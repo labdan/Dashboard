@@ -19,6 +19,7 @@ const inspirationalQuotes = [
 // DOM Elements
 const timeElement = document.getElementById('time');
 const dateElement = document.getElementById('date');
+const miniCalendarContainer = document.getElementById('mini-calendar');
 const quoteElement = document.getElementById('quote');
 const searchInput = document.getElementById('search-input');
 const searchBtn = document.getElementById('search-btn');
@@ -35,6 +36,8 @@ const calendarContainer = document.getElementById('calendar-container');
 const weatherIconImg = document.getElementById('weather-icon-img');
 const weatherTemp = document.querySelector('.weather-temperature');
 const weatherDesc = document.querySelector('.weather-description');
+const sunriseElement = document.getElementById('sunrise-time');
+const sunsetElement = document.getElementById('sunset-time');
 const uvIndexElement = document.getElementById('uv-index');
 const aqiIndexElement = document.getElementById('aqi-index');
 const forecastContainer = document.getElementById('weather-forecast');
@@ -47,6 +50,7 @@ let currentSearchEngine = 'google';
 function init() {
     updateTimeAndDate();
     setInterval(updateTimeAndDate, 1000);
+    renderMiniCalendar();
     loadQuickLinks();
     loadTodos();
     loadStockNews();
@@ -100,6 +104,28 @@ function updateTimeAndDate() {
     });
 }
 
+// Mini Calendar
+function renderMiniCalendar() {
+    const today = new Date();
+    const currentDayOfWeek = today.getDay(); // 0 (Sun) to 6 (Sat)
+    const week = [];
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    for (let i = 0; i < 7; i++) {
+        const date = new Date(today);
+        date.setDate(today.getDate() - currentDayOfWeek + i);
+        week.push(date);
+    }
+
+    miniCalendarContainer.innerHTML = week.map((date, index) => `
+        <div class="mini-calendar-day ${index === currentDayOfWeek ? 'current' : ''}">
+            <span class="day-name">${dayNames[index]}</span>
+            <span class="day-number">${date.getDate()}</span>
+        </div>
+    `).join('');
+}
+
+
 // Weather API using WeatherAPI.com
 async function getWeather() {
     try {
@@ -113,6 +139,7 @@ async function getWeather() {
         if (!response.ok) throw new Error('Weather API response was not ok');
         
         const data = await response.json();
+        const todayForecast = data.forecast.forecastday[0];
         
         // Update Current Weather
         weatherTemp.textContent = `${Math.round(data.current.temp_c)}°C`;
@@ -121,6 +148,8 @@ async function getWeather() {
         weatherIconImg.alt = data.current.condition.text;
 
         // Update Extra Info
+        sunriseElement.textContent = todayForecast.astro.sunrise;
+        sunsetElement.textContent = todayForecast.astro.sunset;
         uvIndexElement.textContent = data.current.uv;
         aqiIndexElement.textContent = Math.round(data.current.air_quality.pm2_5);
 

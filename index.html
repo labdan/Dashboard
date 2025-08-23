@@ -21,6 +21,8 @@
       <div class="time-date header-widget">
         <div class="time-display" id="time">00:00:00</div>
         <div class="date-display" id="date">Monday, January 1, 2023</div>
+        <!-- Mini Calendar -->
+        <div class="mini-calendar" id="mini-calendar"></div>
       </div>
 
       <!-- Search Area & Quick Links -->
@@ -67,8 +69,19 @@
           </div>
         </div>
         <div class="weather-extra-info">
+          <!-- Sunrise and Sunset Added -->
           <div class="info-item">
             <i class="fas fa-sun"></i>
+            <span id="sunrise-time">--:--</span>
+            <small>Sunrise</small>
+          </div>
+          <div class="info-item">
+            <i class="fas fa-moon"></i>
+            <span id="sunset-time">--:--</span>
+            <small>Sunset</small>
+          </div>
+          <div class="info-item">
+            <i class="fas fa-triangle-exclamation"></i>
             <span id="uv-index">--</span>
             <small>UV Index</small>
           </div>
