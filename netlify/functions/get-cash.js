@@ -1,10 +1,10 @@
 // netlify/functions/get-cash.js
-const fetch = require('node-fetch');
+// Using dynamic import for node-fetch
+const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 
 exports.handler = async function(event, context) {
   const API_KEY = process.env.TRADING212_API_KEY;
-  // Using the DEMO (practice) URL for safer debugging.
-  const API_URL = 'https://demo.trading212.com/api/v0/equity/account/cash';
+  const API_URL = 'https://live.trading212.com/api/v0/equity/account/cash';
 
   if (!API_KEY) {
     console.error('CRITICAL: TRADING212_API_KEY environment variable is not set in Netlify.');
@@ -24,7 +24,7 @@ exports.handler = async function(event, context) {
     if (!response.ok) {
       const errorBody = await response.text();
       console.error(`Trading 212 Cash API Error: Status ${response.status} ${response.statusText}`);
-      console.error('Error Body from Cash API:', errorBody); // This is the crucial log
+      console.error('Error Body from Cash API:', errorBody);
       return {
         statusCode: response.status,
         body: JSON.stringify({ 
