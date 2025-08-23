@@ -2,14 +2,21 @@
 const https = require('https');
 
 exports.handler = async function(event, context) {
-  // CORRECTED: Using the new environment variable name to match get-cash.js
-  const API_KEY = process.env.T212_API_KEY;
+  // ===================================================================
+  // TEMPORARY DEBUGGING STEP: Hardcode the API key here.
+  // Replace 'PASTE_YOUR_API_KEY_HERE' with your actual key.
+  // This is NOT secure for production. We will remove this after testing.
+  const API_KEY = '38260697ZtLIKWcZsIknUhHbziHzoBDbidgGF'; 
+  // ===================================================================
 
-  if (!API_KEY) {
-    console.error('CRITICAL: T212_API_KEY environment variable is not set in Netlify.');
+  // This line is temporarily disabled for the test.
+  // const API_KEY = process.env.T212_API_KEY;
+
+  if (!API_KEY || API_KEY === '38260697ZtLIKWcZsIknUhHbziHzoBDbidgGF') {
+    console.error('CRITICAL: API key is not hardcoded for the test.');
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Trading 212 API key is not configured.' }),
+      body: JSON.stringify({ error: 'API key is not set for the debugging test.' }),
     };
   }
 
