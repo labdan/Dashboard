@@ -339,15 +339,21 @@ async function loadStockWatchlist() {
     }
 
     watchlistContainer.innerHTML = '<div style="padding: 20px;">Loading portfolio...</div>';
+    let apiError = null;
+
     try {
         const [portfolioRes, cashRes] = await Promise.all([
             fetch('/.netlify/functions/get-portfolio'),
             fetch('/.netlify/functions/get-cash')
         ]);
 
-        if (!portfolioRes.ok || !cashRes.ok) {
-            const errorText = !portfolioRes.ok ? await portfolioRes.text() : await cashRes.text();
-            throw new Error(`API Error: ${errorText}`);
+        if (!portfolioRes.ok) {
+            const errorJson = await portfolioRes.json();
+            throw new Error(`Portfolio API Error: ${errorJson.error || portfolioRes.statusText}`);
+        }
+        if (!cashRes.ok) {
+            const errorJson = await cashRes.json();
+            throw new Error(`Cash API Error: ${errorJson.error || cashRes.statusText}`);
         }
 
         const portfolioData = await portfolioRes.json();
@@ -360,11 +366,33 @@ async function loadStockWatchlist() {
 
     } catch (error) {
         console.error('Error fetching stock watchlist:', error);
-        watchlistContainer.innerHTML = `<div class="error-message" style="padding: 20px;">Could not load portfolio data. Check console for details.</div>`;
+        apiError = error.message; // Store the error message
+        // Clear potentially bad cache
+        localStorage.removeItem('portfolioCache');
+        // Render the error state
+        renderPortfolio(null, apiError);
     }
 }
 
-function renderPortfolio(data) {
+function renderPortfolio(data, error = null) {
+    if (error) {
+        watchlistContainer.innerHTML = `
+            <div class="portfolio-header">
+                 <div class="portfolio-title-bar">
+                    <div class="portfolio-value">
+                        <div class="value-title">Value</div>
+                        <div class="value-amount">€--.--</div>
+                    </div>
+                    <button class="refresh-btn" id="refresh-portfolio" title="Refresh Portfolio"><i class="fas fa-sync-alt"></i></button>
+                </div>
+            </div>
+            <div class="error-message" style="padding: 20px;">
+                Could not load portfolio data.
+                <small>Reason: ${error}</small>
+            </div>`;
+        return;
+    }
+
     const portfolioData = data.portfolio;
     const cashValue = data.cash.cash || 0;
 
@@ -392,34 +420,38 @@ function renderPortfolio(data) {
             </div>
         </div>`;
     
-    portfolioData.forEach(stock => {
-        const tickerKey = stock.ticker.toUpperCase();
-        const iconUrl = config.trading212.iconUrls[tickerKey] || `https://s3-symbol-logo.trading212.com/symbols/${tickerKey}.png`;
-        
-        const currentValue = stock.currentPrice * stock.quantity;
-        const changeAmount = stock.ppl;
-        const initialValue = currentValue - changeAmount;
-        const changePercent = initialValue === 0 ? 0 : (changeAmount / initialValue) * 100;
-        const isPositive = changeAmount >= 0;
+    if (portfolioData.length === 0) {
+        watchlistHTML += `<div class="no-investments">You have no investments yet.</div>`;
+    } else {
+        portfolioData.forEach(stock => {
+            const tickerKey = stock.ticker.toUpperCase();
+            const iconUrl = config.trading212.iconUrls[tickerKey] || `https://s3-symbol-logo.trading212.com/symbols/${tickerKey}.png`;
+            
+            const currentValue = stock.currentPrice * stock.quantity;
+            const changeAmount = stock.ppl;
+            const initialValue = currentValue - changeAmount;
+            const changePercent = initialValue === 0 ? 0 : (changeAmount / initialValue) * 100;
+            const isPositive = changeAmount >= 0;
 
-        watchlistHTML += `
-            <div class="stock-item-new">
-                <div class="stock-icon-new">
-                    <img src="${iconUrl}" alt="${stock.ticker}" onerror="this.src='https://www.google.com/favicon.ico'; this.onerror=null;">
-                </div>
-                <div class="stock-info-new">
-                    <div class="stock-name-new">${stock.ticker.replace(/_/g, ' ')}</div>
-                    <div class="stock-shares">${stock.quantity} SHARES</div>
-                </div>
-                <div class="stock-pricing-new">
-                    <div class="stock-value">€${currentValue.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                    <div class="stock-change-new ${isPositive ? 'positive' : 'negative'}">
-                        ${isPositive ? '+' : ''}€${changeAmount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${changePercent.toFixed(2)}%)
+            watchlistHTML += `
+                <div class="stock-item-new">
+                    <div class="stock-icon-new">
+                        <img src="${iconUrl}" alt="${stock.ticker}" onerror="this.src='https://www.google.com/favicon.ico'; this.onerror=null;">
+                    </div>
+                    <div class="stock-info-new">
+                        <div class="stock-name-new">${stock.ticker.replace(/_/g, ' ')}</div>
+                        <div class="stock-shares">${stock.quantity} SHARES</div>
+                    </div>
+                    <div class="stock-pricing-new">
+                        <div class="stock-value">€${currentValue.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                        <div class="stock-change-new ${isPositive ? 'positive' : 'negative'}">
+                            ${isPositive ? '+' : ''}€${changeAmount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${changePercent.toFixed(2)}%)
+                        </div>
                     </div>
                 </div>
-            </div>
-        `;
-    });
+            `;
+        });
+    }
 
     watchlistContainer.innerHTML = watchlistHTML;
 }
