@@ -3,8 +3,8 @@
 const config = {
     // OpenWeatherMap configuration remains the same
     openweathermap: {
-        lat: 52.5200,
-        lon: 13.4050 
+        lat: 52.2943,
+        lon: 13.1713 
     },
     // Add your Supabase project details here
     supabase: {
