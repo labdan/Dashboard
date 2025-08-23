@@ -25,6 +25,7 @@ const todoList = document.getElementById('todo-list');
 const newsContainer = document.getElementById('news-container');
 const watchlistContainer = document.getElementById('watchlist-container');
 const calendarContainer = document.getElementById('calendar-container');
+const themeToggleBtn = document.getElementById('theme-toggle');
 
 // Weather DOM Elements
 const weatherIconImg = document.getElementById('weather-icon-img');
@@ -48,6 +49,10 @@ async function init() {
     if (!SUPABASE_URL || SUPABASE_URL.includes('YOUR_SUPABASE_URL')) {
         alert("Supabase URL is not set in config.js. To-Do list will not work.");
     }
+    
+    // Apply saved theme first
+    applySavedTheme();
+
     updateTimeAndDate();
     setInterval(updateTimeAndDate, 1000);
     updateQuote();
@@ -75,6 +80,22 @@ function setupEventListeners() {
         getWeather();
     });
     todoList.addEventListener('click', handleTodoClick);
+    themeToggleBtn.addEventListener('click', toggleTheme);
+}
+
+// --- THEME ---
+function applySavedTheme() {
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.body.setAttribute('data-theme', savedTheme);
+    themeToggleBtn.innerHTML = savedTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+}
+
+function toggleTheme() {
+    const currentTheme = document.body.getAttribute('data-theme');
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    document.body.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+    themeToggleBtn.innerHTML = newTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
 }
 
 // --- TO-DO LIST (with Supabase) ---

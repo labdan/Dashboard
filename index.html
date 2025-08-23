@@ -12,6 +12,10 @@
     <header>
       <!-- Clock -->
       <div class="time-date header-widget">
+        <!-- Dark Mode Toggle Button -->
+        <button class="theme-toggle" id="theme-toggle" title="Toggle Theme">
+          <i class="fas fa-moon"></i>
+        </button>
         <div class="time-display" id="time">00:00:00</div>
         <div class="date-display" id="date">Monday, January 1, 2023</div>
         <div class="mini-calendar" id="mini-calendar"></div>
@@ -43,12 +47,15 @@
             <div class="weather-temperature">--°C</div>
             <div class="weather-description">Loading...</div>
           </div>
-          <div class="weather-high-low">
-            <div id="weather-high">H: --°</div>
-            <div id="weather-low">L: --°</div>
+          <!-- New container for H/L and Rain -->
+          <div class="weather-dynamic-content">
+            <div class="weather-high-low">
+              <div id="weather-high">H: --°</div>
+              <div id="weather-low">L: --°</div>
+            </div>
+            <div class="chance-of-rain" id="chance-of-rain">--% chance of rain</div>
           </div>
         </div>
-        <div class="chance-of-rain" id="chance-of-rain">--% chance of rain</div>
         <div class="weather-extra-info">
           <div class="info-item"><i class="fas fa-sun"></i><span id="sunrise-time">--:--</span><small>Sunrise</small></div>
           <div class="info-item"><i class="fas fa-moon"></i><span id="sunset-time">--:--</span><small>Sunset</small></div>
@@ -89,7 +96,6 @@
 
   <!-- Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <!-- Chart.js is no longer needed for the weather widget -->
   
   <script src="config.js"></script>
   <script src="app.js"></script>
