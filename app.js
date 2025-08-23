@@ -359,7 +359,7 @@ async function loadStockWatchlist() {
     }
 }
 
-async function renderPortfolio(data, error = null) {
+function renderPortfolio(data, error = null) {
     if (error) {
         watchlistContainer.innerHTML = `
             <div class="portfolio-header">
@@ -413,19 +413,11 @@ async function renderPortfolio(data, error = null) {
     if (portfolioData.length === 0) {
         watchlistHTML += `<div class="no-investments">You have no investments yet.</div>`;
     } else {
-        // Fetch all company domains in parallel
-        const domainPromises = portfolioData.map(stock => {
-            const ticker = stock.ticker.split('_')[0]; // Use the base ticker (e.g., 'AVGO' from 'AVGO_US_EQ')
-            return fetch(`/.netlify/functions/get-company-domain?ticker=${ticker}`)
-                .then(res => res.json())
-                .then(data => data.domain)
-                .catch(() => null); // Return null if the domain lookup fails
-        });
-        const domains = await Promise.all(domainPromises);
-
-        portfolioData.forEach((stock, index) => {
-            const domain = domains[index];
-            const iconUrl = domain ? `https://logo.clearbit.com/${domain}` : 'nostockimg.png';
+        portfolioData.forEach(stock => {
+            const baseTicker = stock.ticker.split('_')[0].toUpperCase();
+            const isETF = stock.ticker.includes('_DE_'); // Simple check for German ETFs, can be expanded
+            const logoFolder = isETF ? 'etfs' : 'logos';
+            const iconUrl = `https://raw.githubusercontent.com/davidepalazzo/ticker-logos/main/${logoFolder}/${baseTicker}.png`;
             
             const currentValue = stock.currentPrice * stock.quantity;
             const changeAmount = stock.ppl;
