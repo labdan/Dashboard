@@ -2,10 +2,11 @@
 const https = require('https');
 
 exports.handler = async function(event, context) {
-  const API_KEY = process.env.TRADING212_API_KEY;
+  // Using a new environment variable name to bypass potential caching issues.
+  const API_KEY = process.env.T212_API_KEY;
 
   if (!API_KEY) {
-    console.error('CRITICAL: TRADING212_API_KEY environment variable is not set in Netlify.');
+    console.error('CRITICAL: T212_API_KEY environment variable is not set in Netlify.');
     return {
       statusCode: 500,
       body: JSON.stringify({ error: 'Trading 212 API key is not configured.' }),
