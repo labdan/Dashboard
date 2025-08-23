@@ -368,7 +368,7 @@ header {
 .info-item {
   text-align: center;
   font-size: 0.85rem;
-  flex-basis: 33.33%;
+  flex-basis: 25%;
 }
 
 .info-item i {

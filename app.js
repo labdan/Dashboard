@@ -5,10 +5,9 @@ if (typeof config === 'undefined') {
     alert("Configuration file (config.js) is missing or not loaded.");
 }
 const { url: SUPABASE_URL, anonKey: SUPABASE_ANON_KEY } = config.supabase;
-const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes for weather cache
+const CACHE_DURATION = 30 * 60 * 1000;
 
 // --- SUPABASE CLIENT ---
-// FIX: Renamed the client to avoid conflict with the global 'supabase' object
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // --- DOM ELEMENTS ---
@@ -35,12 +34,13 @@ const weatherHighLow = document.getElementById('weather-high-low');
 const sunriseElement = document.getElementById('sunrise-time');
 const sunsetElement = document.getElementById('sunset-time');
 const uvIndexElement = document.getElementById('uv-index');
+const aqiIndexElement = document.getElementById('aqi-index'); // AQI element
 const refreshWeatherBtn = document.getElementById('refresh-weather');
 const tempChartCanvas = document.getElementById('temp-chart');
 
 // --- STATE ---
 let currentSearchEngine = 'google';
-let tempChart = null; // To hold the chart instance
+let tempChart = null;
 const USER_ID = '12345678-1234-1234-1234-1234567890ab'; 
 
 // --- INITIALIZATION ---
@@ -48,26 +48,18 @@ async function init() {
     if (!SUPABASE_URL || SUPABASE_URL.includes('YOUR_SUPABASE_URL')) {
         alert("Supabase URL is not set in config.js. To-Do list will not work.");
     }
-
-    // UI Updates
     updateTimeAndDate();
     setInterval(updateTimeAndDate, 1000);
     updateQuote();
     setInterval(updateQuote, 10000);
     renderMiniCalendar();
-    
-    // Load Content
     loadQuickLinks();
     getWeather();
     loadStockNews();
     loadStockWatchlist();
     renderCalendar();
-    
-    // Load and subscribe to To-Do list changes
     await loadTodos();
     subscribeToTodoChanges();
-
-    // Event Listeners
     setupEventListeners();
 }
 
@@ -86,28 +78,18 @@ function setupEventListeners() {
 }
 
 // --- TO-DO LIST (with Supabase) ---
-
 async function loadTodos() {
-    const { data: todos, error } = await supabaseClient
-        .from('todos')
-        .select('*')
-        .order('created_at', { ascending: false });
-
+    const { data: todos, error } = await supabaseClient.from('todos').select('*').order('created_at', { ascending: false });
     if (error) {
         console.error('Error fetching todos:', error);
         return;
     }
-
-    todoList.innerHTML = ''; // Clear current list
+    todoList.innerHTML = '';
     todos.forEach(todo => {
         const todoItem = document.createElement('li');
         todoItem.className = 'todo-item';
         todoItem.dataset.id = todo.id;
-        todoItem.innerHTML = `
-            <input type="checkbox" class="todo-checkbox" ${todo.is_complete ? 'checked' : ''}>
-            <span class="todo-text ${todo.is_complete ? 'todo-completed' : ''}">${todo.task}</span>
-            <button class="delete-btn"><i class="fas fa-times"></i></button>
-        `;
+        todoItem.innerHTML = `<input type="checkbox" class="todo-checkbox" ${todo.is_complete ? 'checked' : ''}><span class="todo-text ${todo.is_complete ? 'todo-completed' : ''}">${todo.task}</span><button class="delete-btn"><i class="fas fa-times"></i></button>`;
         todoList.appendChild(todoItem);
     });
 }
@@ -116,48 +98,27 @@ async function handleTodoSubmit(e) {
     e.preventDefault();
     const taskText = todoInput.value.trim();
     if (taskText) {
-        const { error } = await supabaseClient
-            .from('todos')
-            .insert({ task: taskText, user_id: USER_ID });
-        
-        if (error) {
-            console.error('Error adding todo:', error);
-        } else {
-            todoInput.value = '';
-        }
+        const { error } = await supabaseClient.from('todos').insert({ task: taskText, user_id: USER_ID });
+        if (error) console.error('Error adding todo:', error);
+        else todoInput.value = '';
     }
 }
 
 async function handleTodoClick(e) {
     const item = e.target.closest('.todo-item');
     if (!item) return;
-
     const todoId = item.dataset.id;
-    
-    // Toggle completion status
     if (e.target.matches('.todo-checkbox, .todo-text')) {
         const isComplete = item.querySelector('.todo-checkbox').checked;
-        await supabaseClient
-            .from('todos')
-            .update({ is_complete: isComplete })
-            .eq('id', todoId);
+        await supabaseClient.from('todos').update({ is_complete: isComplete }).eq('id', todoId);
     }
-
-    // Delete task
     if (e.target.closest('.delete-btn')) {
-        await supabaseClient
-            .from('todos')
-            .delete()
-            .eq('id', todoId);
+        await supabaseClient.from('todos').delete().eq('id', todoId);
     }
 }
 
 function subscribeToTodoChanges() {
-    supabaseClient.channel('todos')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, payload => {
-            loadTodos(); // Reload the list on any change
-        })
-        .subscribe();
+    supabaseClient.channel('todos').on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, loadTodos).subscribe();
 }
 
 // --- WEATHER ---
@@ -189,17 +150,18 @@ function updateWeatherUI(data) {
     sunsetElement.textContent = new Date(data.current.sunset * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     uvIndexElement.textContent = Math.round(data.current.uvi);
     
+    // Fetch and display AQI
+    if (data.current.air_quality) {
+        aqiIndexElement.textContent = data.current.air_quality.pm2_5.toFixed(1);
+    }
+
     const forecastContainer = document.getElementById('weather-forecast');
     forecastContainer.innerHTML = '';
     data.daily.slice(1, 8).forEach(day => {
         const dayName = new Date(day.dt * 1000).toLocaleDateString('en-US', { weekday: 'short' });
         const forecastItem = document.createElement('div');
         forecastItem.className = 'forecast-item';
-        forecastItem.innerHTML = `
-            <div class="forecast-day">${dayName}</div>
-            <img src="https://openweathermap.org/img/wn/${day.weather[0].icon}.png" alt="${day.weather[0].description}">
-            <div class="forecast-temp">${Math.round(day.temp.max)}°</div>
-        `;
+        forecastItem.innerHTML = `<div class="forecast-day">${dayName}</div><img src="https://openweathermap.org/img/wn/${day.weather[0].icon}.png" alt="${day.weather[0].description}"><div class="forecast-temp">${Math.round(day.temp.max)}°</div>`;
         forecastContainer.appendChild(forecastItem);
     });
 
@@ -208,9 +170,7 @@ function updateWeatherUI(data) {
 
 function drawTempGraph(hourlyData) {
     const ctx = tempChartCanvas.getContext('2d');
-    if (tempChart) {
-        tempChart.destroy();
-    }
+    if (tempChart) tempChart.destroy();
     const labels = hourlyData.slice(0, 12).map(h => new Date(h.dt * 1000).getHours());
     const temps = hourlyData.slice(0, 12).map(h => h.temp);
     tempChart = new Chart(ctx, {
@@ -235,7 +195,6 @@ function drawTempGraph(hourlyData) {
 }
 
 // --- OTHER UI FUNCTIONS ---
-
 function updateTimeAndDate() {
     const now = new Date();
     timeElement.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -251,12 +210,8 @@ function renderMiniCalendar() {
     const startingDay = (firstDayOfMonth.getDay() + 6) % 7;
     let calendarHTML = '';
     const dayNames = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-    dayNames.forEach(day => {
-        calendarHTML += `<div class="mini-calendar-cell mini-calendar-day-name">${day}</div>`;
-    });
-    for (let i = 0; i < startingDay; i++) {
-        calendarHTML += `<div class="mini-calendar-cell"></div>`;
-    }
+    dayNames.forEach(day => { calendarHTML += `<div class="mini-calendar-cell mini-calendar-day-name">${day}</div>`; });
+    for (let i = 0; i < startingDay; i++) { calendarHTML += `<div class="mini-calendar-cell"></div>`; }
     for (let i = 1; i <= daysInMonth; i++) {
         const isToday = i === today.getDate() ? 'current' : '';
         calendarHTML += `<div class="mini-calendar-cell mini-calendar-day-number ${isToday}">${i}</div>`;
