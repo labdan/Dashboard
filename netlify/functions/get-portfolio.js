@@ -1,9 +1,8 @@
 // netlify/functions/get-portfolio.js
-const fetch = require('node-fetch');
+const https = require('https');
 
 exports.handler = async function(event, context) {
   const API_KEY = process.env.TRADING212_API_KEY;
-  const API_URL = 'https://live.trading212.com/api/v0/equity/portfolio';
 
   if (!API_KEY) {
     console.error('CRITICAL: TRADING212_API_KEY environment variable is not set in Netlify.');
@@ -12,37 +11,49 @@ exports.handler = async function(event, context) {
       body: JSON.stringify({ error: 'Trading 212 API key is not configured.' }),
     };
   }
-  
-  try {
-    const response = await fetch(API_URL, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${API_KEY}`
-      }
+
+  const options = {
+    hostname: 'live.trading212.com',
+    path: '/api/v0/equity/portfolio',
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${API_KEY}`
+    }
+  };
+
+  return new Promise((resolve) => {
+    const req = https.request(options, (res) => {
+      let data = '';
+
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          resolve({
+            statusCode: 200,
+            body: data,
+          });
+        } else {
+          console.error(`Trading 212 API Error: Status ${res.statusCode}`);
+          console.error('Error Body from API:', data);
+          resolve({
+            statusCode: res.statusCode,
+            body: JSON.stringify({ error: 'Failed to fetch data from Trading 212.' }),
+          });
+        }
+      });
     });
 
-    if (!response.ok) {
-      const errorBody = await response.text();
-      console.error(`Trading 212 API Error: Status ${response.status} ${response.statusText}`);
-      console.error('Error Body from API:', errorBody);
-      return {
-        statusCode: response.status,
-        body: JSON.stringify({ 
-          error: `Failed to fetch data from Trading 212. Check function logs on Netlify for details.` 
-        }),
-      };
-    }
+    req.on('error', (error) => {
+      console.error('An error occurred in the get-portfolio function execution:', error);
+      resolve({
+        statusCode: 500,
+        body: JSON.stringify({ error: `An internal function error occurred: ${error.message}` }),
+      });
+    });
 
-    const data = await response.json();
-    return {
-      statusCode: 200,
-      body: JSON.stringify(data),
-    };
-  } catch (error) {
-    console.error('An error occurred in the get-portfolio function execution:', error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: `An internal function error occurred: ${error.message}` }),
-    };
-  }
+    req.end();
+  });
 };
