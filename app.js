@@ -168,30 +168,54 @@ function updateWeatherUI(data) {
     });
 
     if (data.hourly) {
-        drawTempGraph(data.hourly);
+        drawTempGraph(data.hourly, data.current.sunrise, data.current.sunset);
     }
 }
 
-function drawTempGraph(hourlyData) {
+function drawTempGraph(hourlyData, sunrise, sunset) {
     if (!tempChartCanvas) return;
     const ctx = tempChartCanvas.getContext('2d');
     if (tempChart) tempChart.destroy();
     
-    // Register the datalabels plugin
     Chart.register(ChartDataLabels);
 
-    const labels = hourlyData.slice(0, 12).map(h => new Date(h.dt * 1000).getHours());
-    const temps = hourlyData.slice(0, 12).map(h => h.temp);
+    const hourlySlice = hourlyData.slice(0, 8); // Get the next 8 hours
+
+    const labels = hourlySlice.map(h => new Date(h.dt * 1000).toLocaleTimeString([], { hour: 'numeric', hour12: false }));
+    const temps = hourlySlice.map(h => h.temp);
+    const rainChance = hourlySlice.map(h => h.pop > 0.3 ? '💧' : '');
+
+    const nightColor = 'rgba(54, 73, 118, 0.8)';
+    const dayColor = 'rgba(255, 217, 102, 0.8)';
+
+    const backgroundColors = hourlySlice.map(h => {
+        const hour = new Date(h.dt * 1000).getHours();
+        const sunriseHour = new Date(sunrise * 1000).getHours();
+        const sunsetHour = new Date(sunset * 1000).getHours();
+
+        if (hour < sunriseHour || hour > sunsetHour) {
+            return nightColor;
+        }
+        // Simple gradient for daytime
+        const noon = 13;
+        const distanceToNoon = Math.abs(noon - hour);
+        const factor = Math.max(0, 1 - (distanceToNoon / 8));
+        
+        // Interpolate between blue and yellow
+        const r = 54 + (255 - 54) * factor;
+        const g = 73 + (217 - 73) * factor;
+        const b = 118 + (102 - 118) * factor;
+        return `rgba(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)}, 0.8)`;
+    });
+
     tempChart = new Chart(ctx, {
-        type: 'line',
+        type: 'bar',
         data: {
             labels: labels,
             datasets: [{
                 data: temps,
-                borderColor: 'rgba(74, 111, 165, 0.8)',
-                borderWidth: 2,
-                tension: 0.4,
-                pointRadius: 0
+                backgroundColor: backgroundColors,
+                borderRadius: 4
             }]
         },
         options: {
@@ -202,16 +226,22 @@ function drawTempGraph(hourlyData) {
                 datalabels: {
                     display: true,
                     align: 'top',
+                    anchor: 'end',
                     color: '#666',
-                    font: {
-                        size: 10
-                    },
-                    formatter: function(value) {
-                        return Math.round(value) + '°';
+                    font: { size: 10 },
+                    formatter: (value, context) => {
+                        const rainIcon = rainChance[context.dataIndex];
+                        return `${rainIcon}\n${Math.round(value)}°`;
                     }
                 }
             },
-            scales: { x: { display: false }, y: { display: false } }
+            scales: { 
+                x: { 
+                    grid: { display: false },
+                    ticks: { font: { size: 10 } }
+                }, 
+                y: { display: false } 
+            }
         }
     });
 }
