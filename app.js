@@ -330,8 +330,16 @@ async function loadStockWatchlist() {
             fetch('/.netlify/functions/get-cash')
         ]);
 
-        if (!portfolioRes.ok || !cashRes.ok) {
-            throw new Error(`Failed to fetch portfolio data.`);
+        // Check portfolio response
+        if (!portfolioRes.ok) {
+            const errorData = await portfolioRes.json();
+            throw new Error(`Portfolio API Error: ${errorData.error || portfolioRes.statusText}`);
+        }
+
+        // Check cash response
+        if (!cashRes.ok) {
+            const errorData = await cashRes.json();
+            throw new Error(`Cash API Error: ${errorData.error || cashRes.statusText}`);
         }
 
         const portfolioData = await portfolioRes.json();
@@ -395,10 +403,11 @@ async function loadStockWatchlist() {
         watchlistContainer.innerHTML = watchlistHTML;
 
     } catch (error) {
-        console.error('Error fetching stock watchlist:', error);
+        console.error('Error fetching stock watchlist:', error.message);
         watchlistContainer.innerHTML = `<div class="error-message" style="padding: 20px;">Could not load portfolio data.</div>`;
     }
 }
+
 
 function renderCalendar() {
     const today = new Date();
