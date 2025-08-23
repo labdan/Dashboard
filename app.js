@@ -155,7 +155,7 @@ function updateWeatherUI(data) {
     sunriseElement.textContent = new Date(data.current.sunrise * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     sunsetElement.textContent = new Date(data.current.sunset * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     uvIndexElement.textContent = Math.round(data.current.uvi);
-    aqiIndexElement.textContent = 'N/A';
+    aqiIndexElement.textContent = 'N/A'; // AQI requires a separate call
 
     const forecastContainer = document.getElementById('weather-forecast');
     forecastContainer.innerHTML = '';
@@ -203,8 +203,8 @@ function drawTempGraph(hourlyData, sunrise, sunset) {
     }
 
     const labels = processedData.map(d => {
-        const start = d.time.getHours();
-        const end = (start + 2) % 24;
+        const start = d.time.toLocaleTimeString([], { hour: 'numeric', hour12: true }).replace(' ', '');
+        const end = new Date(d.time.getTime() + 2 * 60 * 60 * 1000).toLocaleTimeString([], { hour: 'numeric', hour12: true }).replace(' ', '');
         return `${start}-${end}`;
     });
     const temps = processedData.map(d => d.temp);
