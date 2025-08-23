@@ -8,7 +8,8 @@ const { url: SUPABASE_URL, anonKey: SUPABASE_ANON_KEY } = config.supabase;
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes for weather cache
 
 // --- SUPABASE CLIENT ---
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// FIX: Renamed the client to avoid conflict with the global 'supabase' object
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // --- DOM ELEMENTS ---
 const timeElement = document.getElementById('time');
@@ -40,8 +41,6 @@ const tempChartCanvas = document.getElementById('temp-chart');
 // --- STATE ---
 let currentSearchEngine = 'google';
 let tempChart = null; // To hold the chart instance
-// For now, we'll use a hardcoded user ID.
-// In a real app, this would come from Supabase Auth: supabase.auth.user().id
 const USER_ID = '12345678-1234-1234-1234-1234567890ab'; 
 
 // --- INITIALIZATION ---
@@ -89,7 +88,7 @@ function setupEventListeners() {
 // --- TO-DO LIST (with Supabase) ---
 
 async function loadTodos() {
-    const { data: todos, error } = await supabase
+    const { data: todos, error } = await supabaseClient
         .from('todos')
         .select('*')
         .order('created_at', { ascending: false });
@@ -117,7 +116,7 @@ async function handleTodoSubmit(e) {
     e.preventDefault();
     const taskText = todoInput.value.trim();
     if (taskText) {
-        const { error } = await supabase
+        const { error } = await supabaseClient
             .from('todos')
             .insert({ task: taskText, user_id: USER_ID });
         
@@ -138,7 +137,7 @@ async function handleTodoClick(e) {
     // Toggle completion status
     if (e.target.matches('.todo-checkbox, .todo-text')) {
         const isComplete = item.querySelector('.todo-checkbox').checked;
-        await supabase
+        await supabaseClient
             .from('todos')
             .update({ is_complete: isComplete })
             .eq('id', todoId);
@@ -146,7 +145,7 @@ async function handleTodoClick(e) {
 
     // Delete task
     if (e.target.closest('.delete-btn')) {
-        await supabase
+        await supabaseClient
             .from('todos')
             .delete()
             .eq('id', todoId);
@@ -154,7 +153,7 @@ async function handleTodoClick(e) {
 }
 
 function subscribeToTodoChanges() {
-    supabase.channel('todos')
+    supabaseClient.channel('todos')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, payload => {
             loadTodos(); // Reload the list on any change
         })
