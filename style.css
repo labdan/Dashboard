@@ -79,27 +79,50 @@ header {
 
 /* Weather Widget */
 .weather-widget {
-  background: linear-gradient(135deg, #3a7bd5, #3a6073);
-  color: white;
+  background: var(--card-background); /* Removed gradient */
+  color: var(--text-color); /* Adjusted for light/dark themes */
   border-radius: 16px;
   padding: 20px;
-  text-align: center;
   box-shadow: 0 6px 15px rgba(0,0,0,0.15);
-  position: relative;
+  position: relative; /* Crucial for positioning the background icon */
   min-width: 200px;
+  overflow: hidden; /* Hides parts of the icon that go outside the widget */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.weather-icon {
-  width: 60px;
-  height: 60px;
-  margin: 0 auto 10px auto;
+.weather-icon-bg {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 150px; /* Made icon much larger */
+  height: 150px;
+  opacity: 0.1; /* Made icon transparent */
+  z-index: 1; /* Sits behind the text content */
 }
 
-.weather-icon img {
+.weather-icon-bg img {
   width: 100%;
   height: 100%;
   object-fit: contain;
 }
+
+.weather-content {
+  position: relative; /* Sits on top of the icon */
+  z-index: 2;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.05); /* Subtle overlay for readability */
+  padding: 15px;
+  border-radius: 12px;
+  width: 100%;
+}
+
+[data-theme="dark"] .weather-content {
+    background: rgba(255, 255, 255, 0.05);
+}
+
 
 .weather-temperature {
   font-size: 2rem;
