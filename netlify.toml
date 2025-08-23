@@ -3,3 +3,4 @@
 [functions]
   # This specifies the directory where your serverless functions are located.
   directory = "netlify/functions/"
+  node_bundler = "esbuild"

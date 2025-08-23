@@ -1,4 +1,5 @@
 // netlify/functions/get-portfolio.js
+const fetch = require('node-fetch');
 
 exports.handler = async function(event, context) {
   const API_KEY = process.env.TRADING212_API_KEY;
@@ -12,7 +13,6 @@ exports.handler = async function(event, context) {
   }
 
   try {
-    const fetch = (await import('node-fetch')).default;
     const response = await fetch(API_URL, {
       headers: {
         'Authorization': `Bearer ${API_KEY}`
@@ -20,6 +20,8 @@ exports.handler = async function(event, context) {
     });
 
     if (!response.ok) {
+      const errorBody = await response.text();
+      console.error(`Trading 212 API Error: ${response.status} ${response.statusText}`, errorBody);
       return {
         statusCode: response.status,
         body: JSON.stringify({ error: `Failed to fetch data from Trading 212: ${response.statusText}` }),
@@ -32,6 +34,7 @@ exports.handler = async function(event, context) {
       body: JSON.stringify(data),
     };
   } catch (error) {
+    console.error('An error occurred in get-portfolio function:', error);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: `An error occurred: ${error.message}` }),

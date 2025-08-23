@@ -1,7 +1,7 @@
 // netlify/functions/get-cash.js
+const fetch = require('node-fetch');
 
 exports.handler = async function(event, context) {
-  // This securely uses the environment variable you set in Netlify
   const API_KEY = process.env.TRADING212_API_KEY;
   const API_URL = 'https://live.trading212.com/api/v0/equity/account/cash';
 
@@ -13,8 +13,6 @@ exports.handler = async function(event, context) {
   }
 
   try {
-    // Using node-fetch to make the API request
-    const fetch = (await import('node-fetch')).default;
     const response = await fetch(API_URL, {
       headers: {
         'Authorization': `Bearer ${API_KEY}`
@@ -22,6 +20,8 @@ exports.handler = async function(event, context) {
     });
 
     if (!response.ok) {
+      const errorBody = await response.text();
+      console.error(`Trading 212 Cash API Error: ${response.status} ${response.statusText}`, errorBody);
       return {
         statusCode: response.status,
         body: JSON.stringify({ error: `Failed to fetch cash data from Trading 212: ${response.statusText}` }),
@@ -30,12 +30,12 @@ exports.handler = async function(event, context) {
 
     const data = await response.json();
     
-    // The API response includes total, free, locked, etc. 'free' is the usable cash.
     return {
       statusCode: 200,
       body: JSON.stringify({ cash: data.free }),
     };
   } catch (error) {
+    console.error('An error occurred in get-cash function:', error);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: `An error occurred while fetching cash data: ${error.message}` }),
