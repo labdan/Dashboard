@@ -1,14 +1,9 @@
 // app.js
 
 // --- CONFIGURATION ---
-// Ensure the config object is available
-if (typeof config === 'undefined') {
-    alert("Configuration file (config.js) is missing or not loaded. Please make sure it's present and included before app.js in your HTML.");
-}
-
-const API_KEY = config.openweathermap.apiKey;
-const LAT = config.openweathermap.lat;
-const LON = config.openweathermap.lon;
+// We no longer need the API key here. It's now handled by the Netlify Function.
+const LAT = 52.5200;
+const LON = 13.4050;
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
 
 // --- DOM ELEMENTS ---
@@ -41,13 +36,6 @@ let currentSearchEngine = 'google';
 
 // --- INITIALIZATION ---
 function init() {
-    // Check for API Key
-    if (!API_KEY || API_KEY === 'YOUR_OPENWEATHERMAP_API_KEY') {
-        alert("OpenWeatherMap API key is not set. Please add it to config.js.");
-        weatherDesc.textContent = 'API Key Missing'; // Show error on UI
-        return; // Stop initialization if no key
-    }
-
     // Regular UI Updates
     updateTimeAndDate();
     setInterval(updateTimeAndDate, 1000);
@@ -73,7 +61,6 @@ function init() {
         icon.addEventListener('click', (e) => setSearchEngine(e.currentTarget.dataset.engine));
     });
     refreshWeatherBtn.addEventListener('click', () => {
-        // Force a refresh by clearing the cache first
         localStorage.removeItem('weatherCache');
         getWeather();
     });
@@ -83,26 +70,22 @@ function init() {
 async function getWeather() {
     const cachedData = JSON.parse(localStorage.getItem('weatherCache'));
 
-    // If we have cached data and it's not expired, use it
     if (cachedData && (Date.now() - cachedData.timestamp < CACHE_DURATION)) {
         updateWeatherUI(cachedData.data);
         return;
     }
 
-    // Otherwise, fetch new data
     try {
-        const response = await fetch(`https://api.openweathermap.org/data/3.0/onecall?lat=${LAT}&lon=${LON}&exclude=minutely,hourly,alerts&appid=${API_KEY}&units=metric`);
+        // *** THIS IS THE MAIN CHANGE ***
+        // We now fetch from our own serverless function endpoint.
+        const response = await fetch('/.netlify/functions/get-weather');
         
-        if (response.status === 401) {
-            throw new Error('Invalid API Key. Please check your config.js file.');
-        }
         if (!response.ok) {
-            throw new Error(`API request failed with status ${response.status}`);
+            throw new Error(`Netlify function failed with status ${response.status}`);
         }
         
         const data = await response.json();
 
-        // Save the new data and timestamp to cache
         const cache = {
             timestamp: Date.now(),
             data: data
@@ -114,27 +97,21 @@ async function getWeather() {
     } catch (error) {
         console.error('Error fetching weather:', error.message);
         weatherDesc.textContent = 'Weather unavailable';
-        // Log the specific error to help with debugging
-        console.log("Detailed weather error:", error);
     }
 }
 
 function updateWeatherUI(data) {
-    // Current Weather
+    // UI update logic remains the same
     weatherTemp.textContent = `${Math.round(data.current.temp)}°C`;
     weatherDesc.textContent = data.current.weather[0].description;
     weatherIconImg.src = `https://openweathermap.org/img/wn/${data.current.weather[0].icon}@2x.png`;
     weatherIconImg.alt = data.current.weather[0].description;
-
-    // Extra Info
     sunriseElement.textContent = new Date(data.current.sunrise * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     sunsetElement.textContent = new Date(data.current.sunset * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     uvIndexElement.textContent = Math.round(data.current.uvi);
-
-    // 7-Day Forecast
     const forecastContainer = document.getElementById('weather-forecast');
     forecastContainer.innerHTML = '';
-    data.daily.slice(1, 8).forEach(day => { // Use next 7 days from the 'daily' array
+    data.daily.slice(1, 8).forEach(day => {
         const dayName = new Date(day.dt * 1000).toLocaleDateString('en-US', { weekday: 'short' });
         const forecastItem = document.createElement('div');
         forecastItem.className = 'forecast-item';
@@ -148,6 +125,7 @@ function updateWeatherUI(data) {
 }
 
 // --- OTHER FUNCTIONS ---
+// (All other functions like updateTimeAndDate, renderMiniCalendar, etc. remain the same)
 
 function updateTimeAndDate() {
     const now = new Date();

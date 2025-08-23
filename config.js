@@ -6,7 +6,6 @@
 
 const config = {
     openweathermap: {
-        apiKey: '18624c9c35aaac6a1f322ec4c37f4b70',
         // Coordinates for Berlin, Germany. You can change these to your location.
         lat: 52.5200,
         lon: 13.4050 
