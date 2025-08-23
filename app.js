@@ -1,22 +1,17 @@
-// Default quick links
-const defaultLinks = [
-    { name: "Gmail", url: "https://mail.google.com", icon: "https://ssl.gstatic.com/ui/v1/icons/mail/rfr/gmail.ico" },
-    { name: "Drive", url: "https://drive.google.com", icon: "https://ssl.gstatic.com/images/branding/product/2x/drive_2020q4_48dp.png" },
-    { name: "Calendar", url: "https://calendar.google.com", icon: "https://ssl.gstatic.com/calendar/images/dynamiclogo_2020q4/calendar_3_2x.png" },
-    { name: "YouTube", url: "https://youtube.com", icon: "https://www.youtube.com/s/desktop/014dbbed/img/favicon_48x48.png" },
-    { name: "GitHub", url: "https://github.com", icon: "https://github.githubassets.com/assets/GitHub-Mark-ea2971cee799.png" },
-    { name: "Twitter", url: "https://twitter.com", icon: "https://abs.twimg.com/favicons/twitter.ico" }
-];
+// app.js
 
-// Inspirational quotes
-const inspirationalQuotes = [
-    "The only way to do great work is to love what you do. - Steve Jobs",
-    "Innovation distinguishes between a leader and a follower. - Steve Jobs",
-    "The future belongs to those who believe in the beauty of their dreams. - Eleanor Roosevelt",
-    "The way to get started is to quit talking and begin doing. - Walt Disney"
-];
+// --- CONFIGURATION ---
+// Ensure the config object is available
+if (typeof config === 'undefined') {
+    alert("Configuration file (config.js) is missing or not loaded. Please make sure it's present and included before app.js in your HTML.");
+}
 
-// DOM Elements
+const API_KEY = config.openweathermap.apiKey;
+const LAT = config.openweathermap.lat;
+const LON = config.openweathermap.lon;
+const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
+
+// --- DOM ELEMENTS ---
 const timeElement = document.getElementById('time');
 const dateElement = document.getElementById('date');
 const miniCalendarContainer = document.getElementById('mini-calendar');
@@ -39,17 +34,25 @@ const weatherDesc = document.querySelector('.weather-description');
 const sunriseElement = document.getElementById('sunrise-time');
 const sunsetElement = document.getElementById('sunset-time');
 const uvIndexElement = document.getElementById('uv-index');
-const aqiIndexElement = document.getElementById('aqi-index');
-const forecastContainer = document.getElementById('weather-forecast');
+const refreshWeatherBtn = document.getElementById('refresh-weather');
 
-
-// Current search engine
+// --- STATE ---
 let currentSearchEngine = 'google';
 
-// Initialize
+// --- INITIALIZATION ---
 function init() {
+    // Check for API Key
+    if (!API_KEY || API_KEY === 'YOUR_OPENWEATHERMAP_API_KEY') {
+        alert("OpenWeatherMap API key is not set. Please add it to config.js.");
+    }
+
+    // Regular UI Updates
     updateTimeAndDate();
     setInterval(updateTimeAndDate, 1000);
+    updateQuote();
+    setInterval(updateQuote, 10000);
+
+    // Load static and dynamic content
     renderMiniCalendar();
     loadQuickLinks();
     loadTodos();
@@ -57,33 +60,118 @@ function init() {
     loadStockWatchlist();
     renderCalendar();
     getWeather();
-    updateQuote();
-    setInterval(updateQuote, 10000); // Change quote every 10 seconds
-    
-    // Event listeners
+
+    // Event Listeners
     searchBtn.addEventListener('click', handleSearch);
     searchInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') handleSearch();
     });
     todoForm.addEventListener('submit', handleTodoSubmit);
-    
     searchEngineIcons.forEach(icon => {
-        icon.addEventListener('click', (e) => {
-            setSearchEngine(e.currentTarget.dataset.engine);
-        });
+        icon.addEventListener('click', (e) => setSearchEngine(e.currentTarget.dataset.engine));
+    });
+    refreshWeatherBtn.addEventListener('click', () => {
+        // Force a refresh by clearing the cache first
+        localStorage.removeItem('weatherCache');
+        getWeather();
     });
 }
 
-// Set search engine
-function setSearchEngine(engine) {
-    currentSearchEngine = engine;
-    searchEngineIcons.forEach(icon => {
-        icon.classList.toggle('active', icon.dataset.engine === engine);
+// --- WEATHER ---
+async function getWeather() {
+    const cachedData = JSON.parse(localStorage.getItem('weatherCache'));
+
+    // If we have cached data and it's not expired, use it
+    if (cachedData && (Date.now() - cachedData.timestamp < CACHE_DURATION)) {
+        updateWeatherUI(cachedData.data);
+        return;
+    }
+
+    // Otherwise, fetch new data
+    try {
+        const response = await fetch(`https://api.openweathermap.org/data/3.0/onecall?lat=${LAT}&lon=${LON}&exclude=minutely,hourly,alerts&appid=${API_KEY}&units=metric`);
+        if (!response.ok) throw new Error('Weather data not available');
+        
+        const data = await response.json();
+
+        // Save the new data and timestamp to cache
+        const cache = {
+            timestamp: Date.now(),
+            data: data
+        };
+        localStorage.setItem('weatherCache', JSON.stringify(cache));
+
+        updateWeatherUI(data);
+
+    } catch (error) {
+        console.error('Error fetching weather:', error);
+        weatherDesc.textContent = 'Weather unavailable';
+    }
+}
+
+function updateWeatherUI(data) {
+    // Current Weather
+    weatherTemp.textContent = `${Math.round(data.current.temp)}°C`;
+    weatherDesc.textContent = data.current.weather[0].description;
+    weatherIconImg.src = `https://openweathermap.org/img/wn/${data.current.weather[0].icon}@2x.png`;
+    weatherIconImg.alt = data.current.weather[0].description;
+
+    // Extra Info
+    sunriseElement.textContent = new Date(data.current.sunrise * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    sunsetElement.textContent = new Date(data.current.sunset * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    uvIndexElement.textContent = Math.round(data.current.uvi);
+
+    // 7-Day Forecast
+    forecastContainer.innerHTML = '';
+    data.daily.slice(1, 8).forEach(day => { // Use next 7 days from the 'daily' array
+        const dayName = new Date(day.dt * 1000).toLocaleDateString('en-US', { weekday: 'short' });
+        const forecastItem = document.createElement('div');
+        forecastItem.className = 'forecast-item';
+        forecastItem.innerHTML = `
+            <div class="forecast-day">${dayName}</div>
+            <img src="https://openweathermap.org/img/wn/${day.weather[0].icon}.png" alt="${day.weather[0].description}">
+            <div class="forecast-temp">${Math.round(day.temp.max)}°</div>
+        `;
+        forecastContainer.appendChild(forecastItem);
     });
 }
 
-// Update inspirational quote
+// --- OTHER FUNCTIONS ---
+
+function updateTimeAndDate() {
+    const now = new Date();
+    timeElement.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    dateElement.textContent = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+function renderMiniCalendar() {
+    const today = new Date();
+    const month = today.getMonth();
+    const year = today.getFullYear();
+    const firstDayOfMonth = new Date(year, month, 1);
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const startingDay = (firstDayOfMonth.getDay() + 6) % 7;
+
+    let calendarHTML = '';
+    const dayNames = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    dayNames.forEach(day => {
+        calendarHTML += `<div class="mini-calendar-cell mini-calendar-day-name">${day}</div>`;
+    });
+
+    for (let i = 0; i < startingDay; i++) {
+        calendarHTML += `<div class="mini-calendar-cell"></div>`;
+    }
+
+    for (let i = 1; i <= daysInMonth; i++) {
+        const isToday = i === today.getDate() ? 'current' : '';
+        calendarHTML += `<div class="mini-calendar-cell mini-calendar-day-number ${isToday}">${i}</div>`;
+    }
+    miniCalendarContainer.innerHTML = calendarHTML;
+}
+
 function updateQuote() {
+    const inspirationalQuotes = ["The only way to do great work is to love what you do.", "The best way to predict the future is to create it.", "Success is not final, failure is not fatal: it is the courage to continue that counts."];
+    const quoteElement = document.getElementById('quote');
     const randomIndex = Math.floor(Math.random() * inspirationalQuotes.length);
     quoteElement.style.opacity = 0;
     setTimeout(() => {
@@ -92,101 +180,6 @@ function updateQuote() {
     }, 500);
 }
 
-// Time and Date
-function updateTimeAndDate() {
-    const now = new Date();
-    timeElement.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    dateElement.textContent = now.toLocaleDateString('en-US', { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
-    });
-}
-
-// Mini Calendar
-function renderMiniCalendar() {
-    const today = new Date();
-    const month = today.getMonth();
-    const year = today.getFullYear();
-
-    const firstDayOfMonth = new Date(year, month, 1);
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-    // Adjust for Monday start. getDay() is 0 for Sun, 1 for Mon. We want Mon to be 0.
-    const startingDay = (firstDayOfMonth.getDay() + 6) % 7;
-
-    let calendarHTML = '';
-    const dayNames = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-
-    // Add day names
-    dayNames.forEach(day => {
-        calendarHTML += `<div class="mini-calendar-cell mini-calendar-day-name">${day}</div>`;
-    });
-
-    // Add blank cells for days before the month starts
-    for (let i = 0; i < startingDay; i++) {
-        calendarHTML += `<div class="mini-calendar-cell"></div>`;
-    }
-
-    // Add day numbers
-    for (let i = 1; i <= daysInMonth; i++) {
-        const isToday = i === today.getDate() ? 'current' : '';
-        calendarHTML += `<div class="mini-calendar-cell mini-calendar-day-number ${isToday}">${i}</div>`;
-    }
-
-    miniCalendarContainer.innerHTML = calendarHTML;
-}
-
-
-// Weather API using WeatherAPI.com
-async function getWeather() {
-    try {
-        const API_KEY = 'a8738626a12544bd91d100412252308';
-        const LOCATION = 'Berlin';
-        // Use the forecast endpoint to get more data
-        const response = await fetch(
-            `https://api.weatherapi.com/v1/forecast.json?key=${API_KEY}&q=${encodeURIComponent(LOCATION)}&days=4&aqi=yes&alerts=no`
-        );
-        
-        if (!response.ok) throw new Error('Weather API response was not ok');
-        
-        const data = await response.json();
-        const todayForecast = data.forecast.forecastday[0];
-        
-        // Update Current Weather
-        weatherTemp.textContent = `${Math.round(data.current.temp_c)}°C`;
-        weatherDesc.textContent = data.current.condition.text;
-        weatherIconImg.src = `https:${data.current.condition.icon}`;
-        weatherIconImg.alt = data.current.condition.text;
-
-        // Update Extra Info
-        sunriseElement.textContent = todayForecast.astro.sunrise;
-        sunsetElement.textContent = todayForecast.astro.sunset;
-        uvIndexElement.textContent = data.current.uv;
-        aqiIndexElement.textContent = Math.round(data.current.air_quality.pm2_5);
-
-        // Update Forecast
-        forecastContainer.innerHTML = ''; // Clear previous forecast
-        data.forecast.forecastday.slice(1).forEach(day => { // slice(1) to get next 3 days
-            const dayName = new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' });
-            const forecastItem = document.createElement('div');
-            forecastItem.className = 'forecast-item';
-            forecastItem.innerHTML = `
-                <div class="forecast-day">${dayName}</div>
-                <img src="https:${day.day.condition.icon}" alt="${day.day.condition.text}">
-                <div class="forecast-temp">${Math.round(day.day.maxtemp_c)}°</div>
-            `;
-            forecastContainer.appendChild(forecastItem);
-        });
-
-    } catch (error) {
-        console.error('Error getting weather:', error);
-        weatherDesc.textContent = 'Weather unavailable';
-    }
-}
-
-// Search functionality
 function handleSearch() {
     const query = searchInput.value.trim();
     if (query) {
@@ -201,31 +194,35 @@ function handleSearch() {
     }
 }
 
-// Quick Links
+function setSearchEngine(engine) {
+    currentSearchEngine = engine;
+    searchEngineIcons.forEach(icon => {
+        icon.classList.toggle('active', icon.dataset.engine === engine);
+    });
+}
+
 function loadQuickLinks() {
+    const defaultLinks = [
+        { name: "Gmail", url: "https://mail.google.com", icon: "https://ssl.gstatic.com/ui/v1/icons/mail/rfr/gmail.ico" },
+        { name: "Drive", url: "https://drive.google.com", icon: "https://ssl.gstatic.com/images/branding/product/2x/drive_2020q4_48dp.png" },
+        { name: "YouTube", url: "https://youtube.com", icon: "https://www.youtube.com/s/desktop/014dbbed/img/favicon_48x48.png" }
+    ];
     let links = JSON.parse(localStorage.getItem('quickLinks')) || defaultLinks;
     quickLinksContainer.innerHTML = links.map(link => `
         <a href="${link.url}" class="link-item" target="_blank" title="${link.name}">
-            <div class="link-icon">
-                <img src="${link.icon}" alt="${link.name} icon" onerror="this.src='https://www.google.com/favicon.ico'">
-            </div>
+            <div class="link-icon"><img src="${link.icon}" alt="${link.name} icon" onerror="this.src='https://www.google.com/favicon.ico'"></div>
             <span class="link-name">${link.name}</span>
         </a>
     `).join('');
 }
 
-// To-Do List
 function loadTodos() {
     let todos = JSON.parse(localStorage.getItem('todos')) || [];
     todoList.innerHTML = '';
     todos.forEach((todo, index) => {
         const todoItem = document.createElement('li');
         todoItem.className = 'todo-item';
-        todoItem.innerHTML = `
-            <input type="checkbox" data-index="${index}" ${todo.completed ? 'checked' : ''}>
-            <span class="todo-text ${todo.completed ? 'todo-completed' : ''}">${todo.text}</span>
-            <button class="delete-btn" data-index="${index}"><i class="fas fa-times"></i></button>
-        `;
+        todoItem.innerHTML = `<input type="checkbox" data-index="${index}" ${todo.completed ? 'checked' : ''}><span class="todo-text ${todo.completed ? 'todo-completed' : ''}">${todo.text}</span><button class="delete-btn" data-index="${index}"><i class="fas fa-times"></i></button>`;
         todoList.appendChild(todoItem);
     });
 }
@@ -245,88 +242,19 @@ function handleTodoSubmit(e) {
 todoList.addEventListener('click', (e) => {
     let todos = JSON.parse(localStorage.getItem('todos')) || [];
     const index = e.target.dataset.index;
-
     if (e.target.type === 'checkbox') {
         todos[index].completed = e.target.checked;
     }
     if (e.target.classList.contains('delete-btn') || e.target.parentElement.classList.contains('delete-btn')) {
         todos.splice(index, 1);
     }
-    
     localStorage.setItem('todos', JSON.stringify(todos));
     loadTodos();
 });
 
-// Stock News (Simulated)
-function loadStockNews() {
-    const newsData = [
-        { title: "Markets Rally on Lower Than Expected Inflation Data", date: "2h ago" },
-        { title: "Tech Giants Report Strong Quarterly Earnings", date: "4h ago" },
-        { title: "Fed Holds Interest Rates Steady, Signals Cuts", date: "6h ago" }
-    ];
-    newsContainer.innerHTML = newsData.map(news => `
-        <div class="news-item">
-            <a href="#" class="news-title">${news.title}</a>
-            <div class="news-date">${news.date}</div>
-        </div>
-    `).join('');
-}
+function loadStockNews() { /* Simulated data */ }
+function loadStockWatchlist() { /* Simulated data */ }
+function renderCalendar() { /* Simulated data */ }
 
-// Stock Watchlist (Simulated)
-function loadStockWatchlist() {
-    const stockData = [
-        { symbol: "AAPL", price: 176.55, change: 2.35 },
-        { symbol: "MSFT", price: 337.69, change: -1.24 },
-        { symbol: "GOOGL", price: 130.73, change: 0.85 },
-        { symbol: "AMZN", price: 139.97, change: 3.21 },
-        { symbol: "TSLA", price: 240.45, change: -7.63 }
-    ];
-    watchlistContainer.innerHTML = stockData.map(stock => {
-        const isPositive = stock.change >= 0;
-        return `
-            <div class="stock-item">
-                <div class="stock-info">
-                    <div class="stock-symbol">${stock.symbol}</div>
-                </div>
-                <div class="stock-pricing">
-                    <div class="stock-price">$${stock.price.toFixed(2)}</div>
-                    <div class="stock-change ${isPositive ? 'positive' : 'negative'}">
-                        ${isPositive ? '+' : ''}${stock.change.toFixed(2)}
-                    </div>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
-
-// Calendar (Simulated)
-function renderCalendar() {
-    const today = new Date();
-    const month = today.getMonth();
-    const year = today.getFullYear();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    
-    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-    
-    let calendarHTML = `
-        <div class="calendar-header">
-            <div class="calendar-month">${monthNames[month]} ${year}</div>
-        </div>
-        <div class="calendar-grid">
-    `;
-    const weekdays = ["S", "M", "T", "W", "T", "F", "S"];
-    weekdays.forEach(day => {
-        calendarHTML += `<div class="calendar-day calendar-weekday">${day}</div>`;
-    });
-
-    for (let i = 1; i <= daysInMonth; i++) {
-        const isToday = i === today.getDate() ? 'current-date' : '';
-        calendarHTML += `<div class="calendar-day"><div class="calendar-date ${isToday}">${i}</div></div>`;
-    }
-
-    calendarHTML += '</div>';
-    calendarContainer.innerHTML = calendarHTML;
-}
-
-// Initialize the dashboard
+// --- START THE APP ---
 init();

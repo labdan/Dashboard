@@ -21,7 +21,6 @@
       <div class="time-date header-widget">
         <div class="time-display" id="time">00:00:00</div>
         <div class="date-display" id="date">Monday, January 1, 2023</div>
-        <!-- Mini Calendar -->
         <div class="mini-calendar" id="mini-calendar"></div>
       </div>
 
@@ -48,7 +47,6 @@
             <i class="fas fa-search"></i>
           </button>
         </div>
-        <!-- Quick Links are now under the search bar -->
         <div class="quick-links-bar">
           <div class="quick-links" id="quick-links"></div>
         </div>
@@ -56,20 +54,23 @@
 
       <!-- Weather Widget -->
       <div class="weather-widget header-widget" id="weather">
+        <!-- Refresh button added here -->
+        <button class="refresh-btn" id="refresh-weather">
+          <i class="fas fa-sync-alt"></i>
+        </button>
         <div class="weather-main">
           <div class="weather-icon">
-            <img id="weather-icon-img" src="/weather_icons/clear-day.svg" alt="Weather icon" />
+            <img id="weather-icon-img" src="" alt="Weather icon" />
           </div>
           <div class="weather-details">
             <div class="weather-temperature">--°C</div>
             <div class="weather-description">Loading...</div>
             <div class="weather-location">
-              <i class="fas fa-map-marker-alt"></i> Berlin Halensee
+              <i class="fas fa-map-marker-alt"></i> Berlin, DE
             </div>
           </div>
         </div>
         <div class="weather-extra-info">
-          <!-- Sunrise and Sunset Added -->
           <div class="info-item">
             <i class="fas fa-sun"></i>
             <span id="sunrise-time">--:--</span>
@@ -85,57 +86,28 @@
             <span id="uv-index">--</span>
             <small>UV Index</small>
           </div>
-          <div class="info-item">
-            <i class="fas fa-wind"></i>
-            <span id="aqi-index">--</span>
-            <small>AQI</small>
-          </div>
         </div>
         <div class="weather-forecast" id="weather-forecast">
-          <!-- Forecast items will be injected by JS -->
+          <!-- 7-Day Forecast will be injected by JS -->
         </div>
       </div>
     </header>
 
     <div class="dashboard-grid">
-      <!-- To-Do List Widget -->
+      <!-- Widgets remain the same -->
       <div class="widget widget-3">
         <h2 class="card-title">To-Do List</h2>
-        <form class="todo-form" id="todo-form">
-          <input
-            type="text"
-            class="todo-input"
-            id="todo-input"
-            placeholder="Add a new task..."
-          />
-          <button type="submit" class="add-btn">Add</button>
-        </form>
+        <form class="todo-form" id="todo-form"><input type="text" class="todo-input" id="todo-input" placeholder="Add a new task..." /><button type="submit" class="add-btn">Add</button></form>
         <ul class="todo-list" id="todo-list"></ul>
       </div>
-
-      <!-- Stock News Widget -->
       <div class="widget widget-6">
-        <h2 class="card-title">
-          Stock Market News
-          <button class="refresh-btn" id="refresh-news">
-            <i class="fas fa-sync-alt"></i>
-          </button>
-        </h2>
+        <h2 class="card-title">Stock Market News<button class="refresh-btn" id="refresh-news"><i class="fas fa-sync-alt"></i></button></h2>
         <div class="news-container" id="news-container"></div>
       </div>
-
-      <!-- Stock Watchlist Widget -->
       <div class="widget widget-4">
-        <h2 class="card-title">
-          Stocks Watchlist
-          <button class="refresh-btn" id="refresh-stocks">
-            <i class="fas fa-sync-alt"></i>
-          </button>
-        </h2>
+        <h2 class="card-title">Stocks Watchlist<button class="refresh-btn" id="refresh-stocks"><i class="fas fa-sync-alt"></i></button></h2>
         <div class="watchlist-container" id="watchlist-container"></div>
       </div>
-
-      <!-- Calendar Widget -->
       <div class="widget widget-4">
         <h2 class="card-title">Google Calendar</h2>
         <div class="calendar-container" id="calendar-container"></div>
@@ -147,7 +119,8 @@
     </footer>
   </div>
 
-  <!-- External JS -->
+  <!-- IMPORTANT: Load config.js BEFORE app.js -->
+  <script src="config.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

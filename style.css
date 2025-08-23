@@ -48,7 +48,6 @@ body {
 /* ---------------- Header ---------------- */
 header {
   display: grid;
-  /* Adjusted grid to make side columns equal */
   grid-template-columns: 1.1fr 2fr 1.1fr; 
   align-items: stretch;
   gap: 20px;
@@ -66,6 +65,7 @@ header {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  position: relative; /* For positioning refresh button */
 }
 
 /* Clock (Time/Date) */
@@ -264,7 +264,13 @@ header {
 
 /* ---------------- Weather Widget ---------------- */
 .weather-widget {
-  gap: 15px;
+  gap: 10px;
+}
+
+#refresh-weather {
+    position: absolute;
+    top: 15px;
+    right: 15px;
 }
 
 .weather-main {
@@ -303,21 +309,21 @@ header {
 
 .weather-extra-info {
   display: flex;
-  justify-content: space-between; /* Adjusted for 4 items */
+  justify-content: space-between;
   border-top: 1px solid rgba(128, 128, 128, 0.2);
   border-bottom: 1px solid rgba(128, 128, 128, 0.2);
-  padding: 10px 0;
+  padding: 8px 0;
 }
 
 .info-item {
   text-align: center;
-  font-size: 0.9rem;
-  flex-basis: 25%; /* Each item takes up a quarter of the space */
+  font-size: 0.85rem;
+  flex-basis: 25%;
 }
 
 .info-item i {
-  font-size: 1rem;
-  margin-bottom: 5px;
+  font-size: 0.9rem;
+  margin-bottom: 4px;
   color: var(--primary-color);
 }
 
@@ -327,32 +333,33 @@ header {
 }
 
 .info-item small {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   opacity: 0.7;
 }
 
 .weather-forecast {
   display: flex;
   justify-content: space-between;
-  padding-top: 10px;
+  padding-top: 8px;
 }
 
 .forecast-item {
   text-align: center;
+  flex-basis: 14%;
 }
 
 .forecast-item img {
-  width: 35px;
-  height: 35px;
+  width: 30px;
+  height: 30px;
 }
 
 .forecast-day {
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
 }
 
 .forecast-temp {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   opacity: 0.8;
 }
 
