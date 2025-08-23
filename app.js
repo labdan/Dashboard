@@ -107,22 +107,35 @@ function updateTimeAndDate() {
 // Mini Calendar
 function renderMiniCalendar() {
     const today = new Date();
-    const currentDayOfWeek = today.getDay(); // 0 (Sun) to 6 (Sat)
-    const week = [];
-    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const month = today.getMonth();
+    const year = today.getFullYear();
 
-    for (let i = 0; i < 7; i++) {
-        const date = new Date(today);
-        date.setDate(today.getDate() - currentDayOfWeek + i);
-        week.push(date);
+    const firstDayOfMonth = new Date(year, month, 1);
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    // Adjust for Monday start. getDay() is 0 for Sun, 1 for Mon. We want Mon to be 0.
+    const startingDay = (firstDayOfMonth.getDay() + 6) % 7;
+
+    let calendarHTML = '';
+    const dayNames = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
+    // Add day names
+    dayNames.forEach(day => {
+        calendarHTML += `<div class="mini-calendar-cell mini-calendar-day-name">${day}</div>`;
+    });
+
+    // Add blank cells for days before the month starts
+    for (let i = 0; i < startingDay; i++) {
+        calendarHTML += `<div class="mini-calendar-cell"></div>`;
     }
 
-    miniCalendarContainer.innerHTML = week.map((date, index) => `
-        <div class="mini-calendar-day ${index === currentDayOfWeek ? 'current' : ''}">
-            <span class="day-name">${dayNames[index]}</span>
-            <span class="day-number">${date.getDate()}</span>
-        </div>
-    `).join('');
+    // Add day numbers
+    for (let i = 1; i <= daysInMonth; i++) {
+        const isToday = i === today.getDate() ? 'current' : '';
+        calendarHTML += `<div class="mini-calendar-cell mini-calendar-day-number ${isToday}">${i}</div>`;
+    }
+
+    miniCalendarContainer.innerHTML = calendarHTML;
 }
 
 
