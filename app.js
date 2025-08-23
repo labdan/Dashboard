@@ -98,39 +98,42 @@ function loadQuickLinks() {
     quickLinksContainer.innerHTML = ''; // Clear existing links
 
     quickLinksData.forEach(link => {
-        const linkItem = document.createElement('div');
-        linkItem.className = 'link-item';
+        const linkItemWrapper = document.createElement('div');
+        linkItemWrapper.className = 'link-item';
 
-        // Icon can be an image or a FontAwesome class
         const iconHTML = link.icon.startsWith('fas') || link.icon.startsWith('fab')
             ? `<i class="${link.icon}"></i>`
             : `<img src="${link.icon}" alt="${link.name} icon" onerror="this.src='https://www.google.com/favicon.ico'">`;
 
-        // If it has sublinks, create a popup menu
         if (link.subLinks) {
-            const subLinksHTML = link.subLinks.map(sub => 
-                `<a href="${sub.url}" target="_blank">${sub.name}</a>`
-            ).join('');
+            const subLinksHTML = link.subLinks.map(sub => {
+                const faviconUrl = `https://www.google.com/s2/favicons?domain=${new URL(sub.url).hostname}&sz=32`;
+                return `
+                    <a href="${sub.url}" class="link-item" target="_blank" title="${sub.name}">
+                        <div class="link-icon">
+                            <img src="${faviconUrl}" alt="${sub.name} icon" onerror="this.src='https://www.google.com/favicon.ico'">
+                        </div>
+                        <span class="link-name">${sub.name}</span>
+                    </a>
+                `;
+            }).join('');
 
-            linkItem.innerHTML = `
+            linkItemWrapper.innerHTML = `
                 <div class="link-icon">${iconHTML}</div>
                 <span class="link-name">${link.name}</span>
                 <div class="popup-menu">${subLinksHTML}</div>
             `;
         } else {
-            // Otherwise, create a regular link
-            const anchor = document.createElement('a');
-            anchor.href = link.url;
-            anchor.className = 'link-item-anchor'; // Use a wrapper to make the whole item clickable
-            anchor.target = '_blank';
-            anchor.title = link.name;
-            anchor.innerHTML = `
-                <div class="link-icon">${iconHTML}</div>
-                <span class="link-name">${link.name}</span>
+            linkItemWrapper.innerHTML = `
+                <a href="${link.url}" target="_blank" title="${link.name}">
+                    <div class="link-icon">${iconHTML}</div>
+                    <span class="link-name">${link.name}</span>
+                </a>
             `;
-            linkItem.appendChild(anchor);
+            // Make the entire item a link
+            linkItemWrapper.querySelector('a').classList.add('link-item');
         }
-        quickLinksContainer.appendChild(linkItem);
+        quickLinksContainer.appendChild(linkItemWrapper);
     });
 }
 

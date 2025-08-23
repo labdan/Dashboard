@@ -235,7 +235,7 @@ header {
 
 .link-item:hover .link-icon {
   transform: translateY(-5px);
-  box-shadow: 0 0 20px 5px rgba(74, 111, 165, 0.4);
+  background-color: rgba(0,0,0,0.05);
 }
 
 .link-icon {
@@ -246,10 +246,10 @@ header {
   justify-content: center;
   align-items: center;
   margin-bottom: 8px;
-  background: radial-gradient(circle at center, transparent 55%, rgba(74, 111, 165, 0.2) 100%);
-  border: 1px solid rgba(74, 111, 165, 0.3);
+  border: 1px solid rgba(0,0,0,0.1);
   transition: all 0.3s ease;
-  font-size: 20px; /* For FontAwesome icons */
+  font-size: 20px;
+  color: var(--text-color); /* Makes FontAwesome icons black/white */
 }
 
 .link-icon img {
@@ -267,41 +267,34 @@ header {
 /* Quick Link Popups */
 .popup-menu {
   position: absolute;
-  top: 100%;
+  top: 110%; /* Position below the main icon */
   left: 50%;
   transform: translateX(-50%);
   background-color: var(--card-background);
-  border-radius: 10px;
+  border-radius: 25px; /* More rounded corners for bar shape */
   box-shadow: var(--shadow);
-  padding: 8px;
-  width: 160px;
+  padding: 15px;
   z-index: 10;
   border: 1px solid rgba(255, 255, 255, 0.2);
   backdrop-filter: blur(10px);
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.2s ease, visibility 0.2s ease;
+  transition: opacity 0.2s ease, visibility 0.2s ease, top 0.2s ease;
+  display: flex; /* Arrange sub-items in a row */
+  gap: 15px;
+  width: max-content; /* Make it as wide as its content */
 }
 
 .link-item:hover .popup-menu {
   opacity: 1;
   visibility: visible;
+  top: 100%;
 }
 
-.popup-menu a {
-  display: block;
-  padding: 8px 12px;
-  text-decoration: none;
-  color: var(--text-color);
-  border-radius: 6px;
-  font-size: 0.9rem;
-  transition: background-color 0.2s ease;
+/* The sub-links inside the popup will be styled as .link-item */
+.popup-menu .link-item {
+  margin: 0;
 }
-
-.popup-menu a:hover {
-  background-color: rgba(0, 0, 0, 0.1);
-}
-
 
 /* ---------------- Weather Widget ---------------- */
 .weather-widget {
