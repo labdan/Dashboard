@@ -240,32 +240,21 @@ header {
   justify-content: center;
   align-items: center;
   margin-bottom: 8px;
-  background-color: rgba(0, 0, 0, 0.05);
-  border: 1px solid rgba(0,0,0,0.08);
+  background: linear-gradient(145deg, #e6e6e6, #ffffff);
+  box-shadow: inset 3px 3px 5px #d4d4d4,
+              inset -3px -3px 5px #ffffff;
+  border: 1px solid rgba(0,0,0,0.05);
   transition: all 0.3s ease;
   font-size: 20px;
   color: var(--text-color);
 }
 
 [data-theme="dark"] .link-icon {
-    background-color: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.1);
+    background: linear-gradient(145deg, #28303e, #30394a);
+    box-shadow: inset 3px 3px 5px #222935,
+                inset -3px -3px 5px #384357;
 }
 
-.link-item:hover .link-icon {
-  transform: translateY(-5px);
-  background-color: var(--card-background);
-  box-shadow: 0 0 20px 5px rgba(74, 111, 165, 0.4);
-}
-
-.link-icon img, .link-icon i {
-    transition: transform 0.3s ease;
-}
-
-.link-item:hover .link-icon img,
-.link-item:hover .link-icon i {
-    transform: scale(1.1);
-}
 
 .link-icon img {
   width: 24px;
@@ -282,11 +271,11 @@ header {
 /* Quick Link Popups */
 .popup-menu {
   position: absolute;
-  top: 110%;
+  top: 110%; /* Position below the main icon */
   left: 50%;
   transform: translateX(-50%);
   background-color: var(--card-background);
-  border-radius: 25px;
+  border-radius: 25px; /* More rounded corners for bar shape */
   box-shadow: var(--shadow);
   padding: 15px;
   z-index: 10;
@@ -295,9 +284,9 @@ header {
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.2s ease, visibility 0.2s ease, top 0.2s ease;
-  display: flex;
+  display: flex; /* Arrange sub-items in a row */
   gap: 15px;
-  width: max-content;
+  width: max-content; /* Make it as wide as its content */
 }
 
 .link-item:hover .popup-menu {
@@ -350,9 +339,9 @@ header {
 .weather-dynamic-content {
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: center; /* Vertically centers the content */
     align-items: center;
-    min-height: 60px;
+    min-height: 60px; /* Ensures container has height */
     flex-grow: 1.5; /* Give it more space */
 }
 
