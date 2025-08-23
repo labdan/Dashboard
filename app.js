@@ -156,10 +156,9 @@ function updateWeatherUI(data) {
     sunsetElement.textContent = new Date(data.current.sunset * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     uvIndexElement.textContent = Math.round(data.current.uvi);
     
-    // The OneCall API provides AQI data directly in the 'current' object if available for the location
-    // We need to call a separate endpoint for it. For simplicity, we'll use a placeholder.
-    // In a real app, you would make another fetch call here to the AQI endpoint.
-    aqiIndexElement.textContent = data.current.aqi || 'N/A'; // Placeholder
+    // AQI data is not in the standard OneCall response, so we'll leave it as a placeholder for now.
+    // A separate API call would be needed for this.
+    aqiIndexElement.textContent = 'N/A';
 
     const forecastContainer = document.getElementById('weather-forecast');
     forecastContainer.innerHTML = '';
