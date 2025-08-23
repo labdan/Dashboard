@@ -14,6 +14,11 @@ exports.handler = async function(event, context) {
     };
   }
 
+  // SECURE DEBUGGING LOG: Let's see what the function is actually getting.
+  const apiKeyPreview = `${API_KEY.substring(0, 4)}...${API_KEY.substring(API_KEY.length - 4)}`;
+  console.log(`Attempting to use API Key ending in: ${apiKeyPreview}`);
+
+
   try {
     const response = await fetch(API_URL, {
       headers: {
