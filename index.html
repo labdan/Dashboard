@@ -12,7 +12,6 @@
     <header>
       <!-- Clock -->
       <div class="time-date header-widget">
-        <!-- Dark Mode Toggle Button -->
         <button class="theme-toggle" id="theme-toggle" title="Toggle Theme">
           <i class="fas fa-moon"></i>
         </button>
@@ -28,8 +27,11 @@
           <input type="text" class="search-input" id="search-input" placeholder="Search the web..." />
           <div class="search-engines" id="search-engines">
             <i class="search-engine-icon fab fa-google active" data-engine="google" title="Google"></i>
+            <!-- ICONS RESTORED HERE -->
             <i class="search-engine-icon fas fa-duck" data-engine="duckduckgo" title="DuckDuckGo"></i>
             <i class="search-engine-icon fas fa-shield-halved" data-engine="brave" title="Brave Search"></i>
+            <i class="search-engine-icon fab fa-microsoft" data-engine="bing" title="Bing"></i>
+            <i class="search-engine-icon fab fa-yahoo" data-engine="yahoo" title="Yahoo"></i>
           </div>
           <button class="search-btn" id="search-btn"><i class="fas fa-search"></i></button>
         </div>
@@ -47,15 +49,12 @@
             <div class="weather-temperature">--°C</div>
             <div class="weather-description">Loading...</div>
           </div>
-          <!-- New container for H/L and Rain -->
-          <div class="weather-dynamic-content">
-            <div class="weather-high-low">
-              <div id="weather-high">H: --°</div>
-              <div id="weather-low">L: --°</div>
-            </div>
-            <div class="chance-of-rain" id="chance-of-rain">--% chance of rain</div>
+          <div class="weather-high-low">
+            <div id="weather-high">H: --°</div>
+            <div id="weather-low">L: --°</div>
           </div>
         </div>
+        <div class="chance-of-rain" id="chance-of-rain">--% chance of rain</div>
         <div class="weather-extra-info">
           <div class="info-item"><i class="fas fa-sun"></i><span id="sunrise-time">--:--</span><small>Sunrise</small></div>
           <div class="info-item"><i class="fas fa-moon"></i><span id="sunset-time">--:--</span><small>Sunset</small></div>
