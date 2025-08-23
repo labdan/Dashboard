@@ -621,8 +621,15 @@ header {
     border-bottom: 1px solid var(--border-color);
 }
 
-.portfolio-value {
+.portfolio-title-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
     margin-bottom: 15px;
+}
+
+.portfolio-value {
+    /* Takes up remaining space */
 }
 
 .value-title {
