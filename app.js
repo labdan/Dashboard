@@ -349,6 +349,11 @@ async function loadStockWatchlist() {
         }
         const portfolioData = await portfolioRes.json();
         const cashData = await cashRes.json();
+
+        // DEBUGGING: Log the raw data from the API
+        console.log('Received Cash Data:', cashData);
+        console.log('Received Portfolio Data:', portfolioData);
+
         const fullPortfolioData = { portfolio: portfolioData, cash: cashData };
         localStorage.setItem('portfolioCache', JSON.stringify({ timestamp: Date.now(), data: fullPortfolioData }));
         renderPortfolio(fullPortfolioData);
@@ -379,7 +384,7 @@ function renderPortfolio(data, error = null) {
     }
 
     if (!data || !data.cash) {
-        renderPortfolio(null, "Invalid data received from API.");
+        renderPortfolio(null, "Invalid data structure received from API.");
         return;
     }
 
@@ -415,10 +420,13 @@ function renderPortfolio(data, error = null) {
     } else {
         portfolioData.forEach(stock => {
             const baseTicker = stock.ticker.split('_')[0].toUpperCase();
-            const isETF = stock.ticker.includes('_DE_'); // Simple check for German ETFs, can be expanded
+            const isETF = stock.ticker.includes('_DE_');
             const logoFolder = isETF ? 'etfs' : 'logos';
             const iconUrl = `https://raw.githubusercontent.com/davidepalazzo/ticker-logos/main/${logoFolder}/${baseTicker}.png`;
             
+            // DEBUGGING: Log the generated URL for each stock logo
+            console.log(`Attempting to load logo for ${baseTicker} from: ${iconUrl}`);
+
             const currentValue = stock.currentPrice * stock.quantity;
             const changeAmount = stock.ppl;
             const initialValue = currentValue - changeAmount;
