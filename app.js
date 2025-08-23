@@ -30,7 +30,7 @@ const calendarContainer = document.getElementById('calendar-container');
 const weatherIconImg = document.getElementById('weather-icon-img');
 const weatherTemp = document.querySelector('.weather-temperature');
 const weatherDesc = document.querySelector('.weather-description');
-const chanceOfRainElement = document.getElementById('chance-of-rain');
+const weatherHighLow = document.getElementById('weather-high-low');
 const sunriseElement = document.getElementById('sunrise-time');
 const sunsetElement = document.getElementById('sunset-time');
 const uvIndexElement = document.getElementById('uv-index');
@@ -150,12 +150,18 @@ function updateWeatherUI(data) {
     weatherDesc.textContent = data.current.weather[0].description;
     weatherIconImg.src = `https://openweathermap.org/img/wn/${data.current.weather[0].icon}@2x.png`;
     
-    chanceOfRainElement.textContent = getRainPrediction(data.hourly, todayForecast);
+    // This element is no longer in the HTML, so we remove the call
+    // chanceOfRainElement.textContent = getRainPrediction(data.hourly, todayForecast);
     
     sunriseElement.textContent = new Date(data.current.sunrise * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     sunsetElement.textContent = new Date(data.current.sunset * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     uvIndexElement.textContent = Math.round(data.current.uvi);
     aqiIndexElement.textContent = 'N/A'; // AQI requires a separate call
+
+    // Update High and Low Temps
+    document.getElementById('weather-high').textContent = `H: ${Math.round(todayForecast.temp.max)}°`;
+    document.getElementById('weather-low').textContent = `L: ${Math.round(todayForecast.temp.min)}°`;
+
 
     const forecastContainer = document.getElementById('weather-forecast');
     forecastContainer.innerHTML = '';
@@ -167,105 +173,12 @@ function updateWeatherUI(data) {
         forecastContainer.appendChild(forecastItem);
     });
 
-    if (data.hourly) {
-        drawTempGraph(data.hourly, data.current.sunrise, data.current.sunset);
-    }
+    // Remove the call to draw the graph
+    // if (data.hourly) {
+    //     drawTempGraph(data.hourly, data.current.sunrise, data.current.sunset);
+    // }
 }
 
-function getRainPrediction(hourlyData, todayForecast) {
-    const nextRainHour = hourlyData.find(hour => hour.pop > 0.3);
-    if (nextRainHour) {
-        const rainTime = new Date(nextRainHour.dt * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-        return `Rain likely around ${rainTime}`;
-    }
-    return `${Math.round(todayForecast.pop * 100)}% chance of rain today`;
-}
-
-function drawTempGraph(hourlyData, sunrise, sunset) {
-    if (!tempChartCanvas) return;
-    const ctx = tempChartCanvas.getContext('2d');
-    if (tempChart) tempChart.destroy();
-    
-    Chart.register(ChartDataLabels);
-
-    // Process data into 2-hour blocks
-    const processedData = [];
-    for (let i = 0; i < 12; i += 2) {
-        const block = hourlyData.slice(i, i + 2);
-        if (block.length > 0) {
-            processedData.push({
-                time: new Date(block[0].dt * 1000),
-                temp: (block[0].temp + (block[1] ? block[1].temp : block[0].temp)) / 2,
-                pop: Math.max(block[0].pop, (block[1] ? block[1].pop : 0))
-            });
-        }
-    }
-
-    const labels = processedData.map(d => {
-        const startHour = d.time.getHours();
-        const endHour = (startHour + 2);
-        return `${startHour}-${endHour}`;
-    });
-    const temps = processedData.map(d => d.temp);
-    const rainChance = processedData.map(d => d.pop > 0.3);
-
-    const nightColor = 'rgba(54, 73, 118, 0.8)';
-    const dayColor = 'rgba(255, 217, 102, 0.8)';
-
-    const backgroundColors = processedData.map(d => {
-        const hour = d.time.getHours();
-        const sunriseHour = new Date(sunrise * 1000).getHours();
-        const sunsetHour = new Date(sunset * 1000).getHours();
-        if (hour < sunriseHour || hour > sunsetHour) return nightColor;
-        const noon = 13;
-        const distanceToNoon = Math.abs(noon - hour);
-        const factor = Math.max(0, 1 - (distanceToNoon / 8));
-        const r = 54 + (255 - 54) * factor;
-        const g = 73 + (217 - 73) * factor;
-        const b = 118 + (102 - 118) * factor;
-        return `rgba(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)}, 0.8)`;
-    });
-
-    tempChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                data: temps,
-                backgroundColor: backgroundColors,
-                borderRadius: 4,
-                barPercentage: 0.7,
-                categoryPercentage: 0.8
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { 
-                legend: { display: false },
-                datalabels: {
-                    display: true,
-                    align: 'top',
-                    anchor: 'end',
-                    offset: -2,
-                    color: (context) => rainChance[context.dataIndex] ? '#2F80ED' : 'var(--text-color)',
-                    font: { size: 10, weight: 'bold' },
-                    formatter: (value) => `${Math.round(value)}°`
-                }
-            },
-            scales: { 
-                x: { 
-                    grid: { display: false },
-                    ticks: { 
-                        font: { size: 9 },
-                        color: 'var(--secondary-color)'
-                    }
-                }, 
-                y: { display: false, beginAtZero: false } 
-            }
-        }
-    });
-}
 
 // --- OTHER UI FUNCTIONS ---
 function updateTimeAndDate() {
