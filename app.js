@@ -244,7 +244,7 @@ async function getWeather() {
             document.querySelector('.weather-description').textContent = description;
             
             // *** FIXED: Update the src of the background icon image ***
-            const iconUrl = `weather_icons/svg/${iconFilename}`;
+            const iconUrl = `weather_icons/${iconFilename}`;
             if(weatherIconBgElement) {
                 weatherIconBgElement.src = iconUrl;
                 weatherIconBgElement.alt = `${description} icon`;
@@ -256,7 +256,7 @@ async function getWeather() {
         document.querySelector('.weather-temperature').textContent = '--°C';
         document.querySelector('.weather-description').textContent = 'Weather unavailable';
         if(weatherIconBgElement) {
-            weatherIconBgElement.src = 'weather_icons/svg/clear-day.svg';
+            weatherIconBgElement.src = 'weather_icons/clear-day.svg';
             weatherIconBgElement.alt = 'Weather unavailable';
         }
     }
