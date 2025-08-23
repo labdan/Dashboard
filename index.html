@@ -18,12 +18,12 @@
   <div class="container">
     <header>
       <!-- Clock -->
-      <div class="time-date">
+      <div class="time-date header-widget">
         <div class="time-display" id="time">00:00:00</div>
         <div class="date-display" id="date">Monday, January 1, 2023</div>
       </div>
 
-      <!-- Search -->
+      <!-- Search Area & Quick Links -->
       <div class="search-area">
         <div class="inspirational-quote" id="quote">
           "The only way to do great work is to love what you do." - Steve Jobs
@@ -46,29 +46,43 @@
             <i class="fas fa-search"></i>
           </button>
         </div>
+        <!-- Quick Links are now under the search bar -->
+        <div class="quick-links-bar">
+          <div class="quick-links" id="quick-links"></div>
+        </div>
       </div>
 
-      <!-- Weather -->
-      <div class="weather-widget" id="weather">
-        <!-- The weather icon is now the background -->
-        <div class="weather-icon-bg" id="weather-icon-bg">
-            <!-- FIXED: Changed path to remove /svg/ -->
-            <img src="/weather_icons/clear-day.svg" alt="Weather background icon" />
-        </div>
-        <div class="weather-content">
-          <div class="weather-temperature">--°C</div>
-          <div class="weather-description">Loading...</div>
-          <div class="weather-location">
-            <i class="fas fa-map-marker-alt"></i> Berlin Halensee
+      <!-- Weather Widget -->
+      <div class="weather-widget header-widget" id="weather">
+        <div class="weather-main">
+          <div class="weather-icon">
+            <img id="weather-icon-img" src="/weather_icons/clear-day.svg" alt="Weather icon" />
           </div>
+          <div class="weather-details">
+            <div class="weather-temperature">--°C</div>
+            <div class="weather-description">Loading...</div>
+            <div class="weather-location">
+              <i class="fas fa-map-marker-alt"></i> Berlin Halensee
+            </div>
+          </div>
+        </div>
+        <div class="weather-extra-info">
+          <div class="info-item">
+            <i class="fas fa-sun"></i>
+            <span id="uv-index">--</span>
+            <small>UV Index</small>
+          </div>
+          <div class="info-item">
+            <i class="fas fa-wind"></i>
+            <span id="aqi-index">--</span>
+            <small>AQI</small>
+          </div>
+        </div>
+        <div class="weather-forecast" id="weather-forecast">
+          <!-- Forecast items will be injected by JS -->
         </div>
       </div>
     </header>
-
-    <!-- Quick Links Bar -->
-    <div class="quick-links-bar">
-      <div class="quick-links" id="quick-links"></div>
-    </div>
 
     <div class="dashboard-grid">
       <!-- To-Do List Widget -->
