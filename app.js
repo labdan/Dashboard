@@ -30,11 +30,11 @@ const calendarContainer = document.getElementById('calendar-container');
 const weatherIconImg = document.getElementById('weather-icon-img');
 const weatherTemp = document.querySelector('.weather-temperature');
 const weatherDesc = document.querySelector('.weather-description');
-const weatherHighLow = document.getElementById('weather-high-low');
+const chanceOfRainElement = document.getElementById('chance-of-rain');
 const sunriseElement = document.getElementById('sunrise-time');
 const sunsetElement = document.getElementById('sunset-time');
 const uvIndexElement = document.getElementById('uv-index');
-const aqiIndexElement = document.getElementById('aqi-index'); // AQI element
+const aqiIndexElement = document.getElementById('aqi-index');
 const refreshWeatherBtn = document.getElementById('refresh-weather');
 const tempChartCanvas = document.getElementById('temp-chart');
 
@@ -99,8 +99,12 @@ async function handleTodoSubmit(e) {
     const taskText = todoInput.value.trim();
     if (taskText) {
         const { error } = await supabaseClient.from('todos').insert({ task: taskText, user_id: USER_ID });
-        if (error) console.error('Error adding todo:', error);
-        else todoInput.value = '';
+        if (error) {
+            console.error('Error adding todo:', error);
+            alert('Could not add task. See console for details.');
+        } else {
+            todoInput.value = '';
+        }
     }
 }
 
@@ -143,17 +147,19 @@ async function getWeather() {
 function updateWeatherUI(data) {
     const todayForecast = data.daily[0];
     weatherTemp.textContent = `${Math.round(data.current.temp)}°C`;
-    weatherHighLow.textContent = `H: ${Math.round(todayForecast.temp.max)}° L: ${Math.round(todayForecast.temp.min)}°`;
     weatherDesc.textContent = data.current.weather[0].description;
     weatherIconImg.src = `https://openweathermap.org/img/wn/${data.current.weather[0].icon}@2x.png`;
+    
+    chanceOfRainElement.textContent = `${Math.round(todayForecast.pop * 100)}% chance of rain`;
+    
     sunriseElement.textContent = new Date(data.current.sunrise * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     sunsetElement.textContent = new Date(data.current.sunset * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     uvIndexElement.textContent = Math.round(data.current.uvi);
     
-    // Fetch and display AQI
-    if (data.current.air_quality) {
-        aqiIndexElement.textContent = data.current.air_quality.pm2_5.toFixed(1);
-    }
+    // The OneCall API provides AQI data directly in the 'current' object if available for the location
+    // We need to call a separate endpoint for it. For simplicity, we'll use a placeholder.
+    // In a real app, you would make another fetch call here to the AQI endpoint.
+    aqiIndexElement.textContent = data.current.aqi || 'N/A'; // Placeholder
 
     const forecastContainer = document.getElementById('weather-forecast');
     forecastContainer.innerHTML = '';

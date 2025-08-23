@@ -342,19 +342,26 @@ header {
   font-weight: 600;
 }
 
-.weather-high-low {
-    font-size: 0.8rem;
-    opacity: 0.8;
-}
-
 .weather-description {
   font-size: 0.9rem;
   text-transform: capitalize;
 }
 
+.weather-dynamic-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
 .weather-graph {
     width: 80px;
     height: 40px;
+}
+
+.chance-of-rain {
+    font-size: 0.8rem;
+    opacity: 0.8;
+    margin-top: 5px;
 }
 
 .weather-extra-info {

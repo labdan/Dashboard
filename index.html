@@ -41,18 +41,20 @@
           <div class="weather-icon"><img id="weather-icon-img" src="" alt="Weather icon" /></div>
           <div class="weather-details">
             <div class="weather-temperature">--°C</div>
-            <div class="weather-high-low" id="weather-high-low">H: --° L: --°</div>
             <div class="weather-description">Loading...</div>
           </div>
-          <div class="weather-graph">
-            <canvas id="temp-chart"></canvas>
+          <!-- Container for Graph and Rain Chance -->
+          <div class="weather-dynamic-content">
+            <div class="weather-graph">
+              <canvas id="temp-chart"></canvas>
+            </div>
+            <div class="chance-of-rain" id="chance-of-rain">--% chance of rain</div>
           </div>
         </div>
         <div class="weather-extra-info">
           <div class="info-item"><i class="fas fa-sun"></i><span id="sunrise-time">--:--</span><small>Sunrise</small></div>
           <div class="info-item"><i class="fas fa-moon"></i><span id="sunset-time">--:--</span><small>Sunset</small></div>
           <div class="info-item"><i class="fas fa-triangle-exclamation"></i><span id="uv-index">--</span><small>UV Index</small></div>
-          <!-- AQI Element Added -->
           <div class="info-item"><i class="fas fa-wind"></i><span id="aqi-index">--</span><small>AQI</small></div>
         </div>
         <div class="weather-forecast" id="weather-forecast"></div>
