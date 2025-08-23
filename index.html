@@ -10,9 +10,7 @@
 <body>
   <div class="container">
     <header>
-      <!-- Clock -->
       <div class="time-date header-widget">
-        <!-- Dark Mode Toggle Button -->
         <button class="theme-toggle" id="theme-toggle" title="Toggle Theme">
           <i class="fas fa-moon"></i>
         </button>
@@ -21,14 +19,13 @@
         <div class="mini-calendar" id="mini-calendar"></div>
       </div>
 
-      <!-- Search Area & Quick Links -->
       <div class="search-area">
         <div class="inspirational-quote" id="quote">"The only way to do great work is to love what you do."</div>
         <div class="search-container">
           <input type="text" class="search-input" id="search-input" placeholder="Search the web..." />
           <div class="search-engines" id="search-engines">
             <i class="search-engine-icon fab fa-google active" data-engine="google" title="Google"></i>
-            <i class="search-engine-icon fas fa-duck" data-engine="duckduckgo" title="DuckDuckGo"></i>
+            <i class="search-engine-icon fab fa-duckduckgo" data-engine="duckduckgo" title="DuckDuckGo"></i>
             <i class="search-engine-icon fas fa-shield-halved" data-engine="brave" title="Brave Search"></i>
             <i class="search-engine-icon fab fa-microsoft" data-engine="bing" title="Bing"></i>
             <i class="search-engine-icon fab fa-yahoo" data-engine="yahoo" title="Yahoo"></i>
@@ -40,7 +37,6 @@
         </div>
       </div>
 
-      <!-- Weather Widget -->
       <div class="weather-widget header-widget" id="weather">
         <button class="refresh-btn" id="refresh-weather"><i class="fas fa-sync-alt"></i></button>
         <div class="weather-main">
@@ -49,7 +45,6 @@
             <div class="weather-temperature">--°C</div>
             <div class="weather-description">Loading...</div>
           </div>
-          <!-- New container for H/L and Rain -->
           <div class="weather-dynamic-content">
             <div class="weather-high-low">
               <div id="weather-high">H: --°</div>
@@ -68,7 +63,6 @@
       </div>
     </header>
 
-    <!-- Dashboard Grid -->
     <div class="dashboard-grid">
       <div class="widget">
         <h2 class="card-title">To-Do List</h2>
@@ -96,7 +90,6 @@
     </footer>
   </div>
 
-  <!-- Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
   <script src="config.js"></script>
