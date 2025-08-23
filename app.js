@@ -321,24 +321,83 @@ function loadStockNews() {
     `).join('');
 }
 
-function loadStockWatchlist() {
-    const stockData = [
-        { symbol: "AAPL", price: 176.55, change: 2.35 },
-        { symbol: "MSFT", price: 337.69, change: -1.24 },
-        { symbol: "GOOGL", price: 130.73, change: 0.85 },
-    ];
-    watchlistContainer.innerHTML = stockData.map(stock => {
-        const isPositive = stock.change >= 0;
-        return `
-            <div class="stock-item">
-                <div class="stock-info"><div class="stock-symbol">${stock.symbol}</div></div>
-                <div class="stock-pricing">
-                    <div class="stock-price">$${stock.price.toFixed(2)}</div>
-                    <div class="stock-change ${isPositive ? 'positive' : 'negative'}">${isPositive ? '+' : ''}${stock.change.toFixed(2)}</div>
+async function loadStockWatchlist() {
+    watchlistContainer.innerHTML = '<div>Loading portfolio...</div>';
+    try {
+        // Fetch portfolio and cash data in parallel for speed
+        const [portfolioRes, cashRes] = await Promise.all([
+            fetch('/.netlify/functions/get-portfolio'),
+            fetch('/.netlify/functions/get-cash')
+        ]);
+
+        if (!portfolioRes.ok || !cashRes.ok) {
+            throw new Error(`Failed to fetch portfolio data.`);
+        }
+
+        const portfolioData = await portfolioRes.json();
+        const cashData = await cashRes.json();
+        const cashValue = cashData.cash || 0;
+
+        // Calculate total investment value
+        const investmentValue = portfolioData.reduce((acc, stock) => acc + (stock.currentPrice * stock.quantity), 0);
+        const totalPortfolioValue = investmentValue + cashValue;
+
+        // Start building the HTML
+        let watchlistHTML = `
+            <div class="portfolio-header">
+                <div class="portfolio-value">
+                    <div class="value-title">Value</div>
+                    <div class="value-amount">€${totalPortfolioValue.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                 </div>
-            </div>
-        `;
-    }).join('');
+                <div class="portfolio-details">
+                    <div class="detail-item">
+                        <div class="detail-title">Cash</div>
+                        <div class="detail-amount">€${cashValue.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-title">Investments</div>
+                        <div class="detail-amount">€${investmentValue.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                    </div>
+                </div>
+            </div>`;
+        
+        // Add each stock item
+        portfolioData.forEach(stock => {
+            const tickerKey = stock.ticker.toUpperCase();
+            // Try to get a specific icon from config, otherwise generate the URL dynamically
+            const iconUrl = config.trading212.iconUrls[tickerKey] || `https://s3-symbol-logo.trading212.com/symbols/${tickerKey}.png`;
+            
+            const currentValue = stock.currentPrice * stock.quantity;
+            const changeAmount = stock.ppl;
+            const initialValue = currentValue - changeAmount;
+            const changePercent = initialValue === 0 ? 0 : (changeAmount / initialValue) * 100;
+            const isPositive = changeAmount >= 0;
+
+            watchlistHTML += `
+                <div class="stock-item-new">
+                    <div class="stock-icon-new">
+                        <img src="${iconUrl}" alt="${stock.ticker}" onerror="this.src='https://www.google.com/favicon.ico'; this.onerror=null;">
+                    </div>
+                    <div class="stock-info-new">
+                        <div class="stock-name-new">${stock.ticker.replace(/_/g, ' ')}</div>
+                        <div class="stock-shares">${stock.quantity} SHARES</div>
+                    </div>
+                    <div class="stock-pricing-new">
+                        <div class="stock-value">€${currentValue.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                        <div class="stock-change-new ${isPositive ? 'positive' : 'negative'}">
+                            ${isPositive ? '+' : ''}€${changeAmount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${changePercent.toFixed(2)}%)
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        watchlistContainer.innerHTML = watchlistHTML;
+
+    } catch (error) {
+        console.error('Error fetching stock watchlist:', error);
+        watchlistContainer.innerHTML = `<div class="error-message" style="padding: 20px;">Could not load portfolio data.</div>`;
+    }
 }
 
 function renderCalendar() {
