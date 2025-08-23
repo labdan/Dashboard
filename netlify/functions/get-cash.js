@@ -5,11 +5,12 @@ exports.handler = async function(event, context) {
   // Using a new environment variable name to bypass potential caching issues.
   const API_KEY = process.env.T212_API_KEY;
 
-  if (!API_KEY) {
-    console.error('CRITICAL: T212_API_KEY environment variable is not set in Netlify.');
+  // Added a check to ensure the key is a string, which helps debug configuration issues.
+  if (!API_KEY || typeof API_KEY !== 'string') {
+    console.error(`CRITICAL: T212_API_KEY is not set or is not a string. Type: ${typeof API_KEY}`);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Trading 212 API key is not configured.' }),
+      body: JSON.stringify({ error: 'Trading 212 API key is not configured correctly.' }),
     };
   }
 
@@ -18,7 +19,8 @@ exports.handler = async function(event, context) {
     path: '/api/v0/equity/account/cash',
     method: 'GET',
     headers: {
-      'Authorization': `Bearer ${API_KEY}`
+      'Authorization': `Bearer ${API_KEY}`,
+      'User-Agent': 'Productivity Dashboard/1.0' // Added a User-Agent header
     }
   };
 
