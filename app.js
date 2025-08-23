@@ -2,8 +2,8 @@
 
 // --- CONFIGURATION ---
 // We no longer need the API key here. It's now handled by the Netlify Function.
-const LAT = 52.5200;
-const LON = 13.4050;
+const LAT = 52.2742;
+const LON = 13.1713;
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
 
 // --- DOM ELEMENTS ---
@@ -76,8 +76,6 @@ async function getWeather() {
     }
 
     try {
-        // *** THIS IS THE MAIN CHANGE ***
-        // We now fetch from our own serverless function endpoint.
         const response = await fetch('/.netlify/functions/get-weather');
         
         if (!response.ok) {
@@ -101,7 +99,6 @@ async function getWeather() {
 }
 
 function updateWeatherUI(data) {
-    // UI update logic remains the same
     weatherTemp.textContent = `${Math.round(data.current.temp)}°C`;
     weatherDesc.textContent = data.current.weather[0].description;
     weatherIconImg.src = `https://openweathermap.org/img/wn/${data.current.weather[0].icon}@2x.png`;
@@ -125,7 +122,6 @@ function updateWeatherUI(data) {
 }
 
 // --- OTHER FUNCTIONS ---
-// (All other functions like updateTimeAndDate, renderMiniCalendar, etc. remain the same)
 
 function updateTimeAndDate() {
     const now = new Date();
@@ -241,9 +237,74 @@ todoList.addEventListener('click', (e) => {
     loadTodos();
 });
 
-function loadStockNews() { /* Simulated data */ }
-function loadStockWatchlist() { /* Simulated data */ }
-function renderCalendar() { /* Simulated data */ }
+// *** FIXED: Restored simulated data functions ***
+function loadStockNews() {
+    const newsData = [
+        { title: "Markets Rally on Lower Than Expected Inflation Data", date: "2h ago" },
+        { title: "Tech Giants Report Strong Quarterly Earnings", date: "4h ago" },
+        { title: "Fed Holds Interest Rates Steady, Signals Cuts", date: "6h ago" }
+    ];
+    newsContainer.innerHTML = newsData.map(news => `
+        <div class="news-item">
+            <a href="#" class="news-title">${news.title}</a>
+            <div class="news-date">${news.date}</div>
+        </div>
+    `).join('');
+}
+
+function loadStockWatchlist() {
+    const stockData = [
+        { symbol: "AAPL", price: 176.55, change: 2.35 },
+        { symbol: "MSFT", price: 337.69, change: -1.24 },
+        { symbol: "GOOGL", price: 130.73, change: 0.85 },
+        { symbol: "AMZN", price: 139.97, change: 3.21 },
+        { symbol: "TSLA", price: 240.45, change: -7.63 }
+    ];
+    watchlistContainer.innerHTML = stockData.map(stock => {
+        const isPositive = stock.change >= 0;
+        return `
+            <div class="stock-item">
+                <div class="stock-info">
+                    <div class="stock-symbol">${stock.symbol}</div>
+                </div>
+                <div class="stock-pricing">
+                    <div class="stock-price">$${stock.price.toFixed(2)}</div>
+                    <div class="stock-change ${isPositive ? 'positive' : 'negative'}">
+                        ${isPositive ? '+' : ''}${stock.change.toFixed(2)}
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderCalendar() {
+    const today = new Date();
+    const month = today.getMonth();
+    const year = today.getFullYear();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    
+    let calendarHTML = `
+        <div class="calendar-header">
+            <div class="calendar-month">${monthNames[month]} ${year}</div>
+        </div>
+        <div class="calendar-grid">
+    `;
+    const weekdays = ["S", "M", "T", "W", "T", "F", "S"];
+    weekdays.forEach(day => {
+        calendarHTML += `<div class="calendar-day calendar-weekday">${day}</div>`;
+    });
+
+    for (let i = 1; i <= daysInMonth; i++) {
+        const isToday = i === today.getDate() ? 'current-date' : '';
+        calendarHTML += `<div class="calendar-day"><div class="calendar-date ${isToday}">${i}</div></div>`;
+    }
+
+    calendarHTML += '</div>';
+    calendarContainer.innerHTML = calendarHTML;
+}
 
 // --- START THE APP ---
 init();
