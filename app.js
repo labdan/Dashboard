@@ -393,7 +393,7 @@ function renderPortfolio(data, error = null) {
         return;
     }
 
-    // NEW: Handle cases where data is null or malformed, but there's no explicit error.
+    // Handle cases where data is null or malformed, but there's no explicit error.
     if (!data || !data.portfolio || !data.cash) {
         const cashValue = (data && data.cash && data.cash.cash) || 0;
         const totalPortfolioValue = cashValue;
@@ -422,12 +422,13 @@ function renderPortfolio(data, error = null) {
         return;
     }
 
-
     const portfolioData = data.portfolio;
-    const cashValue = data.cash.cash || 0;
+    const cashData = data.cash;
 
-    const investmentValue = portfolioData.reduce((acc, stock) => acc + (stock.currentPrice * stock.quantity), 0);
-    const totalPortfolioValue = investmentValue + cashValue;
+    // Use the accurate values directly from the cash API response.
+    const cashValue = cashData.free || 0;
+    const investmentValue = cashData.invested || 0;
+    const totalPortfolioValue = cashData.total || 0;
 
     let watchlistHTML = `
         <div class="portfolio-header">
@@ -455,8 +456,8 @@ function renderPortfolio(data, error = null) {
     } else {
         portfolioData.forEach(stock => {
             const tickerKey = stock.ticker.toUpperCase();
-            // NEW: Safely access iconUrls to prevent the error
-            const iconUrl = (config.trading212 && config.trading212.iconUrls && config.trading212.iconUrls[tickerKey]) || `https://s3-symbol-logo.trading212.com/symbols/${tickerKey}.png`;
+            // AUTOMATED: Generate the logo URL directly from the ticker.
+            const iconUrl = `https://s3-symbol-logo.trading212.com/symbols/${tickerKey}.png`;
             
             const currentValue = stock.currentPrice * stock.quantity;
             const changeAmount = stock.ppl;
