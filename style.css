@@ -728,6 +728,20 @@ header {
 .positive { color: var(--success-color); }
 .negative { color: var(--danger-color); }
 
+.no-investments {
+    padding: 20px;
+    text-align: center;
+    color: var(--secondary-color);
+}
+
+.error-message small {
+    display: block;
+    margin-top: 10px;
+    font-size: 0.8rem;
+    color: var(--secondary-color);
+    word-break: break-word;
+}
+
 /* ---------------- Calendar ---------------- */
 .calendar-header {
   display: flex;
