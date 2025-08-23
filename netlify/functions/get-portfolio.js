@@ -12,7 +12,7 @@ exports.handler = async function(event, context) {
   // This line is temporarily disabled for the test.
   // const API_KEY = process.env.T212_API_KEY;
 
-  if (!API_KEY || API_KEY === '38260697ZtLIKWcZsIknUhHbziHzoBDbidgGF') {
+  if (!API_KEY || API_KEY === 'PASTE_YOUR_API_KEY_HERE') {
     console.error('CRITICAL: API key is not hardcoded for the test.');
     return {
       statusCode: 500,
