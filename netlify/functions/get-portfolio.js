@@ -1,6 +1,5 @@
 // netlify/functions/get-portfolio.js
-// Using dynamic import for node-fetch
-const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
+const fetch = require('node-fetch');
 
 exports.handler = async function(event, context) {
   const API_KEY = process.env.TRADING212_API_KEY;
@@ -13,13 +12,10 @@ exports.handler = async function(event, context) {
       body: JSON.stringify({ error: 'Trading 212 API key is not configured.' }),
     };
   }
-
-  // SECURE DEBUGGING LOG: Let's see what the function is actually getting.
-  const apiKeyPreview = `${API_KEY.substring(0, 4)}...${API_KEY.substring(API_KEY.length - 4)}`;
-  console.log(`Attempting to use API Key ending in: ${apiKeyPreview}`);
-
+  
   try {
     const response = await fetch(API_URL, {
+      method: 'GET',
       headers: {
         'Authorization': `Bearer ${API_KEY}`
       }
