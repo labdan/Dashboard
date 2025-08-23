@@ -1,9 +1,8 @@
 // app.js
 
 // --- CONFIGURATION ---
-// We no longer need the API key here. It's now handled by the Netlify Function.
-const LAT = 52.2742;
-const LON = 13.1713;
+const LAT = 52.5200;
+const LON = 13.4050;
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
 
 // --- DOM ELEMENTS ---
@@ -36,13 +35,10 @@ let currentSearchEngine = 'google';
 
 // --- INITIALIZATION ---
 function init() {
-    // Regular UI Updates
     updateTimeAndDate();
     setInterval(updateTimeAndDate, 1000);
     updateQuote();
     setInterval(updateQuote, 10000);
-
-    // Load static and dynamic content
     renderMiniCalendar();
     loadQuickLinks();
     loadTodos();
@@ -66,6 +62,79 @@ function init() {
     });
 }
 
+// --- QUICK LINKS ---
+function loadQuickLinks() {
+    const quickLinksData = [
+        { name: "Gmail", url: "https://mail.google.com", icon: "https://ssl.gstatic.com/ui/v1/icons/mail/rfr/gmail.ico" },
+        { name: "Drive", url: "https://drive.google.com", icon: "https://ssl.gstatic.com/images/branding/product/2x/drive_2020q4_48dp.png" },
+        { name: "Udemy", url: "https://www.udemy.com", icon: "https://www.udemy.com/favicon.ico" },
+        { name: "FMHY", url: "https://fmhy.net", icon: "https://fmhy.net/favicon.ico" },
+        {
+            name: "Media",
+            icon: "fas fa-tv", // FontAwesome class
+            subLinks: [
+                { name: "YouTube", url: "https://youtube.com" },
+                { name: "Cineby", url: "https://www.cineby.app/" },
+                { name: "MMA Full", url: "https://watchmmafull.com/" },
+                { name: "NBA Streams", url: "https://top.rnbastreams.com/" },
+                { name: "1337x", url: "https://1337x.to/" }
+            ]
+        },
+        { name: "Trading212", url: "https://app.trading212.com/", icon: "https://www.trading212.com/favicon.ico" },
+        { name: "X.com", url: "https://x.com", icon: "https://abs.twimg.com/favicons/twitter.ico" },
+        {
+            name: "AI",
+            icon: "fas fa-robot", // FontAwesome class
+            subLinks: [
+                { name: "Gemini", url: "https://gemini.google.com/" },
+                { name: "ChatGPT", url: "https://chat.openai.com/" },
+                { name: "DeepSeek", url: "https://chat.deepseek.com/" },
+                { name: "Perplexity", url: "https://www.perplexity.ai/" }
+            ]
+        },
+        { name: "Reddit", url: "https://www.reddit.com", icon: "https://www.redditstatic.com/desktop-assets/Reddit-Favicon-32x32.png" }
+    ];
+
+    quickLinksContainer.innerHTML = ''; // Clear existing links
+
+    quickLinksData.forEach(link => {
+        const linkItem = document.createElement('div');
+        linkItem.className = 'link-item';
+
+        // Icon can be an image or a FontAwesome class
+        const iconHTML = link.icon.startsWith('fas') || link.icon.startsWith('fab')
+            ? `<i class="${link.icon}"></i>`
+            : `<img src="${link.icon}" alt="${link.name} icon" onerror="this.src='https://www.google.com/favicon.ico'">`;
+
+        // If it has sublinks, create a popup menu
+        if (link.subLinks) {
+            const subLinksHTML = link.subLinks.map(sub => 
+                `<a href="${sub.url}" target="_blank">${sub.name}</a>`
+            ).join('');
+
+            linkItem.innerHTML = `
+                <div class="link-icon">${iconHTML}</div>
+                <span class="link-name">${link.name}</span>
+                <div class="popup-menu">${subLinksHTML}</div>
+            `;
+        } else {
+            // Otherwise, create a regular link
+            const anchor = document.createElement('a');
+            anchor.href = link.url;
+            anchor.className = 'link-item-anchor'; // Use a wrapper to make the whole item clickable
+            anchor.target = '_blank';
+            anchor.title = link.name;
+            anchor.innerHTML = `
+                <div class="link-icon">${iconHTML}</div>
+                <span class="link-name">${link.name}</span>
+            `;
+            linkItem.appendChild(anchor);
+        }
+        quickLinksContainer.appendChild(linkItem);
+    });
+}
+
+
 // --- WEATHER ---
 async function getWeather() {
     const cachedData = JSON.parse(localStorage.getItem('weatherCache'));
@@ -77,21 +146,10 @@ async function getWeather() {
 
     try {
         const response = await fetch('/.netlify/functions/get-weather');
-        
-        if (!response.ok) {
-            throw new Error(`Netlify function failed with status ${response.status}`);
-        }
-        
+        if (!response.ok) throw new Error(`Netlify function failed with status ${response.status}`);
         const data = await response.json();
-
-        const cache = {
-            timestamp: Date.now(),
-            data: data
-        };
-        localStorage.setItem('weatherCache', JSON.stringify(cache));
-
+        localStorage.setItem('weatherCache', JSON.stringify({ timestamp: Date.now(), data: data }));
         updateWeatherUI(data);
-
     } catch (error) {
         console.error('Error fetching weather:', error.message);
         weatherDesc.textContent = 'Weather unavailable';
@@ -186,21 +244,6 @@ function setSearchEngine(engine) {
     });
 }
 
-function loadQuickLinks() {
-    const defaultLinks = [
-        { name: "Gmail", url: "https://mail.google.com", icon: "https://ssl.gstatic.com/ui/v1/icons/mail/rfr/gmail.ico" },
-        { name: "Drive", url: "https://drive.google.com", icon: "https://ssl.gstatic.com/images/branding/product/2x/drive_2020q4_48dp.png" },
-        { name: "YouTube", url: "https://youtube.com", icon: "https://www.youtube.com/s/desktop/014dbbed/img/favicon_48x48.png" }
-    ];
-    let links = JSON.parse(localStorage.getItem('quickLinks')) || defaultLinks;
-    quickLinksContainer.innerHTML = links.map(link => `
-        <a href="${link.url}" class="link-item" target="_blank" title="${link.name}">
-            <div class="link-icon"><img src="${link.icon}" alt="${link.name} icon" onerror="this.src='https://www.google.com/favicon.ico'"></div>
-            <span class="link-name">${link.name}</span>
-        </a>
-    `).join('');
-}
-
 function loadTodos() {
     let todos = JSON.parse(localStorage.getItem('todos')) || [];
     todoList.innerHTML = '';
@@ -237,7 +280,6 @@ todoList.addEventListener('click', (e) => {
     loadTodos();
 });
 
-// *** FIXED: Restored simulated data functions ***
 function loadStockNews() {
     const newsData = [
         { title: "Markets Rally on Lower Than Expected Inflation Data", date: "2h ago" },

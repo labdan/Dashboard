@@ -65,7 +65,7 @@ header {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  position: relative; /* For positioning refresh button */
+  position: relative;
 }
 
 /* Clock (Time/Date) */
@@ -161,7 +161,7 @@ header {
   border: none;
   outline: none;
   font-size: 1rem;
-  padding-right: 150px; /* Space for icons */
+  padding-right: 150px;
   background: transparent;
   color: var(--text-color);
 }
@@ -230,6 +230,7 @@ header {
   text-decoration: none;
   color: var(--text-color);
   transition: transform 0.3s ease;
+  position: relative; /* Needed for popup positioning */
 }
 
 .link-item:hover .link-icon {
@@ -248,6 +249,7 @@ header {
   background: radial-gradient(circle at center, transparent 55%, rgba(74, 111, 165, 0.2) 100%);
   border: 1px solid rgba(74, 111, 165, 0.3);
   transition: all 0.3s ease;
+  font-size: 20px; /* For FontAwesome icons */
 }
 
 .link-icon img {
@@ -261,6 +263,45 @@ header {
   text-align: center;
   font-weight: 500;
 }
+
+/* Quick Link Popups */
+.popup-menu {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--card-background);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  padding: 8px;
+  width: 160px;
+  z-index: 10;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.link-item:hover .popup-menu {
+  opacity: 1;
+  visibility: visible;
+}
+
+.popup-menu a {
+  display: block;
+  padding: 8px 12px;
+  text-decoration: none;
+  color: var(--text-color);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  transition: background-color 0.2s ease;
+}
+
+.popup-menu a:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
 
 /* ---------------- Weather Widget ---------------- */
 .weather-widget {
