@@ -10,12 +10,14 @@
 <body>
   <div class="container">
     <header>
-      <!-- Header content remains the same -->
+      <!-- Clock -->
       <div class="time-date header-widget">
         <div class="time-display" id="time">00:00:00</div>
         <div class="date-display" id="date">Monday, January 1, 2023</div>
         <div class="mini-calendar" id="mini-calendar"></div>
       </div>
+
+      <!-- Search Area & Quick Links -->
       <div class="search-area">
         <div class="inspirational-quote" id="quote">"The only way to do great work is to love what you do."</div>
         <div class="search-container">
@@ -31,14 +33,21 @@
           <div class="quick-links" id="quick-links"></div>
         </div>
       </div>
+
+      <!-- Weather Widget -->
       <div class="weather-widget header-widget" id="weather">
         <button class="refresh-btn" id="refresh-weather"><i class="fas fa-sync-alt"></i></button>
         <div class="weather-main">
           <div class="weather-icon"><img id="weather-icon-img" src="" alt="Weather icon" /></div>
           <div class="weather-details">
             <div class="weather-temperature">--°C</div>
+            <!-- High/Low Temps Added -->
+            <div class="weather-high-low" id="weather-high-low">H: --° L: --°</div>
             <div class="weather-description">Loading...</div>
-            <div class="weather-location"><i class="fas fa-map-marker-alt"></i> Berlin, DE</div>
+          </div>
+          <!-- Canvas for the graph -->
+          <div class="weather-graph">
+            <canvas id="temp-chart"></canvas>
           </div>
         </div>
         <div class="weather-extra-info">
@@ -50,25 +59,17 @@
       </div>
     </header>
 
-    <!-- *** NEW DASHBOARD LAYOUT *** -->
+    <!-- Dashboard Grid -->
     <div class="dashboard-grid">
-      <!-- Left Column -->
       <div class="widget">
         <h2 class="card-title">To-Do List</h2>
-        <form class="todo-form" id="todo-form">
-          <input type="text" class="todo-input" id="todo-input" placeholder="Add a new task..." required />
-          <button type="submit" class="add-btn">Add</button>
-        </form>
+        <form class="todo-form" id="todo-form"><input type="text" class="todo-input" id="todo-input" placeholder="Add a new task..." required /><button type="submit" class="add-btn">Add</button></form>
         <ul class="todo-list" id="todo-list"></ul>
       </div>
-
-      <!-- Center Column -->
       <div class="widget">
         <h2 class="card-title">Stock Market News<button class="refresh-btn" id="refresh-news"><i class="fas fa-sync-alt"></i></button></h2>
         <div class="news-container" id="news-container"></div>
       </div>
-
-      <!-- Right Column (Wrapper for stacking) -->
       <div class="right-column-widgets">
         <div class="widget">
           <h2 class="card-title">Stocks Watchlist<button class="refresh-btn" id="refresh-stocks"><i class="fas fa-sync-alt"></i></button></h2>
@@ -86,8 +87,9 @@
     </footer>
   </div>
 
-  <!-- Supabase Client Library -->
+  <!-- Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   
   <script src="config.js"></script>
   <script src="app.js"></script>

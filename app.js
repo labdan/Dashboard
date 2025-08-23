@@ -5,7 +5,7 @@ if (typeof config === 'undefined') {
     alert("Configuration file (config.js) is missing or not loaded.");
 }
 const { url: SUPABASE_URL, anonKey: SUPABASE_ANON_KEY } = config.supabase;
-const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes for weather cache
+const CACHE_DURATION = 30 * 60 * 1000;
 
 // --- SUPABASE CLIENT ---
 const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -14,29 +14,127 @@ const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const timeElement = document.getElementById('time');
 const dateElement = document.getElementById('date');
 const miniCalendarContainer = document.getElementById('mini-calendar');
-const quoteElement = document.getElementById('quote');
-const searchInput = document.getElementById('search-input');
-const searchBtn = document.getElementById('search-btn');
-const searchEngineIcons = document.querySelectorAll('.search-engine-icon');
-const quickLinksContainer = document.getElementById('quick-links');
+const weatherHighLow = document.getElementById('weather-high-low');
+const tempChartCanvas = document.getElementById('temp-chart');
+// ... other DOM elements
 const todoForm = document.getElementById('todo-form');
 const todoInput = document.getElementById('todo-input');
 const todoList = document.getElementById('todo-list');
-const newsContainer = document.getElementById('news-container');
-const watchlistContainer = document.getElementById('watchlist-container');
-const calendarContainer = document.getElementById('calendar-container');
-const weatherIconImg = document.getElementById('weather-icon-img');
-const weatherTemp = document.querySelector('.weather-temperature');
-const weatherDesc = document.querySelector('.weather-description');
-const sunriseElement = document.getElementById('sunrise-time');
-const sunsetElement = document.getElementById('sunset-time');
-const uvIndexElement = document.getElementById('uv-index');
-const refreshWeatherBtn = document.getElementById('refresh-weather');
+
+// --- STATE ---
+let tempChart = null; // To hold the chart instance
+
+// --- INITIALIZATION ---
+async function init() {
+    // ... (rest of init function is the same)
+    
+    // Load and subscribe to To-Do list changes
+    await loadTodos();
+    subscribeToTodoChanges();
+
+    // Event Listeners
+    setupEventListeners();
+}
+
+// --- WEATHER ---
+async function getWeather() {
+    // ... (caching logic is the same)
+
+    try {
+        const response = await fetch('/.netlify/functions/get-weather');
+        if (!response.ok) throw new Error(`Netlify function failed: ${response.statusText}`);
+        const data = await response.json();
+        localStorage.setItem('weatherCache', JSON.stringify({ timestamp: Date.now(), data: data }));
+        updateWeatherUI(data);
+    } catch (error) {
+        console.error('Error fetching weather:', error.message);
+        document.querySelector('.weather-description').textContent = 'Weather unavailable';
+    }
+}
+
+function updateWeatherUI(data) {
+    const todayForecast = data.daily[0];
+
+    // Update main temperature and high/low
+    document.querySelector('.weather-temperature').textContent = `${Math.round(data.current.temp)}°C`;
+    weatherHighLow.textContent = `H: ${Math.round(todayForecast.temp.max)}° L: ${Math.round(todayForecast.temp.min)}°`;
+    
+    // ... (update description, icon, sunrise, sunset, etc.)
+    document.querySelector('.weather-description').textContent = data.current.weather[0].description;
+    document.getElementById('weather-icon-img').src = `https://openweathermap.org/img/wn/${data.current.weather[0].icon}@2x.png`;
+    document.getElementById('sunrise-time').textContent = new Date(data.current.sunrise * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    document.getElementById('sunset-time').textContent = new Date(data.current.sunset * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    document.getElementById('uv-index').textContent = Math.round(data.current.uvi);
+    
+    // Update 7-day forecast
+    const forecastContainer = document.getElementById('weather-forecast');
+    forecastContainer.innerHTML = '';
+    data.daily.slice(1, 8).forEach(day => {
+        const dayName = new Date(day.dt * 1000).toLocaleDateString('en-US', { weekday: 'short' });
+        const forecastItem = document.createElement('div');
+        forecastItem.className = 'forecast-item';
+        forecastItem.innerHTML = `
+            <div class="forecast-day">${dayName}</div>
+            <img src="https://openweathermap.org/img/wn/${day.weather[0].icon}.png" alt="${day.weather[0].description}">
+            <div class="forecast-temp">${Math.round(day.temp.max)}°</div>
+        `;
+        forecastContainer.appendChild(forecastItem);
+    });
+
+    // Draw the temperature graph
+    drawTempGraph(data.hourly);
+}
+
+function drawTempGraph(hourlyData) {
+    const ctx = tempChartCanvas.getContext('2d');
+    
+    // Destroy previous chart instance if it exists
+    if (tempChart) {
+        tempChart.destroy();
+    }
+
+    // Get the next 12 hours of temperature data
+    const labels = hourlyData.slice(0, 12).map(h => new Date(h.dt * 1000).getHours());
+    const temps = hourlyData.slice(0, 12).map(h => h.temp);
+
+    tempChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: temps,
+                borderColor: 'rgba(74, 111, 165, 0.8)',
+                borderWidth: 2,
+                tension: 0.4, // Makes the line smooth
+                pointRadius: 0 // Hides the dots on the line
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false // Hides the legend
+                }
+            },
+            scales: {
+                x: {
+                    display: false // Hides the x-axis labels
+                },
+                y: {
+                    display: false // Hides the y-axis labels
+                }
+            }
+        }
+    });
+}
+
+
+// --- All other functions (init, setupEventListeners, To-Do, etc.) remain the same ---
+// (The rest of your app.js code goes here)
 
 // --- STATE ---
 let currentSearchEngine = 'google';
-// For now, we'll use a hardcoded user ID.
-// In a real app, this would come from Supabase Auth: supabase.auth.user().id
 const USER_ID = '12345678-1234-1234-1234-1234567890ab'; 
 
 // --- INITIALIZATION ---
@@ -87,7 +185,6 @@ async function loadTodos() {
     const { data: todos, error } = await supabase
         .from('todos')
         .select('*')
-        //.eq('user_id', USER_ID) // Uncomment this line when you have user auth
         .order('created_at', { ascending: false });
 
     if (error) {
@@ -132,7 +229,6 @@ async function handleTodoClick(e) {
     const todoId = item.dataset.id;
     const isComplete = item.querySelector('.todo-checkbox').checked;
 
-    // Toggle completion status
     if (e.target.matches('.todo-checkbox, .todo-text')) {
         await supabase
             .from('todos')
@@ -140,7 +236,6 @@ async function handleTodoClick(e) {
             .eq('id', todoId);
     }
 
-    // Delete task
     if (e.target.closest('.delete-btn')) {
         await supabase
             .from('todos')
@@ -152,27 +247,145 @@ async function handleTodoClick(e) {
 function subscribeToTodoChanges() {
     supabase.channel('todos')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, payload => {
-            loadTodos(); // Reload the list on any change
+            loadTodos();
         })
         .subscribe();
 }
 
+function loadQuickLinks() {
+    const quickLinksData = [
+        { name: "Gmail", url: "https://mail.google.com", icon: "https://ssl.gstatic.com/ui/v1/icons/mail/rfr/gmail.ico" },
+        { name: "Drive", url: "https://drive.google.com", icon: "https://ssl.gstatic.com/images/branding/product/2x/drive_2020q4_48dp.png" },
+        { name: "Udemy", url: "https://www.udemy.com", icon: "https://www.udemy.com/favicon.ico" },
+        { name: "FMHY", url: "https://fmhy.net", icon: "https://fmhy.net/favicon.ico" },
+        {
+            name: "Media",
+            icon: "fas fa-tv",
+            subLinks: [
+                { name: "YouTube", url: "https://youtube.com" },
+                { name: "Cineby", url: "https://www.cineby.app/" },
+                { name: "MMA Full", url: "https://watchmmafull.com/" },
+                { name: "NBA Streams", url: "https://top.rnbastreams.com/" },
+                { name: "1337x", url: "https://1337x.to/" }
+            ]
+        },
+        { name: "Trading212", url: "https://app.trading212.com/", icon: "https://www.trading212.com/favicon.ico" },
+        { name: "X.com", url: "https://x.com", icon: "https://abs.twimg.com/favicons/twitter.ico" },
+        {
+            name: "AI",
+            icon: "fas fa-robot",
+            subLinks: [
+                { name: "Gemini", url: "https://gemini.google.com/" },
+                { name: "ChatGPT", url: "https://chat.openai.com/" },
+                { name: "DeepSeek", url: "https://chat.deepseek.com/" },
+                { name: "Perplexity", url: "https://www.perplexity.ai/" }
+            ]
+        },
+        { name: "Reddit", url: "https://www.reddit.com", icon: "https://www.redditstatic.com/desktop-assets/Reddit-Favicon-32x32.png" }
+    ];
 
-// --- OTHER FUNCTIONS ---
+    quickLinksContainer.innerHTML = '';
 
-function loadQuickLinks() { /* Same as before */ }
-async function getWeather() { /* Same as before */ }
-function updateWeatherUI(data) { /* Same as before */ }
-function updateTimeAndDate() { /* Same as before */ }
-function renderMiniCalendar() { /* Same as before */ }
-function updateQuote() { /* Same as before */ }
-function handleSearch() { /* Same as before */ }
-function setSearchEngine(engine) { /* Same as before */ }
-function loadStockNews() { /* Same as before */ }
-function loadStockWatchlist() { /* Same as before */ }
-function renderCalendar() { /* Same as before */ }
+    quickLinksData.forEach(link => {
+        const linkItemWrapper = document.createElement('div');
+        linkItemWrapper.className = 'link-item';
 
-// Re-add the placeholder functions that were removed
+        const iconHTML = link.icon.startsWith('fas') || link.icon.startsWith('fab')
+            ? `<i class="${link.icon}"></i>`
+            : `<img src="${link.icon}" alt="${link.name} icon" onerror="this.src='https://www.google.com/favicon.ico'">`;
+
+        if (link.subLinks) {
+            const subLinksHTML = link.subLinks.map(sub => {
+                const faviconUrl = `https://www.google.com/s2/favicons?domain=${new URL(sub.url).hostname}&sz=32`;
+                return `
+                    <a href="${sub.url}" class="link-item" target="_blank" title="${sub.name}">
+                        <div class="link-icon"><img src="${faviconUrl}" alt="${sub.name} icon" onerror="this.src='https://www.google.com/favicon.ico'"></div>
+                        <span class="link-name">${sub.name}</span>
+                    </a>
+                `;
+            }).join('');
+
+            linkItemWrapper.innerHTML = `
+                <div class="link-icon">${iconHTML}</div>
+                <span class="link-name">${link.name}</span>
+                <div class="popup-menu">${subLinksHTML}</div>
+            `;
+        } else {
+            linkItemWrapper.innerHTML = `
+                <a href="${link.url}" target="_blank" title="${link.name}">
+                    <div class="link-icon">${iconHTML}</div>
+                    <span class="link-name">${link.name}</span>
+                </a>
+            `;
+            linkItemWrapper.querySelector('a').classList.add('link-item');
+        }
+        quickLinksContainer.appendChild(linkItemWrapper);
+    });
+}
+
+function updateTimeAndDate() {
+    const now = new Date();
+    timeElement.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    dateElement.textContent = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+function renderMiniCalendar() {
+    const today = new Date();
+    const month = today.getMonth();
+    const year = today.getFullYear();
+    const firstDayOfMonth = new Date(year, month, 1);
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const startingDay = (firstDayOfMonth.getDay() + 6) % 7;
+
+    let calendarHTML = '';
+    const dayNames = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    dayNames.forEach(day => {
+        calendarHTML += `<div class="mini-calendar-cell mini-calendar-day-name">${day}</div>`;
+    });
+
+    for (let i = 0; i < startingDay; i++) {
+        calendarHTML += `<div class="mini-calendar-cell"></div>`;
+    }
+
+    for (let i = 1; i <= daysInMonth; i++) {
+        const isToday = i === today.getDate() ? 'current' : '';
+        calendarHTML += `<div class="mini-calendar-cell mini-calendar-day-number ${isToday}">${i}</div>`;
+    }
+    miniCalendarContainer.innerHTML = calendarHTML;
+}
+
+function updateQuote() {
+    const inspirationalQuotes = ["The only way to do great work is to love what you do.", "The best way to predict the future is to create it.", "Success is not final, failure is not fatal: it is the courage to continue that counts."];
+    const quoteElement = document.getElementById('quote');
+    const randomIndex = Math.floor(Math.random() * inspirationalQuotes.length);
+    quoteElement.style.opacity = 0;
+    setTimeout(() => {
+        quoteElement.textContent = `"${inspirationalQuotes[randomIndex]}"`;
+        quoteElement.style.opacity = 1;
+    }, 500);
+}
+
+function handleSearch() {
+    const query = searchInput.value.trim();
+    if (query) {
+        const searchUrls = {
+            google: `https://www.google.com/search?q=${encodeURIComponent(query)}`,
+            duckduckgo: `https://duckduckgo.com/?q=${encodeURIComponent(query)}`,
+            brave: `https://search.brave.com/search?q=${encodeURIComponent(query)}`,
+            bing: `https://www.bing.com/search?q=${encodeURIComponent(query)}`,
+            yahoo: `https://search.yahoo.com/search?p=${encodeURIComponent(query)}`
+        };
+        window.open(searchUrls[currentSearchEngine], '_blank');
+    }
+}
+
+function setSearchEngine(engine) {
+    currentSearchEngine = engine;
+    searchEngineIcons.forEach(icon => {
+        icon.classList.toggle('active', icon.dataset.engine === engine);
+    });
+}
+
 function loadStockNews() {
     const newsData = [
         { title: "Markets Rally on Lower Than Expected Inflation Data", date: "2h ago" },
