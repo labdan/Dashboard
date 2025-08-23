@@ -393,6 +393,36 @@ function renderPortfolio(data, error = null) {
         return;
     }
 
+    // NEW: Handle cases where data is null or malformed, but there's no explicit error.
+    if (!data || !data.portfolio || !data.cash) {
+        const cashValue = (data && data.cash && data.cash.cash) || 0;
+        const totalPortfolioValue = cashValue;
+        let watchlistHTML = `
+            <div class="portfolio-header">
+                <div class="portfolio-title-bar">
+                    <div class="portfolio-value">
+                        <div class="value-title">Value</div>
+                        <div class="value-amount">€${totalPortfolioValue.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                    </div>
+                    <button class="refresh-btn" id="refresh-portfolio" title="Refresh Portfolio"><i class="fas fa-sync-alt"></i></button>
+                </div>
+                <div class="portfolio-details">
+                    <div class="detail-item">
+                        <div class="detail-title">Cash</div>
+                        <div class="detail-amount">€${cashValue.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-title">Investments</div>
+                        <div class="detail-amount">€0.00</div>
+                    </div>
+                </div>
+            </div>
+            <div class="no-investments">You have no investments yet.</div>`;
+        watchlistContainer.innerHTML = watchlistHTML;
+        return;
+    }
+
+
     const portfolioData = data.portfolio;
     const cashValue = data.cash.cash || 0;
 
@@ -425,7 +455,8 @@ function renderPortfolio(data, error = null) {
     } else {
         portfolioData.forEach(stock => {
             const tickerKey = stock.ticker.toUpperCase();
-            const iconUrl = config.trading212.iconUrls[tickerKey] || `https://s3-symbol-logo.trading212.com/symbols/${tickerKey}.png`;
+            // NEW: Safely access iconUrls to prevent the error
+            const iconUrl = (config.trading212 && config.trading212.iconUrls && config.trading212.iconUrls[tickerKey]) || `https://s3-symbol-logo.trading212.com/symbols/${tickerKey}.png`;
             
             const currentValue = stock.currentPrice * stock.quantity;
             const changeAmount = stock.ppl;
