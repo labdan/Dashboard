@@ -50,7 +50,7 @@ async function init() {
     if (!SUPABASE_URL || SUPABASE_URL.includes('YOUR_SUPABASE_URL')) {
         alert("Supabase URL is not set in config.js. To-Do list will not work.");
     }
-    
+
     // Apply saved theme first
     applySavedTheme();
 
@@ -178,16 +178,17 @@ function updateWeatherUI(data) {
     weatherTemp.textContent = `${Math.round(data.current.temp)}°C`;
     weatherDesc.textContent = data.current.weather[0].description;
     weatherIconImg.src = `https://openweathermap.org/img/wn/${data.current.weather[0].icon}@2x.png`;
-    
+
     weatherHigh.textContent = `H: ${Math.round(todayForecast.temp.max)}°`;
     weatherLow.textContent = `L: ${Math.round(todayForecast.temp.min)}°`;
-    
+
     chanceOfRainElement.textContent = getRainPrediction(data.hourly, todayForecast);
-    
+
     sunriseElement.textContent = new Date(data.current.sunrise * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     sunsetElement.textContent = new Date(data.current.sunset * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     uvIndexElement.textContent = Math.round(data.current.uvi);
     aqiIndexElement.textContent = 'N/A'; // AQI requires a separate call
+    aqiIndexElement.textContent = 'N/A';
 
     const forecastContainer = document.getElementById('weather-forecast');
     forecastContainer.innerHTML = '';
@@ -371,10 +372,12 @@ async function loadStockWatchlist() {
         localStorage.removeItem('portfolioCache');
         // Render the error state
         renderPortfolio(null, apiError);
+        renderPortfolio(null, error.message);
     }
 }
 
 function renderPortfolio(data, error = null) {
+async function renderPortfolio(data, error = null) {
     if (error) {
         watchlistContainer.innerHTML = `
             <div class="portfolio-header">
@@ -419,10 +422,13 @@ function renderPortfolio(data, error = null) {
             </div>
             <div class="no-investments">You have no investments yet.</div>`;
         watchlistContainer.innerHTML = watchlistHTML;
+    if (!data || !data.cash) {
+        renderPortfolio(null, "Invalid data received from API.");
         return;
     }
 
     const portfolioData = data.portfolio;
+    const portfolioData = data.portfolio || [];
     const cashData = data.cash;
 
     // Use the accurate values directly from the cash API response.
@@ -450,44 +456,19 @@ function renderPortfolio(data, error = null) {
                 </div>
             </div>
         </div>`;
-    
+
     if (portfolioData.length === 0) {
         watchlistHTML += `<div class="no-investments">You have no investments yet.</div>`;
     } else {
         portfolioData.forEach(stock => {
             const tickerKey = stock.ticker.toUpperCase();
             // AUTOMATED: Generate the logo URL directly from the ticker.
-            const iconUrl = `https://s3-symbol-logo.tradingview.com/${baseTicker.toLowerCase()}.svg`;
-
-            
-            const currentValue = stock.currentPrice * stock.quantity;
-            const changeAmount = stock.ppl;
-            const initialValue = currentValue - changeAmount;
-            const changePercent = initialValue === 0 ? 0 : (changeAmount / initialValue) * 100;
-            const isPositive = changeAmount >= 0;
-
-            watchlistHTML += `
-                <div class="stock-item-new">
-                    <div class="stock-icon-new">
-                        <img src="${iconUrl}" alt="${stock.ticker}">
-                    </div>
-                    <div class="stock-info-new">
-                        <div class="stock-name-new">${stock.ticker.replace(/_/g, ' ')}</div>
-                        <div class="stock-shares">${stock.quantity} SHARES</div>
-                    </div>
-                    <div class="stock-pricing-new">
-                        <div class="stock-value">€${currentValue.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                        <div class="stock-change-new ${isPositive ? 'positive' : 'negative'}">
-                            ${isPositive ? '+' : ''}€${changeAmount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${changePercent.toFixed(2)}%)
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-    }
+            const iconUrl = `https://s3-symbol-logo.trading212.com/symbols/${tickerKey}.png`;
+       
+    })
 
     watchlistContainer.innerHTML = watchlistHTML;
-}
+}}}}
 
 function renderCalendar() {
     const today = new Date();
