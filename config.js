@@ -7,8 +7,8 @@
 const config = {
     openweathermap: {
         // Coordinates for Berlin, Germany. You can change these to your location.
-        lat: 52.5200,
-        lon: 13.4050 
+        lat: 52.2742,
+        lon: 13.1713 
     },
     supabase: {
         url: 'YOUR_SUPABASE_URL',
