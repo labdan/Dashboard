@@ -150,12 +150,12 @@ function updateWeatherUI(data) {
     weatherDesc.textContent = data.current.weather[0].description;
     weatherIconImg.src = `https://openweathermap.org/img/wn/${data.current.weather[0].icon}@2x.png`;
     
-    chanceOfRainElement.textContent = `${Math.round(todayForecast.pop * 100)}% chance of rain`;
+    chanceOfRainElement.textContent = getRainPrediction(data.hourly);
     
     sunriseElement.textContent = new Date(data.current.sunrise * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     sunsetElement.textContent = new Date(data.current.sunset * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     uvIndexElement.textContent = Math.round(data.current.uvi);
-    aqiIndexElement.textContent = 'N/A'; // AQI requires a separate call
+    aqiIndexElement.textContent = 'N/A';
 
     const forecastContainer = document.getElementById('weather-forecast');
     forecastContainer.innerHTML = '';
@@ -172,6 +172,16 @@ function updateWeatherUI(data) {
     }
 }
 
+function getRainPrediction(hourlyData) {
+    const nextRainHour = hourlyData.find(hour => hour.pop > 0.3);
+    if (nextRainHour) {
+        const rainTime = new Date(nextRainHour.dt * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        return `${Math.round(nextRainHour.pop * 100)}% chance of rain around ${rainTime}`;
+    }
+    const maxPop = Math.max(...hourlyData.map(h => h.pop));
+    return `${Math.round(maxPop * 100)}% chance of rain today`;
+}
+
 function drawTempGraph(hourlyData, sunrise, sunset) {
     if (!tempChartCanvas) return;
     const ctx = tempChartCanvas.getContext('2d');
@@ -179,29 +189,38 @@ function drawTempGraph(hourlyData, sunrise, sunset) {
     
     Chart.register(ChartDataLabels);
 
-    const hourlySlice = hourlyData.slice(0, 8); // Get the next 8 hours
+    // Process data into 2-hour blocks
+    const processedData = [];
+    for (let i = 0; i < 12; i += 2) {
+        const block = hourlyData.slice(i, i + 2);
+        if (block.length > 0) {
+            processedData.push({
+                time: new Date(block[0].dt * 1000),
+                temp: (block[0].temp + (block[1] ? block[1].temp : block[0].temp)) / 2,
+                pop: Math.max(block[0].pop, (block[1] ? block[1].pop : 0))
+            });
+        }
+    }
 
-    const labels = hourlySlice.map(h => new Date(h.dt * 1000).toLocaleTimeString([], { hour: 'numeric', hour12: false }));
-    const temps = hourlySlice.map(h => h.temp);
-    const rainChance = hourlySlice.map(h => h.pop > 0.3 ? '💧' : '');
+    const labels = processedData.map(d => {
+        const start = d.time.getHours();
+        const end = (start + 2) % 24;
+        return `${start}-${end}`;
+    });
+    const temps = processedData.map(d => d.temp);
+    const rainChance = processedData.map(d => d.pop > 0.3 ? '💧' : '');
 
     const nightColor = 'rgba(54, 73, 118, 0.8)';
     const dayColor = 'rgba(255, 217, 102, 0.8)';
 
-    const backgroundColors = hourlySlice.map(h => {
-        const hour = new Date(h.dt * 1000).getHours();
+    const backgroundColors = processedData.map(d => {
+        const hour = d.time.getHours();
         const sunriseHour = new Date(sunrise * 1000).getHours();
         const sunsetHour = new Date(sunset * 1000).getHours();
-
-        if (hour < sunriseHour || hour > sunsetHour) {
-            return nightColor;
-        }
-        // Simple gradient for daytime
+        if (hour < sunriseHour || hour > sunsetHour) return nightColor;
         const noon = 13;
         const distanceToNoon = Math.abs(noon - hour);
         const factor = Math.max(0, 1 - (distanceToNoon / 8));
-        
-        // Interpolate between blue and yellow
         const r = 54 + (255 - 54) * factor;
         const g = 73 + (217 - 73) * factor;
         const b = 118 + (102 - 118) * factor;
@@ -215,7 +234,9 @@ function drawTempGraph(hourlyData, sunrise, sunset) {
             datasets: [{
                 data: temps,
                 backgroundColor: backgroundColors,
-                borderRadius: 4
+                borderRadius: 4,
+                barPercentage: 0.8,
+                categoryPercentage: 0.9
             }]
         },
         options: {
@@ -227,11 +248,11 @@ function drawTempGraph(hourlyData, sunrise, sunset) {
                     display: true,
                     align: 'top',
                     anchor: 'end',
-                    color: '#666',
-                    font: { size: 10 },
+                    color: 'var(--text-color)',
+                    font: { size: 10, weight: 'bold' },
                     formatter: (value, context) => {
                         const rainIcon = rainChance[context.dataIndex];
-                        return `${rainIcon}\n${Math.round(value)}°`;
+                        return `${rainIcon}${Math.round(value)}°`;
                     }
                 }
             },
@@ -240,7 +261,7 @@ function drawTempGraph(hourlyData, sunrise, sunset) {
                     grid: { display: false },
                     ticks: { font: { size: 10 } }
                 }, 
-                y: { display: false } 
+                y: { display: false, beginAtZero: false } 
             }
         }
     });
