@@ -155,7 +155,7 @@ function updateWeatherUI(data) {
     sunriseElement.textContent = new Date(data.current.sunrise * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     sunsetElement.textContent = new Date(data.current.sunset * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     uvIndexElement.textContent = Math.round(data.current.uvi);
-    aqiIndexElement.textContent = 'N/A'; // AQI requires a separate call, keeping as placeholder
+    aqiIndexElement.textContent = 'N/A'; // AQI requires a separate call
 
     const forecastContainer = document.getElementById('weather-forecast');
     forecastContainer.innerHTML = '';
@@ -173,10 +173,13 @@ function updateWeatherUI(data) {
 }
 
 function drawTempGraph(hourlyData) {
-    // *** FIX: Ensure the canvas element exists before trying to get context ***
     if (!tempChartCanvas) return;
     const ctx = tempChartCanvas.getContext('2d');
     if (tempChart) tempChart.destroy();
+    
+    // Register the datalabels plugin
+    Chart.register(ChartDataLabels);
+
     const labels = hourlyData.slice(0, 12).map(h => new Date(h.dt * 1000).getHours());
     const temps = hourlyData.slice(0, 12).map(h => h.temp);
     tempChart = new Chart(ctx, {
@@ -194,7 +197,20 @@ function drawTempGraph(hourlyData) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
+            plugins: { 
+                legend: { display: false },
+                datalabels: {
+                    display: true,
+                    align: 'top',
+                    color: '#666',
+                    font: {
+                        size: 10
+                    },
+                    formatter: function(value) {
+                        return Math.round(value) + '°';
+                    }
+                }
+            },
             scales: { x: { display: false }, y: { display: false } }
         }
     });
