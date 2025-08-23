@@ -155,10 +155,7 @@ function updateWeatherUI(data) {
     sunriseElement.textContent = new Date(data.current.sunrise * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     sunsetElement.textContent = new Date(data.current.sunset * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     uvIndexElement.textContent = Math.round(data.current.uvi);
-    
-    // AQI data is not in the standard OneCall response, so we'll leave it as a placeholder for now.
-    // A separate API call would be needed for this.
-    aqiIndexElement.textContent = 'N/A';
+    aqiIndexElement.textContent = 'N/A'; // AQI requires a separate call, keeping as placeholder
 
     const forecastContainer = document.getElementById('weather-forecast');
     forecastContainer.innerHTML = '';
@@ -170,7 +167,10 @@ function updateWeatherUI(data) {
         forecastContainer.appendChild(forecastItem);
     });
 
-    drawTempGraph(data.hourly);
+    // *** FIX: Added a safety check for hourly data before drawing graph ***
+    if (data.hourly) {
+        drawTempGraph(data.hourly);
+    }
 }
 
 function drawTempGraph(hourlyData) {

@@ -5,10 +5,11 @@ exports.handler = async function(event, context) {
     const API_KEY = process.env.OPENWEATHERMAP_API_KEY;
     
     // Coordinates for Berlin, Germany. You can change these if needed.
-    const LAT = 52.5200;
-    const LON = 13.4050;
+    const LAT = 52.2943;
+    const LON = 13.1713;
 
-    const API_URL = `https://api.openweathermap.org/data/3.0/onecall?lat=${LAT}&lon=${LON}&exclude=minutely,hourly,alerts&appid=${API_KEY}&units=metric`;
+    // *** FIX: Removed 'hourly' from the exclude list to get graph data ***
+    const API_URL = `https://api.openweathermap.org/data/3.0/onecall?lat=${LAT}&lon=${LON}&exclude=minutely,alerts&appid=${API_KEY}&units=metric`;
 
     try {
         const response = await fetch(API_URL);
