@@ -4,113 +4,80 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Productivity Dashboard</title>
-
-  <!-- FontAwesome Icons -->
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-  />
-
-  <!-- External CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="container">
     <header>
-      <!-- Clock -->
+      <!-- Header content remains the same -->
       <div class="time-date header-widget">
         <div class="time-display" id="time">00:00:00</div>
         <div class="date-display" id="date">Monday, January 1, 2023</div>
         <div class="mini-calendar" id="mini-calendar"></div>
       </div>
-
-      <!-- Search Area & Quick Links -->
       <div class="search-area">
-        <div class="inspirational-quote" id="quote">
-          "The only way to do great work is to love what you do." - Steve Jobs
-        </div>
+        <div class="inspirational-quote" id="quote">"The only way to do great work is to love what you do."</div>
         <div class="search-container">
-          <input
-            type="text"
-            class="search-input"
-            id="search-input"
-            placeholder="Search the web..."
-          />
+          <input type="text" class="search-input" id="search-input" placeholder="Search the web..." />
           <div class="search-engines" id="search-engines">
             <i class="search-engine-icon fab fa-google active" data-engine="google" title="Google"></i>
-            <!-- DuckDuckGo Icon Added -->
             <i class="search-engine-icon fas fa-duck" data-engine="duckduckgo" title="DuckDuckGo"></i>
             <i class="search-engine-icon fas fa-shield-halved" data-engine="brave" title="Brave Search"></i>
-            <i class="search-engine-icon fab fa-microsoft" data-engine="bing" title="Bing"></i>
-            <i class="search-engine-icon fab fa-yahoo" data-engine="yahoo" title="Yahoo"></i>
           </div>
-          <button class="search-btn" id="search-btn">
-            <i class="fas fa-search"></i>
-          </button>
+          <button class="search-btn" id="search-btn"><i class="fas fa-search"></i></button>
         </div>
         <div class="quick-links-bar">
           <div class="quick-links" id="quick-links"></div>
         </div>
       </div>
-
-      <!-- Weather Widget -->
       <div class="weather-widget header-widget" id="weather">
-        <button class="refresh-btn" id="refresh-weather">
-          <i class="fas fa-sync-alt"></i>
-        </button>
+        <button class="refresh-btn" id="refresh-weather"><i class="fas fa-sync-alt"></i></button>
         <div class="weather-main">
-          <div class="weather-icon">
-            <img id="weather-icon-img" src="" alt="Weather icon" />
-          </div>
+          <div class="weather-icon"><img id="weather-icon-img" src="" alt="Weather icon" /></div>
           <div class="weather-details">
             <div class="weather-temperature">--°C</div>
             <div class="weather-description">Loading...</div>
-            <div class="weather-location">
-              <i class="fas fa-map-marker-alt"></i> Berlin, DE
-            </div>
+            <div class="weather-location"><i class="fas fa-map-marker-alt"></i> Berlin, DE</div>
           </div>
         </div>
         <div class="weather-extra-info">
-          <div class="info-item">
-            <i class="fas fa-sun"></i>
-            <span id="sunrise-time">--:--</span>
-            <small>Sunrise</small>
-          </div>
-          <div class="info-item">
-            <i class="fas fa-moon"></i>
-            <span id="sunset-time">--:--</span>
-            <small>Sunset</small>
-          </div>
-          <div class="info-item">
-            <i class="fas fa-triangle-exclamation"></i>
-            <span id="uv-index">--</span>
-            <small>UV Index</small>
-          </div>
+          <div class="info-item"><i class="fas fa-sun"></i><span id="sunrise-time">--:--</span><small>Sunrise</small></div>
+          <div class="info-item"><i class="fas fa-moon"></i><span id="sunset-time">--:--</span><small>Sunset</small></div>
+          <div class="info-item"><i class="fas fa-triangle-exclamation"></i><span id="uv-index">--</span><small>UV Index</small></div>
         </div>
-        <div class="weather-forecast" id="weather-forecast">
-          <!-- 7-Day Forecast will be injected by JS -->
-        </div>
+        <div class="weather-forecast" id="weather-forecast"></div>
       </div>
     </header>
 
+    <!-- *** NEW DASHBOARD LAYOUT *** -->
     <div class="dashboard-grid">
-      <!-- Widgets remain the same -->
-      <div class="widget widget-3">
+      <!-- Left Column -->
+      <div class="widget">
         <h2 class="card-title">To-Do List</h2>
-        <form class="todo-form" id="todo-form"><input type="text" class="todo-input" id="todo-input" placeholder="Add a new task..." /><button type="submit" class="add-btn">Add</button></form>
+        <form class="todo-form" id="todo-form">
+          <input type="text" class="todo-input" id="todo-input" placeholder="Add a new task..." required />
+          <button type="submit" class="add-btn">Add</button>
+        </form>
         <ul class="todo-list" id="todo-list"></ul>
       </div>
-      <div class="widget widget-6">
+
+      <!-- Center Column -->
+      <div class="widget">
         <h2 class="card-title">Stock Market News<button class="refresh-btn" id="refresh-news"><i class="fas fa-sync-alt"></i></button></h2>
         <div class="news-container" id="news-container"></div>
       </div>
-      <div class="widget widget-4">
-        <h2 class="card-title">Stocks Watchlist<button class="refresh-btn" id="refresh-stocks"><i class="fas fa-sync-alt"></i></button></h2>
-        <div class="watchlist-container" id="watchlist-container"></div>
-      </div>
-      <div class="widget widget-4">
-        <h2 class="card-title">Google Calendar</h2>
-        <div class="calendar-container" id="calendar-container"></div>
+
+      <!-- Right Column (Wrapper for stacking) -->
+      <div class="right-column-widgets">
+        <div class="widget">
+          <h2 class="card-title">Stocks Watchlist<button class="refresh-btn" id="refresh-stocks"><i class="fas fa-sync-alt"></i></button></h2>
+          <div class="watchlist-container" id="watchlist-container"></div>
+        </div>
+        <div class="widget">
+          <h2 class="card-title">Google Calendar</h2>
+          <div class="calendar-container" id="calendar-container"></div>
+        </div>
       </div>
     </div>
 
@@ -119,7 +86,9 @@
     </footer>
   </div>
 
-  <!-- IMPORTANT: Load config.js BEFORE app.js -->
+  <!-- Supabase Client Library -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
   <script src="config.js"></script>
   <script src="app.js"></script>
 </body>
