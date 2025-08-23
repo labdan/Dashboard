@@ -167,13 +167,14 @@ function updateWeatherUI(data) {
         forecastContainer.appendChild(forecastItem);
     });
 
-    // *** FIX: Added a safety check for hourly data before drawing graph ***
     if (data.hourly) {
         drawTempGraph(data.hourly);
     }
 }
 
 function drawTempGraph(hourlyData) {
+    // *** FIX: Ensure the canvas element exists before trying to get context ***
+    if (!tempChartCanvas) return;
     const ctx = tempChartCanvas.getContext('2d');
     if (tempChart) tempChart.destroy();
     const labels = hourlyData.slice(0, 12).map(h => new Date(h.dt * 1000).getHours());
