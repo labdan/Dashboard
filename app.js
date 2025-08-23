@@ -43,7 +43,7 @@ const refreshWeatherBtn = document.getElementById('refresh-weather');
 
 // --- STATE ---
 let currentSearchEngine = 'google';
-const USER_ID = '12345678-1234-1234-1234567890ab'; 
+const USER_ID = '12345678-1234-1234-1234-1234567890ab'; 
 
 // --- INITIALIZATION ---
 async function init() {
@@ -468,7 +468,7 @@ function renderPortfolio(data, error = null) {
             watchlistHTML += `
                 <div class="stock-item-new">
                     <div class="stock-icon-new">
-                        <img src="${iconUrl}" alt="${stock.ticker}" onerror="this.src='nostockimg.png'; this.onerror=null;">
+                        <img src="${iconUrl}" alt="${stock.ticker}">
                     </div>
                     <div class="stock-info-new">
                         <div class="stock-name-new">${stock.ticker.replace(/_/g, ' ')}</div>
