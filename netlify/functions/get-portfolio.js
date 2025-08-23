@@ -2,10 +2,11 @@
 const https = require('https');
 
 exports.handler = async function(event, context) {
-  const API_KEY = process.env.TRADING212_API_KEY;
+  // CORRECTED: Using the new environment variable name to match get-cash.js
+  const API_KEY = process.env.T212_API_KEY;
 
   if (!API_KEY) {
-    console.error('CRITICAL: TRADING212_API_KEY environment variable is not set in Netlify.');
+    console.error('CRITICAL: T212_API_KEY environment variable is not set in Netlify.');
     return {
       statusCode: 500,
       body: JSON.stringify({ error: 'Trading 212 API key is not configured.' }),
@@ -17,7 +18,8 @@ exports.handler = async function(event, context) {
     path: '/api/v0/equity/portfolio',
     method: 'GET',
     headers: {
-      'Authorization': `Bearer ${API_KEY}`
+      'Authorization': `Bearer ${API_KEY}`,
+      'User-Agent': 'Productivity Dashboard/1.0'
     }
   };
 
@@ -36,11 +38,11 @@ exports.handler = async function(event, context) {
             body: data,
           });
         } else {
-          console.error(`Trading 212 API Error: Status ${res.statusCode}`);
-          console.error('Error Body from API:', data);
+          console.error(`Trading 212 Portfolio API Error: Status ${res.statusCode}`);
+          console.error('Error Body from Portfolio API:', data);
           resolve({
             statusCode: res.statusCode,
-            body: JSON.stringify({ error: 'Failed to fetch data from Trading 212.' }),
+            body: JSON.stringify({ error: 'Failed to fetch portfolio data from Trading 212.' }),
           });
         }
       });
