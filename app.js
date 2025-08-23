@@ -44,6 +44,8 @@ function init() {
     // Check for API Key
     if (!API_KEY || API_KEY === 'YOUR_OPENWEATHERMAP_API_KEY') {
         alert("OpenWeatherMap API key is not set. Please add it to config.js.");
+        weatherDesc.textContent = 'API Key Missing'; // Show error on UI
+        return; // Stop initialization if no key
     }
 
     // Regular UI Updates
@@ -90,7 +92,13 @@ async function getWeather() {
     // Otherwise, fetch new data
     try {
         const response = await fetch(`https://api.openweathermap.org/data/3.0/onecall?lat=${LAT}&lon=${LON}&exclude=minutely,hourly,alerts&appid=${API_KEY}&units=metric`);
-        if (!response.ok) throw new Error('Weather data not available');
+        
+        if (response.status === 401) {
+            throw new Error('Invalid API Key. Please check your config.js file.');
+        }
+        if (!response.ok) {
+            throw new Error(`API request failed with status ${response.status}`);
+        }
         
         const data = await response.json();
 
@@ -104,8 +112,10 @@ async function getWeather() {
         updateWeatherUI(data);
 
     } catch (error) {
-        console.error('Error fetching weather:', error);
+        console.error('Error fetching weather:', error.message);
         weatherDesc.textContent = 'Weather unavailable';
+        // Log the specific error to help with debugging
+        console.log("Detailed weather error:", error);
     }
 }
 
@@ -122,6 +132,7 @@ function updateWeatherUI(data) {
     uvIndexElement.textContent = Math.round(data.current.uvi);
 
     // 7-Day Forecast
+    const forecastContainer = document.getElementById('weather-forecast');
     forecastContainer.innerHTML = '';
     data.daily.slice(1, 8).forEach(day => { // Use next 7 days from the 'daily' array
         const dayName = new Date(day.dt * 1000).toLocaleDateString('en-US', { weekday: 'short' });
