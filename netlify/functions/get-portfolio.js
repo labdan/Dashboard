@@ -1,5 +1,5 @@
 // netlify/functions/get-portfolio.js
-const fetch = require('node-fetch');
+const https = require('https');
 
 exports.handler = async function(event, context) {
   const API_KEY = process.env.T212_API_KEY;
@@ -12,35 +12,50 @@ exports.handler = async function(event, context) {
     };
   }
 
-  try {
-    const response = await fetch('https://live.trading212.com/api/v0/equity/portfolio', {
-      method: 'GET',
-      headers: {
-        // CORRECTED: Sending only the key, without the "Bearer " prefix.
-        'Authorization': API_KEY
-      }
+  const options = {
+    hostname: 'live.trading212.com',
+    path: '/api/v0/equity/portfolio',
+    method: 'GET',
+    headers: {
+      // CORRECTED: Sending only the key, as required by the documentation.
+      'Authorization': API_KEY,
+      'User-Agent': 'Productivity Dashboard/1.0'
+    }
+  };
+
+  return new Promise((resolve) => {
+    const req = https.request(options, (res) => {
+      let data = '';
+
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          resolve({
+            statusCode: 200,
+            body: data,
+          });
+        } else {
+          console.error(`Trading 212 Portfolio API Error: Status ${res.statusCode}`);
+          console.error('Error Body from Portfolio API:', data);
+          resolve({
+            statusCode: res.statusCode,
+            body: JSON.stringify({ error: 'Failed to fetch portfolio data from Trading 212.' }),
+          });
+        }
+      });
     });
 
-    if (!response.ok) {
-      const errorBody = await response.text();
-      console.error(`Trading 212 Portfolio API Error: Status ${response.status}`);
-      console.error('Error Body from Portfolio API:', errorBody);
-      return {
-        statusCode: response.status,
-        body: JSON.stringify({ error: 'Failed to fetch portfolio data from Trading 212.' }),
-      };
-    }
+    req.on('error', (error) => {
+      console.error('An error occurred in the get-portfolio function execution:', error);
+      resolve({
+        statusCode: 500,
+        body: JSON.stringify({ error: `An internal function error occurred: ${error.message}` }),
+      });
+    });
 
-    const data = await response.json();
-    return {
-      statusCode: 200,
-      body: JSON.stringify(data),
-    };
-  } catch (error) {
-    console.error('An error occurred in the get-portfolio function execution:', error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: `An internal function error occurred: ${error.message}` }),
-    };
-  }
+    req.end();
+  });
 };
