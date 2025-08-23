@@ -30,17 +30,17 @@ const calendarContainer = document.getElementById('calendar-container');
 const weatherIconImg = document.getElementById('weather-icon-img');
 const weatherTemp = document.querySelector('.weather-temperature');
 const weatherDesc = document.querySelector('.weather-description');
-const weatherHighLow = document.getElementById('weather-high-low');
+const weatherHigh = document.getElementById('weather-high');
+const weatherLow = document.getElementById('weather-low');
+const chanceOfRainElement = document.getElementById('chance-of-rain');
 const sunriseElement = document.getElementById('sunrise-time');
 const sunsetElement = document.getElementById('sunset-time');
 const uvIndexElement = document.getElementById('uv-index');
 const aqiIndexElement = document.getElementById('aqi-index');
 const refreshWeatherBtn = document.getElementById('refresh-weather');
-const tempChartCanvas = document.getElementById('temp-chart');
 
 // --- STATE ---
 let currentSearchEngine = 'google';
-let tempChart = null;
 const USER_ID = '12345678-1234-1234-1234-1234567890ab'; 
 
 // --- INITIALIZATION ---
@@ -150,18 +150,15 @@ function updateWeatherUI(data) {
     weatherDesc.textContent = data.current.weather[0].description;
     weatherIconImg.src = `https://openweathermap.org/img/wn/${data.current.weather[0].icon}@2x.png`;
     
-    // This element is no longer in the HTML, so we remove the call
-    // chanceOfRainElement.textContent = getRainPrediction(data.hourly, todayForecast);
+    weatherHigh.textContent = `H: ${Math.round(todayForecast.temp.max)}°`;
+    weatherLow.textContent = `L: ${Math.round(todayForecast.temp.min)}°`;
+    
+    chanceOfRainElement.textContent = getRainPrediction(data.hourly, todayForecast);
     
     sunriseElement.textContent = new Date(data.current.sunrise * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     sunsetElement.textContent = new Date(data.current.sunset * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     uvIndexElement.textContent = Math.round(data.current.uvi);
     aqiIndexElement.textContent = 'N/A'; // AQI requires a separate call
-
-    // Update High and Low Temps
-    document.getElementById('weather-high').textContent = `H: ${Math.round(todayForecast.temp.max)}°`;
-    document.getElementById('weather-low').textContent = `L: ${Math.round(todayForecast.temp.min)}°`;
-
 
     const forecastContainer = document.getElementById('weather-forecast');
     forecastContainer.innerHTML = '';
@@ -172,13 +169,16 @@ function updateWeatherUI(data) {
         forecastItem.innerHTML = `<div class="forecast-day">${dayName}</div><img src="https://openweathermap.org/img/wn/${day.weather[0].icon}.png" alt="${day.weather[0].description}"><div class="forecast-temp">${Math.round(day.temp.max)}°</div>`;
         forecastContainer.appendChild(forecastItem);
     });
-
-    // Remove the call to draw the graph
-    // if (data.hourly) {
-    //     drawTempGraph(data.hourly, data.current.sunrise, data.current.sunset);
-    // }
 }
 
+function getRainPrediction(hourlyData, todayForecast) {
+    const nextRainHour = hourlyData.find(hour => hour.pop > 0.3);
+    if (nextRainHour) {
+        const rainTime = new Date(nextRainHour.dt * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        return `Rain likely around ${rainTime}`;
+    }
+    return `${Math.round(todayForecast.pop * 100)}% chance of rain today`;
+}
 
 // --- OTHER UI FUNCTIONS ---
 function updateTimeAndDate() {
