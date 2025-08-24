@@ -7,6 +7,7 @@ if (typeof config === 'undefined') {
 const { url: SUPABASE_URL, anonKey: SUPABASE_ANON_KEY } = config.supabase;
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes for weather
 const PORTFOLIO_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes for portfolio
+const COMPANY_DETAILS_CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours for company details
 
 // --- SUPABASE CLIENT ---
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -47,11 +48,6 @@ const USER_ID = '12345678-12321-1234-1234567890ab';
 
 // --- INITIALIZATION ---
 async function init() {
-    // *** FIX: Force clear the portfolio cache on initial load to ensure fresh data. ***
-    // This resolves the issue of seeing old or incorrect stocks.
-    // This line can be removed after the first successful load if desired.
-    localStorage.removeItem('portfolioCache');
-
     if (!SUPABASE_URL || SUPABASE_URL.includes('YOUR_SUPABASE_URL')) {
         alert("Supabase URL is not set in config.js. To-Do list will not work.");
     }
@@ -86,6 +82,7 @@ function setupEventListeners() {
     watchlistContainer.addEventListener('click', (e) => {
         if (e.target.closest('#refresh-portfolio')) {
             localStorage.removeItem('portfolioCache');
+            localStorage.removeItem('companyDetailsCache'); // Also clear company details
             loadStockWatchlist();
         }
     });
@@ -333,12 +330,40 @@ function loadStockNews() {
 
 // --- STOCK WATCHLIST ---
 
-// A small, targeted map for overriding logo slugs for tickers where the dynamic
-// generation from 'instrumentName' might fail (e.g., complex ETF names).
-const logoSlugOverrides = {
-    'SXR8d_EQ': 'ishares',
-    'XNASd_EQ': 'xtrackers',
-};
+/**
+ * Fetches company details (name, logo) for a given ticker.
+ * It uses a local cache to avoid redundant API calls.
+ * @param {string} ticker - The stock ticker symbol from Trading 212 (e.g., 'AMD_US_EQ').
+ * @returns {Promise<object>} A promise that resolves to an object with { name, logoUrl }.
+ */
+async function getCompanyDetails(ticker) {
+    let companyDetailsCache = JSON.parse(localStorage.getItem('companyDetailsCache')) || {};
+    const cachedItem = companyDetailsCache[ticker];
+
+    if (cachedItem && (Date.now() - cachedItem.timestamp < COMPANY_DETAILS_CACHE_DURATION)) {
+        return cachedItem.data;
+    }
+
+    try {
+        const response = await fetch(`/.netlify/functions/get-company-details?ticker=${ticker}`);
+        if (!response.ok) {
+            console.error(`Failed to get details for ${ticker}`);
+            return { name: ticker.split('_')[0], logoUrl: '' };
+        }
+        const details = await response.json();
+
+        companyDetailsCache[ticker] = {
+            timestamp: Date.now(),
+            data: details,
+        };
+        localStorage.setItem('companyDetailsCache', JSON.stringify(companyDetailsCache));
+
+        return details;
+    } catch (error) {
+        console.error(`Error fetching company details for ${ticker}:`, error);
+        return { name: ticker.split('_')[0], logoUrl: '' };
+    }
+}
 
 async function loadStockWatchlist() {
     const cachedPortfolio = JSON.parse(localStorage.getItem('portfolioCache'));
@@ -360,13 +385,20 @@ async function loadStockWatchlist() {
 
         const portfolioData = await portfolioRes.json();
         const cashData = await cashRes.json();
-        
-        const fullPortfolioData = { portfolio: portfolioData, cash: cashData };
 
-        // Cache the raw data from the API.
+        const enrichedPortfolio = await Promise.all(portfolioData.map(async (stock) => {
+            const details = await getCompanyDetails(stock.ticker);
+            return {
+                ...stock,
+                companyName: details.name,
+                logoUrl: details.logoUrl,
+            };
+        }));
+        
+        const fullPortfolioData = { portfolio: enrichedPortfolio, cash: cashData };
+
         localStorage.setItem('portfolioCache', JSON.stringify({ timestamp: Date.now(), data: fullPortfolioData }));
         
-        // Render the portfolio using the fresh data.
         renderPortfolio(fullPortfolioData);
 
     } catch (error) {
@@ -432,27 +464,8 @@ function renderPortfolio(data, error = null) {
     } else {
         portfolioData.forEach(stock => {
             const baseTicker = stock.ticker.split('_')[0];
-            const companyName = stock.instrumentName || baseTicker;
-
-            // *** NEW, SMARTER LOGIC: Generate the logo URL slug ***
-            // 1. Check for a manual override first (best for ETFs).
-            // 2. If no override, create a clean slug from the company name.
-            const slug = logoSlugOverrides[stock.ticker] || companyName
-                .toLowerCase()
-                // Remove content in parentheses e.g. (Acc)
-                .replace(/\s*\(.*\)\s*/g, '')
-                // Remove common corporate suffixes. The '$' ensures it only matches at the end.
-                .replace(/(\s+inc|\s+ltd|\s+group|\s+nv|\s+plc|\s+co|\s+technologies|\s+corp|\s+corporation)$/i, '')
-                // Specific replacements like '&'
-                .replace(/\s*&\s*/g, ' ')
-                // Clean up remaining non-alphanumeric characters
-                .replace(/[.,]/g, '') 
-                .replace(/[^a-z0-9\s-]+/g, '') 
-                .trim()
-                // Replace spaces with hyphens
-                .replace(/\s+/g, '-'); 
-
-            const iconUrl = `https://s3-symbol-logo.tradingview.com/${slug}--big.svg`;
+            const companyName = stock.companyName; // Use the name fetched from our function
+            const iconUrl = stock.logoUrl; // Use the logo URL from our function
             
             const currentValue = stock.currentPrice * stock.quantity;
             const changeAmount = stock.ppl;
