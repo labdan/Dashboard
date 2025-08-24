@@ -87,6 +87,7 @@ function setupEventListeners() {
     watchlistContainer.addEventListener('click', (e) => {
         if (e.target.closest('#refresh-portfolio')) {
             localStorage.removeItem('portfolioCache');
+            localStorage.removeItem('instrumentCache'); // Also clear instrument cache
             loadStockWatchlist();
         }
     });
@@ -126,7 +127,7 @@ async function loadSideNews() {
             const timeAgo = new Date(article.publishedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit'});
             return `
                 <div class="news-item">
-                    <img src="${article.urlToImage}" alt="News image" class="news-image" onerror="this.style.display='none'">
+                    <img src="${article.urlToImage}" alt="News image" class="news-image" onerror="this.parentElement.style.display='none'">
                     <div class="news-content">
                         <a href="${article.url}" class="news-title" target="_blank" rel="noopener noreferrer">${article.title}</a>
                         <div class="news-date">${article.source.name} - ${timeAgo}</div>
@@ -147,28 +148,27 @@ function loadTwitterWidget() {
     const listId = "1959714572497006792";
     const theme = localStorage.getItem('theme') || 'light';
 
-    twitterFeedContainer.innerHTML = 'Loading Feed...';
+    // Clear previous widget content but keep the placeholder text
+    const placeholder = twitterFeedContainer.querySelector('p');
+    if(placeholder) {
+        twitterFeedContainer.innerHTML = placeholder.outerHTML;
+    } else {
+        twitterFeedContainer.innerHTML = '';
+    }
 
     const anchor = document.createElement('a');
     anchor.className = "twitter-timeline";
     anchor.setAttribute('data-theme', theme);
-    anchor.setAttribute('data-height', "100%");
-    anchor.href = `https://twitter.com/i/lists/${listId}`;
+    anchor.setAttribute('data-height', "100%"); // Let CSS handle height
+    anchor.href = `https://x.com/i/lists/${listId}`;
     
-    // Use a timeout to ensure the container is ready
-    setTimeout(() => {
-        twitterFeedContainer.innerHTML = ''; // Clear "Loading..." message
-        twitterFeedContainer.appendChild(anchor);
-        if (window.twttr && window.twttr.widgets) {
-            window.twttr.widgets.load(twitterFeedContainer);
-        } else {
-            const script = document.createElement('script');
-            script.src = "https://platform.twitter.com/widgets.js";
-            script.async = true;
-            script.charset = "utf-8";
-            document.head.appendChild(script);
-        }
-    }, 100);
+    twitterFeedContainer.appendChild(anchor);
+
+    // If the global twitter object is ready, tell it to render the new widget
+    // The script is now loaded in index.html, making this more reliable.
+    if (window.twttr && window.twttr.widgets) {
+        window.twttr.widgets.load(twitterFeedContainer);
+    }
 }
 
 
