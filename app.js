@@ -7,6 +7,7 @@ if (typeof config === 'undefined') {
 const { url: SUPABASE_URL, anonKey: SUPABASE_ANON_KEY } = config.supabase;
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes for weather
 const PORTFOLIO_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes for portfolio
+const INSTRUMENT_CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours for the master instrument list
 
 // --- SUPABASE CLIENT ---
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -328,17 +329,42 @@ function loadStockNews() {
 
 // --- STOCK WATCHLIST ---
 
-async function loadStockWatchlist() {
-    const cachedPortfolio = JSON.parse(localStorage.getItem('portfolioCache'));
-    if (cachedPortfolio && (Date.now() - cachedPortfolio.timestamp < PORTFOLIO_CACHE_DURATION)) {
-        renderPortfolio(cachedPortfolio.data);
-        return;
+/**
+ * Fetches the master list of all instruments, caching it for efficiency.
+ * @returns {Promise<Map<string, object>>} A promise that resolves to a Map where keys are tickers.
+ */
+async function getInstrumentDictionary() {
+    const cachedInstruments = JSON.parse(localStorage.getItem('instrumentCache'));
+    if (cachedInstruments && (Date.now() - cachedInstruments.timestamp < INSTRUMENT_CACHE_DURATION)) {
+        return new Map(cachedInstruments.data);
     }
 
+    try {
+        const response = await fetch('/.netlify/functions/get-instruments');
+        if (!response.ok) throw new Error('Failed to fetch instrument metadata');
+        const instrumentList = await response.json();
+        
+        const instrumentMap = new Map(instrumentList.map(item => [item.ticker, item]));
+
+        localStorage.setItem('instrumentCache', JSON.stringify({
+            timestamp: Date.now(),
+            data: Array.from(instrumentMap.entries())
+        }));
+
+        return instrumentMap;
+    } catch (error) {
+        console.error("Could not load instrument dictionary:", error);
+        return new Map();
+    }
+}
+
+
+async function loadStockWatchlist() {
     watchlistContainer.innerHTML = '<div style="padding: 20px;">Loading portfolio...</div>';
 
     try {
-        const [portfolioRes, cashRes] = await Promise.all([
+        const [instrumentDictionary, portfolioRes, cashRes] = await Promise.all([
+            getInstrumentDictionary(),
             fetch('/.netlify/functions/get-portfolio'),
             fetch('/.netlify/functions/get-cash')
         ]);
@@ -348,10 +374,14 @@ async function loadStockWatchlist() {
 
         const portfolioData = await portfolioRes.json();
         const cashData = await cashRes.json();
-
+        
         const enrichedPortfolio = await Promise.all(portfolioData.map(async (stock) => {
-            const response = await fetch(`/.netlify/functions/get-company-details?ticker=${stock.ticker}`);
+            const instrumentDetails = instrumentDictionary.get(stock.ticker);
+            const instrumentName = instrumentDetails ? instrumentDetails.name : stock.ticker;
+
+            const response = await fetch(`/.netlify/functions/enrich-company-details?ticker=${encodeURIComponent(stock.ticker)}&instrumentName=${encodeURIComponent(instrumentName)}`);
             const details = await response.json();
+            
             return {
                 ...stock,
                 companyName: details.name,
@@ -360,14 +390,11 @@ async function loadStockWatchlist() {
         }));
         
         const fullPortfolioData = { portfolio: enrichedPortfolio, cash: cashData };
-
-        localStorage.setItem('portfolioCache', JSON.stringify({ timestamp: Date.now(), data: fullPortfolioData }));
         
         renderPortfolio(fullPortfolioData);
 
     } catch (error) {
         console.error('Error fetching stock watchlist:', error);
-        localStorage.removeItem('portfolioCache');
         renderPortfolio(null, error.message);
     }
 }
@@ -396,11 +423,18 @@ function renderPortfolio(data, error = null) {
         return;
     }
 
-    const portfolioData = data.portfolio || [];
+    let portfolioData = data.portfolio || [];
     const cashData = data.cash;
     const cashValue = cashData.free || 0;
     const investmentValue = cashData.invested || 0;
     const totalPortfolioValue = cashData.total || 0;
+
+    // --- SORTING LOGIC ---
+    portfolioData.sort((a, b) => {
+        const valueA = a.currentPrice * a.quantity;
+        const valueB = b.currentPrice * b.quantity;
+        return valueB - valueA; // Sort descending
+    });
 
     let watchlistHTML = `
         <div class="portfolio-header">
