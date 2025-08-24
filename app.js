@@ -7,7 +7,6 @@ if (typeof config === 'undefined') {
 const { url: SUPABASE_URL, anonKey: SUPABASE_ANON_KEY } = config.supabase;
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes for weather
 const PORTFOLIO_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes for portfolio
-const COMPANY_DETAILS_CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days for company details
 
 // --- SUPABASE CLIENT ---
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -48,6 +47,9 @@ const USER_ID = '12345678-12321-1234-1234567890ab';
 
 // --- INITIALIZATION ---
 async function init() {
+    // Force clear the portfolio cache on initial load to ensure fresh data.
+    localStorage.removeItem('portfolioCache');
+
     if (!SUPABASE_URL || SUPABASE_URL.includes('YOUR_SUPABASE_URL')) {
         alert("Supabase URL is not set in config.js. To-Do list will not work.");
     }
@@ -82,7 +84,6 @@ function setupEventListeners() {
     watchlistContainer.addEventListener('click', (e) => {
         if (e.target.closest('#refresh-portfolio')) {
             localStorage.removeItem('portfolioCache');
-            localStorage.removeItem('companyDetailsCache'); // Also clear company details
             loadStockWatchlist();
         }
     });
@@ -328,45 +329,7 @@ function loadStockNews() {
     `).join('');
 }
 
-// --- STOCK WATCHLIST ---
-
-/**
- * Your "Local Folder" - Fetches and caches company details.
- * @param {string} ticker - The stock ticker from Trading 212 (e.g., 'AMD_US_EQ').
- * @param {string} instrumentName - The full name of the instrument from Trading 212.
- * @returns {Promise<object>} A promise that resolves to { name, logoUrl }.
- */
-async function getCompanyDetails(ticker, instrumentName) {
-    let companyDetailsCache = JSON.parse(localStorage.getItem('companyDetailsCache')) || {};
-    const cachedItem = companyDetailsCache[ticker];
-
-    // Tier 1: Check the local cache first.
-    if (cachedItem && (Date.now() - cachedItem.timestamp < COMPANY_DETAILS_CACHE_DURATION)) {
-        return cachedItem.data;
-    }
-
-    try {
-        // If not in cache, call our Netlify function which handles the multi-tiered logic.
-        const response = await fetch(`/.netlify/functions/get-company-details?ticker=${encodeURIComponent(ticker)}&instrumentName=${encodeURIComponent(instrumentName)}`);
-        if (!response.ok) {
-            console.error(`Failed to get details for ${ticker}`);
-            return { name: instrumentName, logoUrl: '' }; // Fallback
-        }
-        const details = await response.json();
-
-        // Save the result to our local cache for next time.
-        companyDetailsCache[ticker] = {
-            timestamp: Date.now(),
-            data: details,
-        };
-        localStorage.setItem('companyDetailsCache', JSON.stringify(companyDetailsCache));
-
-        return details;
-    } catch (error) {
-        console.error(`Error fetching company details for ${ticker}:`, error);
-        return { name: instrumentName, logoUrl: '' }; // Fallback
-    }
-}
+// --- STOCK WATCHLIST (Simplified) ---
 
 async function loadStockWatchlist() {
     const cachedPortfolio = JSON.parse(localStorage.getItem('portfolioCache'));
@@ -388,19 +351,10 @@ async function loadStockWatchlist() {
 
         const portfolioData = await portfolioRes.json();
         const cashData = await cashRes.json();
-
-        const enrichedPortfolio = await Promise.all(portfolioData.map(async (stock) => {
-            // Pass both the ticker and the instrument name to our smart fetcher.
-            const details = await getCompanyDetails(stock.ticker, stock.instrumentName);
-            return {
-                ...stock,
-                companyName: details.name,
-                logoUrl: details.logoUrl,
-            };
-        }));
         
-        const fullPortfolioData = { portfolio: enrichedPortfolio, cash: cashData };
+        const fullPortfolioData = { portfolio: portfolioData, cash: cashData };
 
+        // Save the raw data to the client-side cache.
         localStorage.setItem('portfolioCache', JSON.stringify({ timestamp: Date.now(), data: fullPortfolioData }));
         
         renderPortfolio(fullPortfolioData);
@@ -468,8 +422,11 @@ function renderPortfolio(data, error = null) {
     } else {
         portfolioData.forEach(stock => {
             const baseTicker = stock.ticker.split('_')[0];
-            const companyName = stock.companyName; // Use the name from our enriched data
-            const iconUrl = stock.logoUrl; // Use the logo URL from our enriched data
+            const companyName = stock.instrumentName || baseTicker;
+            
+            // --- NEW SIMPLIFIED LOGIC ---
+            // Construct the URL directly from the GitHub repository.
+            const iconUrl = `https://raw.githubusercontent.com/nvstly/icons/main/png/${baseTicker}.png`;
             
             const currentValue = stock.currentPrice * stock.quantity;
             const changeAmount = stock.ppl;
@@ -510,7 +467,7 @@ function renderCalendar() {
     const weekdays = ["S", "M", "T", "W", "T", "F", "S"];
     weekdays.forEach(day => { calendarHTML += `<div class="calendar-day calendar-weekday">${day}</div>`; });
     for (let i = 1; i <= daysInMonth; i++) {
-        const isToday = i === today.getDate() ? 'current-date' : '';
+        const isToday = i === today.getDate() ? 'current' : '';
         calendarHTML += `<div class="calendar-day"><div class="calendar-date ${isToday}">${i}</div></div>`;
     }
     calendarHTML += '</div>';
