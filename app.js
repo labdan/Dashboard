@@ -51,9 +51,7 @@ async function init() {
         alert("Supabase URL is not set in config.js. To-Do list will not work.");
     }
     
-    // Apply saved theme first
     applySavedTheme();
-
     updateTimeAndDate();
     setInterval(updateTimeAndDate, 1000);
     updateQuote();
@@ -80,7 +78,6 @@ function setupEventListeners() {
         localStorage.removeItem('weatherCache');
         getWeather();
     });
-    // Add event listener for the new refresh button
     watchlistContainer.addEventListener('click', (e) => {
         if (e.target.closest('#refresh-portfolio')) {
             localStorage.removeItem('portfolioCache');
@@ -187,7 +184,7 @@ function updateWeatherUI(data) {
     sunriseElement.textContent = new Date(data.current.sunrise * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     sunsetElement.textContent = new Date(data.current.sunset * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     uvIndexElement.textContent = Math.round(data.current.uvi);
-    aqiIndexElement.textContent = 'N/A'; // AQI requires a separate call
+    aqiIndexElement.textContent = 'N/A';
 
     const forecastContainer = document.getElementById('weather-forecast');
     forecastContainer.innerHTML = '';
@@ -332,21 +329,16 @@ function loadStockNews() {
 // --- STOCK WATCHLIST (with Caching) ---
 async function loadStockWatchlist() {
     const cachedPortfolio = JSON.parse(localStorage.getItem('portfolioCache'));
-
     if (cachedPortfolio && (Date.now() - cachedPortfolio.timestamp < PORTFOLIO_CACHE_DURATION)) {
         renderPortfolio(cachedPortfolio.data);
         return;
     }
-
     watchlistContainer.innerHTML = '<div style="padding: 20px;">Loading portfolio...</div>';
-    let apiError = null;
-
     try {
         const [portfolioRes, cashRes] = await Promise.all([
             fetch('/.netlify/functions/get-portfolio'),
             fetch('/.netlify/functions/get-cash')
         ]);
-
         if (!portfolioRes.ok) {
             const errorJson = await portfolioRes.json();
             throw new Error(`Portfolio API Error: ${errorJson.error || portfolioRes.statusText}`);
@@ -355,24 +347,41 @@ async function loadStockWatchlist() {
             const errorJson = await cashRes.json();
             throw new Error(`Cash API Error: ${errorJson.error || cashRes.statusText}`);
         }
-
         const portfolioData = await portfolioRes.json();
         const cashData = await cashRes.json();
-        
         const fullPortfolioData = { portfolio: portfolioData, cash: cashData };
-
         localStorage.setItem('portfolioCache', JSON.stringify({ timestamp: Date.now(), data: fullPortfolioData }));
         renderPortfolio(fullPortfolioData);
-
     } catch (error) {
         console.error('Error fetching stock watchlist:', error);
-        apiError = error.message; // Store the error message
-        // Clear potentially bad cache
         localStorage.removeItem('portfolioCache');
-        // Render the error state
-        renderPortfolio(null, apiError);
+        renderPortfolio(null, error.message);
     }
 }
+
+// --- Helper function to get TradingView logo URL ---
+function getTradingViewLogoUrl(ticker) {
+    const parts = ticker.split('_');
+    const baseTicker = parts[0];
+    const country = parts.length > 1 ? parts[1] : '';
+
+    let exchange = '';
+    // Map country codes to common TradingView exchange prefixes
+    switch (country) {
+        case 'US':
+            exchange = 'NASDAQ'; // Default to NASDAQ for US stocks, a common choice
+            break;
+        case 'DE':
+            exchange = 'XETR'; // XETRA for German stocks
+            break;
+        // Add more mappings here as needed for other countries
+        default:
+            exchange = 'NASDAQ'; // A sensible default
+    }
+
+    return `https://s3-symbol-logo.tradingview.com/${exchange}--${baseTicker}.svg`;
+}
+
 
 function renderPortfolio(data, error = null) {
     if (error) {
@@ -393,39 +402,13 @@ function renderPortfolio(data, error = null) {
         return;
     }
 
-    // Handle cases where data is null or malformed, but there's no explicit error.
-    if (!data || !data.portfolio || !data.cash) {
-        const cashValue = (data && data.cash && data.cash.cash) || 0;
-        const totalPortfolioValue = cashValue;
-        let watchlistHTML = `
-            <div class="portfolio-header">
-                <div class="portfolio-title-bar">
-                    <div class="portfolio-value">
-                        <div class="value-title">Value</div>
-                        <div class="value-amount">€${totalPortfolioValue.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                    </div>
-                    <button class="refresh-btn" id="refresh-portfolio" title="Refresh Portfolio"><i class="fas fa-sync-alt"></i></button>
-                </div>
-                <div class="portfolio-details">
-                    <div class="detail-item">
-                        <div class="detail-title">Cash</div>
-                        <div class="detail-amount">€${cashValue.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-title">Investments</div>
-                        <div class="detail-amount">€0.00</div>
-                    </div>
-                </div>
-            </div>
-            <div class="no-investments">You have no investments yet.</div>`;
-        watchlistContainer.innerHTML = watchlistHTML;
+    if (!data || !data.cash) {
+        renderPortfolio(null, "Invalid data structure received from API.");
         return;
     }
 
-    const portfolioData = data.portfolio;
+    const portfolioData = data.portfolio || [];
     const cashData = data.cash;
-
-    // Use the accurate values directly from the cash API response.
     const cashValue = cashData.free || 0;
     const investmentValue = cashData.invested || 0;
     const totalPortfolioValue = cashData.total || 0;
@@ -455,10 +438,7 @@ function renderPortfolio(data, error = null) {
         watchlistHTML += `<div class="no-investments">You have no investments yet.</div>`;
     } else {
         portfolioData.forEach(stock => {
-            const tickerKey = stock.ticker.toUpperCase();
-            // AUTOMATED: Generate the logo URL directly from the ticker.
-            const iconUrl = `https://s3-symbol-logo.tradingview.com/${baseTicker.toLowerCase()}.svg`;
-
+            const iconUrl = getTradingViewLogoUrl(stock.ticker);
             
             const currentValue = stock.currentPrice * stock.quantity;
             const changeAmount = stock.ppl;
@@ -469,7 +449,7 @@ function renderPortfolio(data, error = null) {
             watchlistHTML += `
                 <div class="stock-item-new">
                     <div class="stock-icon-new">
-                        <img src="${iconUrl}" alt="${stock.ticker}">
+                        <img src="${iconUrl}" alt="${stock.ticker}" onerror="this.src='nostockimg.png'; this.onerror=null;">
                     </div>
                     <div class="stock-info-new">
                         <div class="stock-name-new">${stock.ticker.replace(/_/g, ' ')}</div>
