@@ -82,7 +82,6 @@ function setupEventListeners() {
     watchlistContainer.addEventListener('click', (e) => {
         if (e.target.closest('#refresh-portfolio')) {
             localStorage.removeItem('portfolioCache');
-            localStorage.removeItem('instrumentCache'); // Also clear instrument cache
             loadStockWatchlist();
         }
     });
@@ -376,13 +375,19 @@ async function loadStockWatchlist() {
         const portfolioData = await portfolioRes.json();
         const cashData = await cashRes.json();
         
-        const enrichedPortfolio = portfolioData.map(stock => {
+        const enrichedPortfolio = await Promise.all(portfolioData.map(async (stock) => {
             const instrumentDetails = instrumentDictionary.get(stock.ticker);
+            const instrumentName = instrumentDetails ? instrumentDetails.name : stock.ticker;
+
+            const response = await fetch(`/.netlify/functions/enrich-company-details?ticker=${encodeURIComponent(stock.ticker)}&instrumentName=${encodeURIComponent(instrumentName)}`);
+            const details = await response.json();
+            
             return {
                 ...stock,
-                companyName: instrumentDetails ? instrumentDetails.name : stock.ticker,
+                companyName: details.name,
+                logoUrl: details.logo_url,
             };
-        });
+        }));
         
         const fullPortfolioData = { portfolio: enrichedPortfolio, cash: cashData };
         
@@ -430,16 +435,6 @@ function renderPortfolio(data, error = null) {
         const valueB = b.currentPrice * b.quantity;
         return valueB - valueA; // Sort descending
     });
-
-    // --- NAME & ICON OVERRIDES ---
-    const nameOverrides = {
-        'Xtrackers NASDAQ 100 UCITS ETF (Acc)': 'NASDAQ 100',
-        'iShares Core S&P 500 UCITS ETF (Acc)': 'Core S&P 500'
-    };
-    const iconTickerOverrides = {
-        'XNASd': 'XNAS',
-        'SXR8d': 'IVV'
-    };
 
     // --- GOAL PROGRESS BARS LOGIC ---
     const goals = [
@@ -489,24 +484,9 @@ function renderPortfolio(data, error = null) {
         watchlistHTML += `<div class="no-investments">You have no investments yet.</div>`;
     } else {
         portfolioData.forEach(stock => {
-            let baseTicker = stock.ticker.split('_')[0];
-            
-            // --- APPLY NAME OVERRIDE ---
-            let companyName = stock.companyName;
-            if (nameOverrides[companyName]) {
-                companyName = nameOverrides[companyName];
-            }
-            
-            // --- APPLY ICON OVERRIDE ---
-            if (iconTickerOverrides[baseTicker]) {
-                baseTicker = iconTickerOverrides[baseTicker];
-            }
-
-            // --- DYNAMICALLY ADD CLASS FOR LONG NAMES ---
-            const nameClass = companyName.length > 22 ? 'stock-name-long' : '';
-            
-            // --- USE FORKED GITHUB REPO FOR ICONS ---
-            const iconUrl = `https://raw.githubusercontent.com/labdan/icons/main/png/${baseTicker}.png`;
+            const baseTicker = stock.ticker.split('_')[0];
+            const companyName = stock.companyName;
+            const iconUrl = stock.logoUrl;
             
             const currentValue = stock.currentPrice * stock.quantity;
             const changeAmount = stock.ppl;
@@ -520,7 +500,7 @@ function renderPortfolio(data, error = null) {
                         <img src="${iconUrl}" alt="${companyName}" onerror="this.src='https://placehold.co/40x40/EFEFEF/AAAAAA?text=${baseTicker}'; this.onerror=null;">
                     </div>
                     <div class="stock-info-new">
-                        <div class="stock-name-new ${nameClass}">${companyName}</div>
+                        <div class="stock-name-new">${companyName}</div>
                         <div class="stock-shares">${stock.quantity.toFixed(2)} SHARES</div>
                     </div>
                     <div class="stock-pricing-new">

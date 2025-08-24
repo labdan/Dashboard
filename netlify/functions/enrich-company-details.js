@@ -49,14 +49,27 @@ exports.handler = async function(event, context) {
   const baseTicker = ticker.split('_')[0];
 
   // --- Tier 1: Check Supabase Cache ---
-  const { data: cachedData } = await supabase.from('company_details').select('name, logo_url').eq('ticker', ticker).single();
-  if (cachedData && cachedData.name && cachedData.logo_url) { // Return if we have a complete record
+  let { data: cachedData } = await supabase.from('company_details').select('name, logo_url').eq('ticker', ticker).single();
+  
+  // If we have a complete record, return it immediately.
+  if (cachedData && cachedData.name && cachedData.logo_url) {
     return { statusCode: 200, body: JSON.stringify(cachedData) };
   }
 
-  // --- If not in cache or incomplete, start the enrichment process ---
-  let finalName = cachedData?.name || instrumentName; // Use cached name if it exists
-  let foundLogoUrl = cachedData?.logo_url || '';
+  // --- Progressive Enrichment Logic ---
+  
+  // If no record exists, create one with the basic info first.
+  if (!cachedData) {
+    const { data: newData } = await supabase
+      .from('company_details')
+      .insert({ ticker: ticker, name: instrumentName })
+      .select()
+      .single();
+    cachedData = newData;
+  }
+
+  let finalName = cachedData.name || instrumentName;
+  let foundLogoUrl = cachedData.logo_url || '';
 
   // --- Tier 2: Search for Logo (if we don't have one) ---
   if (!foundLogoUrl) {
@@ -83,7 +96,6 @@ exports.handler = async function(event, context) {
         fetchJson(`https://api.twelvedata.com/profile?symbol=${baseTicker}&apikey=${TWELVE_DATA_API_KEY}`),
         fetchJson(`https://api.twelvedata.com/logo?symbol=${baseTicker}&apikey=${TWELVE_DATA_API_KEY}`)
       ]);
-      // Only override the name if Twelve Data provides one
       if (profileData.name) {
         finalName = profileData.name;
       }
@@ -93,13 +105,13 @@ exports.handler = async function(event, context) {
     }
   }
 
-  // --- Tier 4: Save the result to Supabase Cache ---
-  const detailsToCache = {
-    ticker: ticker,
-    name: finalName,
-    logo_url: foundLogoUrl,
-  };
-  await supabase.from('company_details').upsert(detailsToCache);
+  // --- Tier 4: Update the record in Supabase with the new findings ---
+  const { data: updatedData } = await supabase
+    .from('company_details')
+    .update({ name: finalName, logo_url: foundLogoUrl })
+    .eq('ticker', ticker)
+    .select()
+    .single();
 
-  return { statusCode: 200, body: JSON.stringify({ name: finalName, logo_url: foundLogoUrl }) };
+  return { statusCode: 200, body: JSON.stringify(updatedData) };
 };
