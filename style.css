@@ -37,7 +37,7 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* --- NEW: 5-column grid layout for the whole page --- */
+/* --- UPDATED: 5-column grid layout for the whole page --- */
 .container {
   max-width: 98%;
   margin: 0 auto;
@@ -639,17 +639,18 @@ header {
   padding: 0 !important; /* Override widget padding */
 }
 
+/* --- UPDATED: News item layout --- */
 .news-item {
   padding: 15px 0;
   border-bottom: 1px solid var(--border-color);
-  display: flex; /* NEW: Flex layout for images */
+  display: flex;
   align-items: flex-start;
   gap: 15px;
 }
 
 .news-item:last-child { border-bottom: none; }
 
-/* NEW: Style for news images */
+/* --- NEW: Style for news images --- */
 .news-image {
     width: 100px;
     height: 75px;

@@ -87,7 +87,7 @@ function setupEventListeners() {
     watchlistContainer.addEventListener('click', (e) => {
         if (e.target.closest('#refresh-portfolio')) {
             localStorage.removeItem('portfolioCache');
-            localStorage.removeItem('instrumentCache');
+            localStorage.removeItem('instrumentCache'); // Also clear instrument cache
             loadStockWatchlist();
         }
     });
@@ -148,16 +148,24 @@ function loadTwitterWidget() {
     const listId = "1959714572497006792";
     const theme = localStorage.getItem('theme') || 'light';
 
-    // Clear the container and create the anchor tag for the widget to find.
-    twitterFeedContainer.innerHTML = '';
+    // Clear previous widget content but keep the placeholder text
+    const placeholder = twitterFeedContainer.querySelector('p');
+    if(placeholder) {
+        twitterFeedContainer.innerHTML = placeholder.outerHTML;
+    } else {
+        twitterFeedContainer.innerHTML = '';
+    }
+
     const anchor = document.createElement('a');
     anchor.className = "twitter-timeline";
     anchor.setAttribute('data-theme', theme);
-    anchor.setAttribute('data-height', "100%");
+    anchor.setAttribute('data-height', "100%"); // Let CSS handle height
     anchor.href = `https://x.com/i/lists/${listId}`;
+    
     twitterFeedContainer.appendChild(anchor);
 
-    // If the global twitter object is ready, tell it to render the new widget.
+    // If the global twitter object is ready, tell it to render the new widget
+    // The script is now loaded in index.html, making this more reliable.
     if (window.twttr && window.twttr.widgets) {
         window.twttr.widgets.load(twitterFeedContainer);
     }
