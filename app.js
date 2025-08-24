@@ -327,6 +327,22 @@ function loadStockNews() {
 }
 
 // --- STOCK WATCHLIST (with Caching) ---
+const tickerToNameMap = {
+    'QUBT_US_EQ': 'Quantum Computing',
+    'AMD_US_EQ': 'AMD',
+    'XPOA_US_EQ': 'D-Orbit',
+    'LLY_US_EQ': 'Eli Lilly',
+    'AVGO_US_EQ': 'Broadcom',
+    'EA_US_EQ': 'Electronic Arts',
+    'DMYI_US_EQ': 'IonQ',
+    'XNASd_EQ': 'iShares NASDAQ 100',
+    'YNDX_US_EQ': 'Yandex',
+    'IPOE_US_EQ': 'SoFi',
+    'NIO_US_EQ': 'NIO',
+    'RR_US_EQ': 'Rolls-Royce',
+    'SXR8d_EQ': 'iShares Core S&P 500'
+};
+
 async function loadStockWatchlist() {
     const cachedPortfolio = JSON.parse(localStorage.getItem('portfolioCache'));
     if (cachedPortfolio && (Date.now() - cachedPortfolio.timestamp < PORTFOLIO_CACHE_DURATION)) {
@@ -419,8 +435,9 @@ function renderPortfolio(data, error = null) {
     } else {
         portfolioData.forEach(stock => {
             const baseTicker = stock.ticker.split('_')[0];
-            // *** CHANGE: Use the new TradingView URL format as requested. ***
-            const iconUrl = `https://s3-symbol-logo.tradingview.com/${baseTicker.toLowerCase()}.svg`;
+            const companyName = tickerToNameMap[stock.ticker] || baseTicker;
+            const formattedCompanyName = companyName.toLowerCase().replace(/ /g, '-');
+            const iconUrl = `https://s3-symbol-logo.tradingview.com/${formattedCompanyName}--big.svg`;
             
             const currentValue = stock.currentPrice * stock.quantity;
             const changeAmount = stock.ppl;
@@ -431,11 +448,11 @@ function renderPortfolio(data, error = null) {
             watchlistHTML += `
                 <div class="stock-item-new">
                     <div class="stock-icon-new">
-                        <img src="${iconUrl}" alt="${stock.ticker}" onerror="this.src='https://placehold.co/40x40/EFEFEF/AAAAAA?text=${baseTicker}'; this.onerror=null;">
+                        <img src="${iconUrl}" alt="${companyName}" onerror="this.src='https://placehold.co/40x40/EFEFEF/AAAAAA?text=${baseTicker}'; this.onerror=null;">
                     </div>
                     <div class="stock-info-new">
-                        <div class="stock-name-new">${stock.ticker.replace(/_/g, ' ')}</div>
-                        <div class="stock-shares">${stock.quantity} SHARES</div>
+                        <div class="stock-name-new">${companyName}</div>
+                        <div class="stock-shares">${stock.quantity.toFixed(2)} SHARES</div>
                     </div>
                     <div class="stock-pricing-new">
                         <div class="stock-value">€${currentValue.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
