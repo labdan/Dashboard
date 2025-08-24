@@ -1,41 +1,71 @@
 // netlify/functions/get-list-tweets.js
-const { TwitterApi } = require('twitter-api-v2');
+import fetch from "node-fetch";
 
-exports.handler = async function (event, context) {
-  // 1. Get your List ID from the query string
-  const { listId } = event.queryStringParameters;
+// --- SIMPLE CACHE ---
+let cachedData = null;
+let cachedTime = 0;
+const CACHE_DURATION = 60 * 1000; // 1 minute cache
 
-  if (!listId) {
-    return {
-      statusCode: 400,
-      body: JSON.stringify({ error: 'List ID is required.' }),
-    };
-  }
+export async function handler(event, context) {
+  const now = Date.now();
 
-  // 2. Initialize Twitter client with your Bearer Token from environment variables
-  const client = new TwitterApi(process.env.TWITTER_BEARER_TOKEN);
-
-  try {
-    // 3. Fetch the most recent tweets from the specified list
-    const tweets = await client.v2.listTweets(listId, {
-      expansions: ['author_id', 'attachments.media_keys'],
-      'tweet.fields': ['created_at', 'public_metrics', 'entities'],
-      'user.fields': ['name', 'username', 'profile_image_url'],
-      'media.fields': ['preview_image_url', 'url', 'alt_text', 'type'],
-      max_results: 30, // Fetch the last 30 tweets
-    });
-
-    // 4. Return the complete tweet data to the frontend
+  // ✅ Return cache if still valid
+  if (cachedData && (now - cachedTime) < CACHE_DURATION) {
     return {
       statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(tweets),
-    };
-  } catch (error) {
-    console.error('Twitter API Error:', error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'Failed to fetch tweets' }),
+      headers: {
+        "Cache-Control": "public, max-age=60", // Netlify CDN cache for 1 min
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(cachedData),
     };
   }
-};
+
+  try {
+    // 🔑 Replace with your actual Twitter API endpoint
+    const url = "https://api.x.com/2/your-endpoint-here";
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${process.env.TWITTER_BEARER_TOKEN}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Twitter API Error: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // ✅ Save to cache
+    cachedData = data;
+    cachedTime = now;
+
+    return {
+      statusCode: 200,
+      headers: {
+        "Cache-Control": "public, max-age=60", // Netlify edge caching
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    };
+  } catch (err) {
+    console.error("Twitter API Error:", err);
+
+    // fallback: return last cached data if available
+    if (cachedData) {
+      return {
+        statusCode: 200,
+        headers: {
+          "Cache-Control": "public, max-age=60",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(cachedData),
+      };
+    }
+
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: "Failed to fetch tweets" }),
+    };
+  }
+}
