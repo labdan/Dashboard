@@ -22,7 +22,13 @@ const fetchJson = (url) => {
       }
       let data = '';
       res.on('data', (chunk) => { data += chunk; });
-      res.on('end', () => resolve(JSON.parse(data)));
+      res.on('end', () => {
+        try {
+            resolve(data ? JSON.parse(data) : {});
+        } catch(e) {
+            reject(new Error('Failed to parse JSON response.'));
+        }
+      });
     }).on('error', (err) => reject(err));
   });
 };
@@ -44,38 +50,43 @@ exports.handler = async function(event, context) {
 
   // --- Tier 1: Check Supabase Cache ---
   const { data: cachedData } = await supabase.from('company_details').select('name, logo_url').eq('ticker', ticker).single();
-  if (cachedData && cachedData.logo_url) { // Return if we have a complete record
+  if (cachedData && cachedData.name && cachedData.logo_url) { // Return if we have a complete record
     return { statusCode: 200, body: JSON.stringify(cachedData) };
   }
 
   // --- If not in cache or incomplete, start the enrichment process ---
-  let finalName = instrumentName;
-  let foundLogoUrl = '';
+  let finalName = cachedData?.name || instrumentName; // Use cached name if it exists
+  let foundLogoUrl = cachedData?.logo_url || '';
 
-  // --- Tier 2: Search for Logos ---
-  // Attempt A: TradingView CDN
-  const slug = instrumentName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-  const tradingViewUrl = `https://s3-symbol-logo.tradingview.com/${slug}--big.svg`;
-  if (await urlExists(tradingViewUrl)) {
-    foundLogoUrl = tradingViewUrl;
-  }
-  
-  // Attempt B: Forked GitHub Repo
+  // --- Tier 2: Search for Logo (if we don't have one) ---
   if (!foundLogoUrl) {
-    const githubUrl = `https://raw.githubusercontent.com/labdan/icons/main/png/${baseTicker}.png`;
-    if (await urlExists(githubUrl)) {
-      foundLogoUrl = githubUrl;
+    // Attempt A: TradingView CDN
+    const slug = finalName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const tradingViewUrl = `https://s3-symbol-logo.tradingview.com/${slug}--big.svg`;
+    if (await urlExists(tradingViewUrl)) {
+      foundLogoUrl = tradingViewUrl;
+    }
+    
+    // Attempt B: Forked GitHub Repo
+    if (!foundLogoUrl) {
+      const githubUrl = `https://raw.githubusercontent.com/labdan/icons/main/png/${baseTicker}.png`;
+      if (await urlExists(githubUrl)) {
+        foundLogoUrl = githubUrl;
+      }
     }
   }
 
-  // --- Tier 3: Fallback to Twelve Data API (only if no logo was found) ---
+  // --- Tier 3: Fallback to Twelve Data API (if still no logo) ---
   if (!foundLogoUrl) {
     try {
       const [profileData, logoData] = await Promise.all([
         fetchJson(`https://api.twelvedata.com/profile?symbol=${baseTicker}&apikey=${TWELVE_DATA_API_KEY}`),
         fetchJson(`https://api.twelvedata.com/logo?symbol=${baseTicker}&apikey=${TWELVE_DATA_API_KEY}`)
       ]);
-      finalName = profileData.name || instrumentName;
+      // Only override the name if Twelve Data provides one
+      if (profileData.name) {
+        finalName = profileData.name;
+      }
       foundLogoUrl = logoData.url || '';
     } catch (error) {
       console.error(`Twelve Data fallback failed for ${ticker}:`, error);
