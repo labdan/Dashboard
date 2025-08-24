@@ -490,6 +490,5 @@ function renderCalendar() {
     calendarHTML += '</div>';
     calendarContainer.innerHTML = calendarHTML;
 }
-
 // --- START THE APP ---
 init();
