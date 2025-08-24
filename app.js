@@ -7,6 +7,7 @@ if (typeof config === 'undefined') {
 const { url: SUPABASE_URL, anonKey: SUPABASE_ANON_KEY } = config.supabase;
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes for weather
 const PORTFOLIO_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes for portfolio
+const INSTRUMENT_CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours for the master instrument list
 
 // --- SUPABASE CLIENT ---
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -81,6 +82,7 @@ function setupEventListeners() {
     watchlistContainer.addEventListener('click', (e) => {
         if (e.target.closest('#refresh-portfolio')) {
             localStorage.removeItem('portfolioCache');
+            localStorage.removeItem('instrumentCache'); // Also clear instrument cache
             loadStockWatchlist();
         }
     });
@@ -328,18 +330,42 @@ function loadStockNews() {
 
 // --- STOCK WATCHLIST ---
 
-async function loadStockWatchlist() {
-    // We use a simple client-side cache for the final, enriched portfolio data.
-    const cachedPortfolio = JSON.parse(localStorage.getItem('portfolioCache'));
-    if (cachedPortfolio && (Date.now() - cachedPortfolio.timestamp < PORTFOLIO_CACHE_DURATION)) {
-        renderPortfolio(cachedPortfolio.data);
-        return;
+/**
+ * Fetches the master list of all instruments, caching it for efficiency.
+ * @returns {Promise<Map<string, object>>} A promise that resolves to a Map where keys are tickers.
+ */
+async function getInstrumentDictionary() {
+    const cachedInstruments = JSON.parse(localStorage.getItem('instrumentCache'));
+    if (cachedInstruments && (Date.now() - cachedInstruments.timestamp < INSTRUMENT_CACHE_DURATION)) {
+        return new Map(cachedInstruments.data);
     }
 
+    try {
+        const response = await fetch('/.netlify/functions/get-instruments');
+        if (!response.ok) throw new Error('Failed to fetch instrument metadata');
+        const instrumentList = await response.json();
+        
+        const instrumentMap = new Map(instrumentList.map(item => [item.ticker, item]));
+
+        localStorage.setItem('instrumentCache', JSON.stringify({
+            timestamp: Date.now(),
+            data: Array.from(instrumentMap.entries())
+        }));
+
+        return instrumentMap;
+    } catch (error) {
+        console.error("Could not load instrument dictionary:", error);
+        return new Map();
+    }
+}
+
+
+async function loadStockWatchlist() {
     watchlistContainer.innerHTML = '<div style="padding: 20px;">Loading portfolio...</div>';
 
     try {
-        const [portfolioRes, cashRes] = await Promise.all([
+        const [instrumentDictionary, portfolioRes, cashRes] = await Promise.all([
+            getInstrumentDictionary(),
             fetch('/.netlify/functions/get-portfolio'),
             fetch('/.netlify/functions/get-cash')
         ]);
@@ -349,28 +375,21 @@ async function loadStockWatchlist() {
 
         const portfolioData = await portfolioRes.json();
         const cashData = await cashRes.json();
-
-        // Enrich the raw portfolio data by fetching details for each stock from our Supabase-powered function.
-        const enrichedPortfolio = await Promise.all(portfolioData.map(async (stock) => {
-            const response = await fetch(`/.netlify/functions/get-company-details?ticker=${stock.ticker}`);
-            const details = await response.json();
+        
+        const enrichedPortfolio = portfolioData.map(stock => {
+            const instrumentDetails = instrumentDictionary.get(stock.ticker);
             return {
                 ...stock,
-                companyName: details.name,
-                logoUrl: details.logo_url, // Note the snake_case from the function
+                companyName: instrumentDetails ? instrumentDetails.name : stock.ticker,
             };
-        }));
+        });
         
         const fullPortfolioData = { portfolio: enrichedPortfolio, cash: cashData };
-
-        // Save the final, enriched data to the client-side cache.
-        localStorage.setItem('portfolioCache', JSON.stringify({ timestamp: Date.now(), data: fullPortfolioData }));
         
         renderPortfolio(fullPortfolioData);
 
     } catch (error) {
         console.error('Error fetching stock watchlist:', error);
-        localStorage.removeItem('portfolioCache');
         renderPortfolio(null, error.message);
     }
 }
@@ -399,11 +418,28 @@ function renderPortfolio(data, error = null) {
         return;
     }
 
-    const portfolioData = data.portfolio || [];
+    let portfolioData = data.portfolio || [];
     const cashData = data.cash;
     const cashValue = cashData.free || 0;
     const investmentValue = cashData.invested || 0;
     const totalPortfolioValue = cashData.total || 0;
+
+    // --- SORTING LOGIC ---
+    portfolioData.sort((a, b) => {
+        const valueA = a.currentPrice * a.quantity;
+        const valueB = b.currentPrice * b.quantity;
+        return valueB - valueA; // Sort descending
+    });
+
+    // --- NAME & ICON OVERRIDES ---
+    const nameOverrides = {
+        'Xtrackers NASDAQ 100 UCITS ETF (Acc)': 'NASDAQ 100',
+        'iShares Core S&P 500 UCITS ETF (Acc)': 'Core S&P 500'
+    };
+    const iconTickerOverrides = {
+        'XNASd': 'XNAS',
+        'SXR8d': 'IVV'
+    };
 
     let watchlistHTML = `
         <div class="portfolio-header">
@@ -430,9 +466,24 @@ function renderPortfolio(data, error = null) {
         watchlistHTML += `<div class="no-investments">You have no investments yet.</div>`;
     } else {
         portfolioData.forEach(stock => {
-            const baseTicker = stock.ticker.split('_')[0];
-            const companyName = stock.companyName; // Use the name from our enriched data
-            const iconUrl = stock.logoUrl; // Use the logo URL from our enriched data
+            let baseTicker = stock.ticker.split('_')[0];
+            
+            // --- APPLY NAME OVERRIDE ---
+            let companyName = stock.companyName;
+            if (nameOverrides[companyName]) {
+                companyName = nameOverrides[companyName];
+            }
+            
+            // --- APPLY ICON OVERRIDE ---
+            if (iconTickerOverrides[baseTicker]) {
+                baseTicker = iconTickerOverrides[baseTicker];
+            }
+
+            // --- DYNAMICALLY ADD CLASS FOR LONG NAMES ---
+            const nameClass = companyName.length > 22 ? 'stock-name-long' : '';
+            
+            // --- USE FORKED GITHUB REPO FOR ICONS ---
+            const iconUrl = `https://raw.githubusercontent.com/labdan/icons/main/png/${baseTicker}.png`;
             
             const currentValue = stock.currentPrice * stock.quantity;
             const changeAmount = stock.ppl;
@@ -446,7 +497,7 @@ function renderPortfolio(data, error = null) {
                         <img src="${iconUrl}" alt="${companyName}" onerror="this.src='https://placehold.co/40x40/EFEFEF/AAAAAA?text=${baseTicker}'; this.onerror=null;">
                     </div>
                     <div class="stock-info-new">
-                        <div class="stock-name-new">${companyName}</div>
+                        <div class="stock-name-new ${nameClass}">${companyName}</div>
                         <div class="stock-shares">${stock.quantity.toFixed(2)} SHARES</div>
                     </div>
                     <div class="stock-pricing-new">
