@@ -1021,3 +1021,82 @@ footer {
     font-size: 0.9rem;
   }
 }
+
+/* ---------------- X.com Feed ---------------- */
+.tweet {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 15px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.tweet:last-child {
+  border-bottom: none;
+}
+
+.tweet-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tweet-content {
+  flex: 1;
+  min-width: 0; /* prevent text overflow */
+}
+
+.tweet-author {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.tweet-author-name {
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.tweet-author-username {
+  font-size: 0.85rem;
+  color: var(--secondary-color);
+}
+
+.tweet-text {
+  font-size: 0.95rem;
+  line-height: 1.4;
+  margin-bottom: 10px;
+  word-wrap: break-word;
+}
+
+.tweet-text a {
+  color: var(--primary-color);
+  text-decoration: none;
+}
+.tweet-text a:hover {
+  text-decoration: underline;
+}
+
+.tweet-media {
+  margin-top: 8px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.tweet-media img {
+  display: block;
+  max-width: 100%;
+  max-height: 400px;
+  width: auto;
+  height: auto;
+  border-radius: 12px;
+  object-fit: contain;
+}
+
+.tweet-date {
+  font-size: 0.8rem;
+  color: var(--secondary-color);
+  margin-top: 6px;
+}
