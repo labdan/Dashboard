@@ -47,9 +47,6 @@ const USER_ID = '12345678-12321-1234-1234567890ab';
 
 // --- INITIALIZATION ---
 async function init() {
-    // Force clear the portfolio cache on initial load to ensure fresh data.
-    localStorage.removeItem('portfolioCache');
-
     if (!SUPABASE_URL || SUPABASE_URL.includes('YOUR_SUPABASE_URL')) {
         alert("Supabase URL is not set in config.js. To-Do list will not work.");
     }
@@ -332,12 +329,6 @@ function loadStockNews() {
 // --- STOCK WATCHLIST (Simplified) ---
 
 async function loadStockWatchlist() {
-    const cachedPortfolio = JSON.parse(localStorage.getItem('portfolioCache'));
-    if (cachedPortfolio && (Date.now() - cachedPortfolio.timestamp < PORTFOLIO_CACHE_DURATION)) {
-        renderPortfolio(cachedPortfolio.data);
-        return;
-    }
-
     watchlistContainer.innerHTML = '<div style="padding: 20px;">Loading portfolio...</div>';
 
     try {
@@ -352,16 +343,15 @@ async function loadStockWatchlist() {
         const portfolioData = await portfolioRes.json();
         const cashData = await cashRes.json();
         
-        const fullPortfolioData = { portfolio: portfolioData, cash: cashData };
+        // *** DIAGNOSTIC STEP: Log the raw portfolio data to the console ***
+        console.log("Raw Portfolio Data Received:", portfolioData);
 
-        // Save the raw data to the client-side cache.
-        localStorage.setItem('portfolioCache', JSON.stringify({ timestamp: Date.now(), data: fullPortfolioData }));
+        const fullPortfolioData = { portfolio: portfolioData, cash: cashData };
         
         renderPortfolio(fullPortfolioData);
 
     } catch (error) {
         console.error('Error fetching stock watchlist:', error);
-        localStorage.removeItem('portfolioCache');
         renderPortfolio(null, error.message);
     }
 }
@@ -422,10 +412,9 @@ function renderPortfolio(data, error = null) {
     } else {
         portfolioData.forEach(stock => {
             const baseTicker = stock.ticker.split('_')[0];
+            // Use instrumentName if it exists, otherwise fall back to the base ticker.
             const companyName = stock.instrumentName || baseTicker;
             
-            // --- NEW SIMPLIFIED LOGIC ---
-            // Construct the URL directly from your forked GitHub repository.
             const iconUrl = `https://raw.githubusercontent.com/labdan/icons/main/png/${baseTicker}.png`;
             
             const currentValue = stock.currentPrice * stock.quantity;
