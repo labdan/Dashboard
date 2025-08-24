@@ -7,6 +7,7 @@ if (typeof config === 'undefined') {
 const { url: SUPABASE_URL, anonKey: SUPABASE_ANON_KEY } = config.supabase;
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes for weather
 const PORTFOLIO_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes for portfolio
+const INSTRUMENT_CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours for the master instrument list
 
 // --- SUPABASE CLIENT ---
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -326,13 +327,48 @@ function loadStockNews() {
     `).join('');
 }
 
-// --- STOCK WATCHLIST (Simplified) ---
+// --- STOCK WATCHLIST ---
+
+/**
+ * Fetches the master list of all instruments, caching it for efficiency.
+ * @returns {Promise<Map<string, object>>} A promise that resolves to a Map where keys are tickers.
+ */
+async function getInstrumentDictionary() {
+    const cachedInstruments = JSON.parse(localStorage.getItem('instrumentCache'));
+    if (cachedInstruments && (Date.now() - cachedInstruments.timestamp < INSTRUMENT_CACHE_DURATION)) {
+        // Data is stored as an array, so we convert it back to a Map for fast lookups.
+        return new Map(cachedInstruments.data);
+    }
+
+    try {
+        const response = await fetch('/.netlify/functions/get-instruments');
+        if (!response.ok) throw new Error('Failed to fetch instrument metadata');
+        const instrumentList = await response.json();
+        
+        // Convert the array to a Map for O(1) lookups. The key is the ticker.
+        const instrumentMap = new Map(instrumentList.map(item => [item.ticker, item]));
+
+        // Store the array version in localStorage, as Maps don't serialize well.
+        localStorage.setItem('instrumentCache', JSON.stringify({
+            timestamp: Date.now(),
+            data: Array.from(instrumentMap.entries()) // Store as an array of [key, value] pairs
+        }));
+
+        return instrumentMap;
+    } catch (error) {
+        console.error("Could not load instrument dictionary:", error);
+        return new Map(); // Return an empty map on failure
+    }
+}
+
 
 async function loadStockWatchlist() {
     watchlistContainer.innerHTML = '<div style="padding: 20px;">Loading portfolio...</div>';
 
     try {
-        const [portfolioRes, cashRes] = await Promise.all([
+        // Fetch both the master instrument list and the user's personal portfolio data in parallel.
+        const [instrumentDictionary, portfolioRes, cashRes] = await Promise.all([
+            getInstrumentDictionary(),
             fetch('/.netlify/functions/get-portfolio'),
             fetch('/.netlify/functions/get-cash')
         ]);
@@ -343,10 +379,17 @@ async function loadStockWatchlist() {
         const portfolioData = await portfolioRes.json();
         const cashData = await cashRes.json();
         
-        // *** DIAGNOSTIC STEP: Log the raw portfolio data to the console ***
-        console.log("Raw Portfolio Data Received:", portfolioData);
-
-        const fullPortfolioData = { portfolio: portfolioData, cash: cashData };
+        // Enrich the portfolio data with full names from the dictionary.
+        const enrichedPortfolio = portfolioData.map(stock => {
+            const instrumentDetails = instrumentDictionary.get(stock.ticker);
+            return {
+                ...stock,
+                // Use the official name from the dictionary, or fall back to the ticker if not found.
+                companyName: instrumentDetails ? instrumentDetails.name : stock.ticker,
+            };
+        });
+        
+        const fullPortfolioData = { portfolio: enrichedPortfolio, cash: cashData };
         
         renderPortfolio(fullPortfolioData);
 
@@ -412,9 +455,9 @@ function renderPortfolio(data, error = null) {
     } else {
         portfolioData.forEach(stock => {
             const baseTicker = stock.ticker.split('_')[0];
-            // Use instrumentName if it exists, otherwise fall back to the base ticker.
-            const companyName = stock.instrumentName || baseTicker;
+            const companyName = stock.companyName; // Use the enriched name
             
+            // Construct the URL directly from your forked GitHub repository.
             const iconUrl = `https://raw.githubusercontent.com/labdan/icons/main/png/${baseTicker}.png`;
             
             const currentValue = stock.currentPrice * stock.quantity;
