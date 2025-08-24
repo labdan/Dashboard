@@ -327,30 +327,6 @@ function loadStockNews() {
 }
 
 // --- STOCK WATCHLIST (with Caching) ---
-// *** FIX: Updated map to match user's portfolio screenshot and remove incorrect stocks ***
-const tickerToNameMap = {
-    'QUBT_US_EQ': 'Quantum Computing',
-    'AMD_US_EQ': 'Advanced Micro Devices',
-    'LLY_US_EQ': 'Eli Lilly & Co',
-    'AVGO_US_EQ': 'Broadcom',
-    'EA_US_EQ': 'Electronic Arts',
-    'DMYI_US_EQ': 'IonQ',
-    'XNASd_EQ': 'Xtrackers NASDAQ 100',
-    'IPOE_US_EQ': 'SoFi Technologies',
-    'NIO_US_EQ': 'NIO',
-    'SXR8d_EQ': 'iShares Core S&P 500',
-    // Assuming tickers for stocks visible in screenshot but not in original API log
-    'NVDA_US_EQ': 'Nvidia Group NV', 
-    'QBTS_US_EQ': 'D-Wave Quantum'
-};
-
-// *** FIX: Added a map for special icon cases, especially for ETFs ***
-const tickerToIconOverrides = {
-    'XNASd_EQ': 'xtrackers',
-    'SXR8d_EQ': 'ishares'
-};
-
-
 async function loadStockWatchlist() {
     const cachedPortfolio = JSON.parse(localStorage.getItem('portfolioCache'));
     if (cachedPortfolio && (Date.now() - cachedPortfolio.timestamp < PORTFOLIO_CACHE_DURATION)) {
@@ -442,17 +418,17 @@ function renderPortfolio(data, error = null) {
         watchlistHTML += `<div class="no-investments">You have no investments yet.</div>`;
     } else {
         portfolioData.forEach(stock => {
-            // *** FIX: Only render stocks that are in our corrected name map ***
-            if (!tickerToNameMap[stock.ticker]) {
-                return; // Skip rendering stocks not in our map
-            }
-
             const baseTicker = stock.ticker.split('_')[0];
-            const companyName = tickerToNameMap[stock.ticker] || baseTicker;
             
-            // *** FIX: Use the icon override map first, then fall back to the company name ***
-            const iconSlug = tickerToIconOverrides[stock.ticker] || companyName.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-');
-            const iconUrl = `https://s3-symbol-logo.tradingview.com/${iconSlug}--big.svg`;
+            // *** CHANGE: Use instrumentName from the API if available, otherwise fall back to the base ticker. ***
+            const companyName = stock.instrumentName || baseTicker;
+            
+            // *** CHANGE: Dynamically create the slug for the icon URL from the company name. ***
+            const slug = companyName.toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric chars with a hyphen
+                .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+            
+            const iconUrl = `https://s3-symbol-logo.tradingview.com/${slug}--big.svg`;
             
             const currentValue = stock.currentPrice * stock.quantity;
             const changeAmount = stock.ppl;
