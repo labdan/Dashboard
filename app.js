@@ -327,21 +327,29 @@ function loadStockNews() {
 }
 
 // --- STOCK WATCHLIST (with Caching) ---
+// *** FIX: Updated map to match user's portfolio screenshot and remove incorrect stocks ***
 const tickerToNameMap = {
     'QUBT_US_EQ': 'Quantum Computing',
-    'AMD_US_EQ': 'AMD',
-    'XPOA_US_EQ': 'D-Orbit',
-    'LLY_US_EQ': 'Eli Lilly',
+    'AMD_US_EQ': 'Advanced Micro Devices',
+    'LLY_US_EQ': 'Eli Lilly & Co',
     'AVGO_US_EQ': 'Broadcom',
     'EA_US_EQ': 'Electronic Arts',
     'DMYI_US_EQ': 'IonQ',
-    'XNASd_EQ': 'iShares NASDAQ 100',
-    'YNDX_US_EQ': 'Yandex',
-    'IPOE_US_EQ': 'SoFi',
+    'XNASd_EQ': 'Xtrackers NASDAQ 100',
+    'IPOE_US_EQ': 'SoFi Technologies',
     'NIO_US_EQ': 'NIO',
-    'RR_US_EQ': 'Rolls-Royce',
-    'SXR8d_EQ': 'iShares Core S&P 500'
+    'SXR8d_EQ': 'iShares Core S&P 500',
+    // Assuming tickers for stocks visible in screenshot but not in original API log
+    'NVDA_US_EQ': 'Nvidia Group NV', 
+    'QBTS_US_EQ': 'D-Wave Quantum'
 };
+
+// *** FIX: Added a map for special icon cases, especially for ETFs ***
+const tickerToIconOverrides = {
+    'XNASd_EQ': 'xtrackers',
+    'SXR8d_EQ': 'ishares'
+};
+
 
 async function loadStockWatchlist() {
     const cachedPortfolio = JSON.parse(localStorage.getItem('portfolioCache'));
@@ -434,10 +442,17 @@ function renderPortfolio(data, error = null) {
         watchlistHTML += `<div class="no-investments">You have no investments yet.</div>`;
     } else {
         portfolioData.forEach(stock => {
+            // *** FIX: Only render stocks that are in our corrected name map ***
+            if (!tickerToNameMap[stock.ticker]) {
+                return; // Skip rendering stocks not in our map
+            }
+
             const baseTicker = stock.ticker.split('_')[0];
             const companyName = tickerToNameMap[stock.ticker] || baseTicker;
-            const formattedCompanyName = companyName.toLowerCase().replace(/ /g, '-');
-            const iconUrl = `https://s3-symbol-logo.tradingview.com/${formattedCompanyName}--big.svg`;
+            
+            // *** FIX: Use the icon override map first, then fall back to the company name ***
+            const iconSlug = tickerToIconOverrides[stock.ticker] || companyName.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-');
+            const iconUrl = `https://s3-symbol-logo.tradingview.com/${iconSlug}--big.svg`;
             
             const currentValue = stock.currentPrice * stock.quantity;
             const changeAmount = stock.ppl;
