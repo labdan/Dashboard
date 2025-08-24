@@ -350,7 +350,6 @@ async function loadStockWatchlist() {
         const portfolioData = await portfolioRes.json();
         const cashData = await cashRes.json();
 
-        // DEBUGGING: Log the raw data from the API
         console.log('Received Cash Data:', cashData);
         console.log('Received Portfolio Data:', portfolioData);
 
@@ -363,35 +362,6 @@ async function loadStockWatchlist() {
         renderPortfolio(null, error.message);
     }
 }
-
-// --- Helper function to get TradingView logo URL ---
-function getTradingViewLogoUrl(ticker) {
-    const parts = ticker.split('_');
-    const baseTicker = parts[0];
-    const country = parts.length > 1 ? parts[1] : '';
-
-    let exchange = '';
-    // Map country codes to common TradingView exchange prefixes
-    switch (country) {
-        case 'US':
-            exchange = 'NASDAQ'; // Default to NASDAQ for US stocks
-            break;
-        case 'DE':
-            exchange = 'XETR'; // XETRA for German stocks
-            break;
-        // Add more mappings here as needed for other countries
-        default:
-            exchange = 'NASDAQ'; // A sensible default for other markets
-    }
-
-    // Special cases for specific tickers on different exchanges
-    if (baseTicker === 'BRK.B' || baseTicker === 'BRK.A') {
-        exchange = 'NYSE';
-    }
-
-    return `https://s3-symbol-logo.tradingview.com/${exchange}--${baseTicker}.svg`;
-}
-
 
 function renderPortfolio(data, error = null) {
     if (error) {
@@ -448,8 +418,9 @@ function renderPortfolio(data, error = null) {
         watchlistHTML += `<div class="no-investments">You have no investments yet.</div>`;
     } else {
         portfolioData.forEach(stock => {
-            const iconUrl = getTradingViewLogoUrl(stock.ticker);
             const baseTicker = stock.ticker.split('_')[0];
+            // *** CHANGE: Use the new TradingView URL format as requested. ***
+            const iconUrl = `https://s3-symbol-logo.tradingview.com/${baseTicker.toLowerCase()}.svg`;
             
             const currentValue = stock.currentPrice * stock.quantity;
             const changeAmount = stock.ppl;
@@ -457,7 +428,6 @@ function renderPortfolio(data, error = null) {
             const changePercent = initialValue === 0 ? 0 : (changeAmount / initialValue) * 100;
             const isPositive = changeAmount >= 0;
 
-            // *** FIX: Replaced 'nostockimg.png' with a placeholder service to prevent 404 errors. ***
             watchlistHTML += `
                 <div class="stock-item-new">
                     <div class="stock-icon-new">
