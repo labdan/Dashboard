@@ -1100,3 +1100,16 @@ footer {
   color: var(--secondary-color);
   margin-top: 6px;
 }
+
+/* Highlighted news/tweets */
+.highlight-news {
+  background-color: rgba(40, 167, 69, 0.1);
+  border-left: 4px solid var(--success-color);
+  padding-left: 12px;
+}
+
+.highlight-tweet {
+  background-color: rgba(40, 167, 69, 0.1);
+  border-left: 4px solid var(--success-color);
+  padding-left: 12px;
+}

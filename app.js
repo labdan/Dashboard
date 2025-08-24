@@ -110,35 +110,50 @@ function toggleTheme() {
     themeToggleBtn.innerHTML = newTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
 }
 
-// --- SIDEBAR NEWS ---
+// --- SIDEBAR NEWS (Seeking Alpha + Highlight) ---
+function highlightIfTicker(text, tickers) {
+    return tickers.some(ticker =>
+        text.toUpperCase().includes(ticker.toUpperCase())
+    );
+}
+
 async function loadSideNews() {
     if (!sideNewsContainer) return;
+
     try {
         const response = await fetch('/.netlify/functions/get-stock-news');
         if (!response.ok) throw new Error(`News function failed: ${response.statusText}`);
         const data = await response.json();
-        
+
+        // get tickers from your cached portfolio
+        let portfolioTickers = [];
+        try {
+            const cached = JSON.parse(localStorage.getItem("portfolioCache"));
+            if (cached?.portfolio) {
+                portfolioTickers = cached.portfolio.map(s => s.ticker);
+            }
+        } catch {}
+
         sideNewsContainer.innerHTML = data.articles.map(article => {
-            if (!article.title || article.title === '[Removed]' || !article.urlToImage) return '';
-            const timeAgo = new Date(article.publishedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit'});
+            if (!article.title || article.title === '[Removed]') return '';
+            const isHighlight = highlightIfTicker(article.title, portfolioTickers) ||
+                                highlightIfTicker(article.description || '', portfolioTickers);
+
             return `
-                <div class="news-item">
-                    <img src="${article.urlToImage}" alt="News image" class="news-image" onerror="this.parentElement.style.display='none'">
-                    <div class="news-content">
-                        <a href="${article.url}" class="news-title" target="_blank" rel="noopener noreferrer">${article.title}</a>
-                        <div class="news-date">${article.source.name} - ${timeAgo}</div>
-                    </div>
+                <div class="news-item ${isHighlight ? "highlight-news" : ""}">
+                    <a href="${article.link}" class="news-title" target="_blank" rel="noopener noreferrer">${article.title}</a>
+                    <div class="news-date">${new Date(article.pubDate).toLocaleString()}</div>
                 </div>
             `;
         }).join('');
-
     } catch (error) {
         console.error('Error fetching side news:', error.message);
         sideNewsContainer.innerHTML = `<div class="error-message" style="padding: 20px;">Could not load news.</div>`;
     }
 }
 
-// --- NEW X.COM FEED ---
+
+// --- NEW X.COM FEED (with highlight) ---
 async function loadXFeed() {
     if (!twitterFeedContainer) return;
     const listId = "1959714572497006792";
@@ -149,42 +164,57 @@ async function loadXFeed() {
         if (!response.ok) throw new Error('Failed to fetch tweets from serverless function.');
         
         const tweetsData = await response.json();
-        
         const tweets = tweetsData.data;
         const users = tweetsData.includes.users;
         const media = tweetsData.includes.media || [];
 
-        twitterFeedContainer.innerHTML = ''; // Clear loading message
+        // get portfolio tickers
+        let portfolioTickers = [];
+        try {
+            const cached = JSON.parse(localStorage.getItem("portfolioCache"));
+            if (cached?.portfolio) {
+                portfolioTickers = cached.portfolio.map(s => s.ticker);
+            }
+        } catch {}
+
+        twitterFeedContainer.innerHTML = '';
 
         tweets.forEach(tweet => {
             const author = users.find(user => user.id === tweet.author_id);
-            
+
             let mediaHTML = '';
             if (tweet.attachments && tweet.attachments.media_keys) {
                 const mediaKey = tweet.attachments.media_keys[0];
                 const mediaItem = media.find(m => m.media_key === mediaKey);
                 if (mediaItem && mediaItem.type === 'photo') {
-                    mediaHTML = `<div class="tweet-media"><img src="${mediaItem.url}" alt="${mediaItem.alt_text || 'Tweet image'}"></div>`;
+                    mediaHTML = `<div class="tweet-media"><img src="${mediaItem.url}" alt="Tweet image"></div>`;
                 }
             }
-            
-            // Format tweet text to link URLs, hashtags, and mentions
+
+            // Format tweet text
             let formattedText = tweet.text;
             if (tweet.entities) {
                 if (tweet.entities.urls) {
                     tweet.entities.urls.forEach(url => {
-                        formattedText = formattedText.replace(url.url, `<a href="${url.expanded_url}" target="_blank" rel="noopener noreferrer">${url.display_url}</a>`);
+                        formattedText = formattedText.replace(url.url,
+                            `<a href="${url.expanded_url}" target="_blank" rel="noopener noreferrer">${url.display_url}</a>`);
                     });
                 }
-                 if (tweet.entities.mentions) {
+                if (tweet.entities.mentions) {
                     tweet.entities.mentions.forEach(mention => {
-                         formattedText = formattedText.replace(`@${mention.username}`, `<a href="https://x.com/${mention.username}" target="_blank" rel="noopener noreferrer">@${mention.username}</a>`);
+                        formattedText = formattedText.replace(`@${mention.username}`,
+                            `<a href="https://x.com/${mention.username}" target="_blank" rel="noopener noreferrer">@${mention.username}</a>`);
                     });
                 }
             }
 
+            // Highlight if contains portfolio tickers
+            const isHighlight = portfolioTickers.some(ticker =>
+                tweet.text.toUpperCase().includes(ticker.toUpperCase())
+            );
+
             const tweetElement = `
-                <div class="tweet">
+                <div class="tweet ${isHighlight ? "highlight-tweet" : ""}">
                     <img src="${author.profile_image_url}" alt="${author.username}" class="tweet-avatar">
                     <div class="tweet-content">
                         <div class="tweet-author">
@@ -205,6 +235,7 @@ async function loadXFeed() {
         twitterFeedContainer.innerHTML = '<p style="padding: 20px; text-align: center;">Could not load feed.</p>';
     }
 }
+
 
 
 // --- TO-DO LIST (with Supabase) ---
