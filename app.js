@@ -67,7 +67,7 @@ async function init() {
     loadStockWatchlist();
     renderCalendar();
     loadSideNews();
-    loadTwitterWidget();
+    loadXFeed(); // <-- Changed from loadTwitterWidget
     await loadTodos();
     subscribeToTodoChanges();
     setupEventListeners();
@@ -87,7 +87,7 @@ function setupEventListeners() {
     watchlistContainer.addEventListener('click', (e) => {
         if (e.target.closest('#refresh-portfolio')) {
             localStorage.removeItem('portfolioCache');
-            localStorage.removeItem('instrumentCache'); // Also clear instrument cache
+            localStorage.removeItem('instrumentCache'); 
             loadStockWatchlist();
         }
     });
@@ -100,9 +100,6 @@ function applySavedTheme() {
     const savedTheme = localStorage.getItem('theme') || 'light';
     document.body.setAttribute('data-theme', savedTheme);
     themeToggleBtn.innerHTML = savedTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
-    if (twitterFeedContainer) {
-        loadTwitterWidget();
-    }
 }
 
 function toggleTheme() {
@@ -111,7 +108,6 @@ function toggleTheme() {
     document.body.setAttribute('data-theme', newTheme);
     localStorage.setItem('theme', newTheme);
     themeToggleBtn.innerHTML = newTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
-    loadTwitterWidget();
 }
 
 // --- SIDEBAR NEWS ---
@@ -142,32 +138,71 @@ async function loadSideNews() {
     }
 }
 
-// --- TWITTER WIDGET ---
-function loadTwitterWidget() {
+// --- NEW X.COM FEED ---
+async function loadXFeed() {
     if (!twitterFeedContainer) return;
     const listId = "1959714572497006792";
-    const theme = localStorage.getItem('theme') || 'light';
+    twitterFeedContainer.innerHTML = '<p style="padding: 20px; text-align: center;">Loading Feed...</p>';
 
-    // Clear previous widget content but keep the placeholder text
-    const placeholder = twitterFeedContainer.querySelector('p');
-    if(placeholder) {
-        twitterFeedContainer.innerHTML = placeholder.outerHTML;
-    } else {
-        twitterFeedContainer.innerHTML = '';
-    }
+    try {
+        const response = await fetch(`/.netlify/functions/get-list-tweets?listId=${listId}`);
+        if (!response.ok) throw new Error('Failed to fetch tweets from serverless function.');
+        
+        const tweetsData = await response.json();
+        
+        const tweets = tweetsData.data;
+        const users = tweetsData.includes.users;
+        const media = tweetsData.includes.media || [];
 
-    const anchor = document.createElement('a');
-    anchor.className = "twitter-timeline";
-    anchor.setAttribute('data-theme', theme);
-    anchor.setAttribute('data-height', "100%"); // Let CSS handle height
-    anchor.href = `https://x.com/i/lists/${listId}`;
-    
-    twitterFeedContainer.appendChild(anchor);
+        twitterFeedContainer.innerHTML = ''; // Clear loading message
 
-    // If the global twitter object is ready, tell it to render the new widget
-    // The script is now loaded in index.html, making this more reliable.
-    if (window.twttr && window.twttr.widgets) {
-        window.twttr.widgets.load(twitterFeedContainer);
+        tweets.forEach(tweet => {
+            const author = users.find(user => user.id === tweet.author_id);
+            
+            let mediaHTML = '';
+            if (tweet.attachments && tweet.attachments.media_keys) {
+                const mediaKey = tweet.attachments.media_keys[0];
+                const mediaItem = media.find(m => m.media_key === mediaKey);
+                if (mediaItem && mediaItem.type === 'photo') {
+                    mediaHTML = `<div class="tweet-media"><img src="${mediaItem.url}" alt="${mediaItem.alt_text || 'Tweet image'}"></div>`;
+                }
+            }
+            
+            // Format tweet text to link URLs, hashtags, and mentions
+            let formattedText = tweet.text;
+            if (tweet.entities) {
+                if (tweet.entities.urls) {
+                    tweet.entities.urls.forEach(url => {
+                        formattedText = formattedText.replace(url.url, `<a href="${url.expanded_url}" target="_blank" rel="noopener noreferrer">${url.display_url}</a>`);
+                    });
+                }
+                 if (tweet.entities.mentions) {
+                    tweet.entities.mentions.forEach(mention => {
+                         formattedText = formattedText.replace(`@${mention.username}`, `<a href="https://x.com/${mention.username}" target="_blank" rel="noopener noreferrer">@${mention.username}</a>`);
+                    });
+                }
+            }
+
+            const tweetElement = `
+                <div class="tweet">
+                    <img src="${author.profile_image_url}" alt="${author.username}" class="tweet-avatar">
+                    <div class="tweet-content">
+                        <div class="tweet-author">
+                            <strong class="tweet-author-name">${author.name}</strong>
+                            <span class="tweet-author-username">@${author.username}</span>
+                        </div>
+                        <div class="tweet-text">${formattedText}</div>
+                        ${mediaHTML}
+                        <div class="tweet-date">${new Date(tweet.created_at).toLocaleString()}</div>
+                    </div>
+                </div>
+            `;
+            twitterFeedContainer.innerHTML += tweetElement;
+        });
+
+    } catch (error) {
+        console.error('Error loading X Feed:', error);
+        twitterFeedContainer.innerHTML = '<p style="padding: 20px; text-align: center;">Could not load feed.</p>';
     }
 }
 
