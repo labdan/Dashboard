@@ -9,6 +9,7 @@
 </head>
 <body>
   <div class="container">
+    <!-- Left sidebar for news -->
     <div class="left-sidebar">
         <div class="widget">
             <h2 class="card-title">Latest News</h2>
@@ -18,7 +19,9 @@
 
     <div class="main-content">
         <header>
+          <!-- Clock -->
           <div class="time-date header-widget">
+            <!-- Dark Mode Toggle Button -->
             <button class="theme-toggle" id="theme-toggle" title="Toggle Theme">
               <i class="fas fa-moon"></i>
             </button>
@@ -27,6 +30,7 @@
             <div class="mini-calendar" id="mini-calendar"></div>
           </div>
 
+          <!-- Search Area & Quick Links -->
           <div class="search-area">
             <div class="inspirational-quote" id="quote">"The only way to do great work is to love what you do."</div>
             <div class="search-container">
@@ -43,6 +47,7 @@
             </div>
           </div>
 
+          <!-- Weather Widget -->
           <div class="weather-widget header-widget" id="weather">
             <button class="refresh-btn" id="refresh-weather"><i class="fas fa-sync-alt"></i></button>
             <div class="weather-main">
@@ -67,6 +72,7 @@
           </div>
         </header>
 
+        <!-- Dashboard Grid -->
         <div class="dashboard-grid">
           <div class="widget">
             <h2 class="card-title">To-Do List</h2>
@@ -94,17 +100,21 @@
         </footer>
     </div>
 
+    <!-- Right sidebar for X.com feed -->
     <div class="right-sidebar">
         <div class="widget">
             <h2 class="card-title">X.com Feed</h2>
             <div id="twitter-feed-container">
+                <!-- The anchor tag will be created by app.js -->
                 <p style="padding: 20px; text-align: center; opacity: 0.7;">Loading Feed... If it doesn't appear, please check your ad blocker.</p>
             </div>
         </div>
     </div>
   </div>
 
+  <!-- Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- NEW: X.com Widget Script loaded directly in HTML -->
   <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
   
   <script src="config.js"></script>
