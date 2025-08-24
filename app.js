@@ -28,6 +28,10 @@ const newsContainer = document.getElementById('news-container');
 const watchlistContainer = document.getElementById('watchlist-container');
 const calendarContainer = document.getElementById('calendar-container');
 const themeToggleBtn = document.getElementById('theme-toggle');
+// NEW DOM ELEMENTS
+const sideNewsContainer = document.getElementById('side-news-container');
+const twitterFeedContainer = document.getElementById('twitter-feed-container');
+
 
 // Weather DOM Elements
 const weatherIconImg = document.getElementById('weather-icon-img');
@@ -63,6 +67,9 @@ async function init() {
     loadStockNews();
     loadStockWatchlist();
     renderCalendar();
+    // NEW FUNCTION CALLS
+    loadSideNews();
+    loadTwitterWidget();
     await loadTodos();
     subscribeToTodoChanges();
     setupEventListeners();
@@ -82,6 +89,7 @@ function setupEventListeners() {
     watchlistContainer.addEventListener('click', (e) => {
         if (e.target.closest('#refresh-portfolio')) {
             localStorage.removeItem('portfolioCache');
+            localStorage.removeItem('instrumentCache'); // Also clear instrument cache
             loadStockWatchlist();
         }
     });
@@ -94,6 +102,10 @@ function applySavedTheme() {
     const savedTheme = localStorage.getItem('theme') || 'light';
     document.body.setAttribute('data-theme', savedTheme);
     themeToggleBtn.innerHTML = savedTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+    // NEW: Set theme for Twitter widget if it exists
+    if (twitterFeedContainer.innerHTML) {
+        loadTwitterWidget(); // Reload widget to apply theme
+    }
 }
 
 function toggleTheme() {
@@ -102,7 +114,62 @@ function toggleTheme() {
     document.body.setAttribute('data-theme', newTheme);
     localStorage.setItem('theme', newTheme);
     themeToggleBtn.innerHTML = newTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+    // NEW: Reload Twitter widget to apply new theme
+    loadTwitterWidget();
 }
+
+// --- NEW: SIDEBAR NEWS ---
+async function loadSideNews() {
+    try {
+        const response = await fetch('/.netlify/functions/get-stock-news');
+        if (!response.ok) throw new Error(`News function failed: ${response.statusText}`);
+        const data = await response.json();
+        
+        sideNewsContainer.innerHTML = data.articles.map(article => {
+            if (!article.title || article.title === '[Removed]') return ''; // Filter out removed articles
+            const timeAgo = new Date(article.publishedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit'});
+            return `
+                <div class="news-item">
+                    <a href="${article.url}" class="news-title" target="_blank" rel="noopener noreferrer">${article.title}</a>
+                    <div class="news-date">${article.source.name} - ${timeAgo}</div>
+                </div>
+            `;
+        }).join('');
+
+    } catch (error) {
+        console.error('Error fetching side news:', error.message);
+        sideNewsContainer.innerHTML = `<div class="error-message">Could not load news.</div>`;
+    }
+}
+
+// --- NEW: TWITTER WIDGET ---
+function loadTwitterWidget() {
+    const listId = "1959714572497006792";
+    const theme = localStorage.getItem('theme') || 'light';
+
+    // Clear previous widget
+    twitterFeedContainer.innerHTML = '';
+
+    // Create a new anchor tag for the widget
+    const anchor = document.createElement('a');
+    anchor.className = `twitter-timeline`;
+    anchor.setAttribute('data-theme', theme);
+    anchor.setAttribute('data-height', "800"); // Adjust as needed
+    anchor.setAttribute('href', `https://twitter.com/i/lists/${listId}`);
+    twitterFeedContainer.appendChild(anchor);
+
+    // Load the Twitter widget script
+    if (window.twttr && window.twttr.widgets) {
+        window.twttr.widgets.load(twitterFeedContainer);
+    } else {
+        const script = document.createElement('script');
+        script.src = "https://platform.twitter.com/widgets.js";
+        script.async = true;
+        script.charset = "utf-8";
+        document.head.appendChild(script);
+    }
+}
+
 
 // --- TO-DO LIST (with Supabase) ---
 async function loadTodos() {
@@ -375,19 +442,13 @@ async function loadStockWatchlist() {
         const portfolioData = await portfolioRes.json();
         const cashData = await cashRes.json();
         
-        const enrichedPortfolio = await Promise.all(portfolioData.map(async (stock) => {
+        const enrichedPortfolio = portfolioData.map(stock => {
             const instrumentDetails = instrumentDictionary.get(stock.ticker);
-            const instrumentName = instrumentDetails ? instrumentDetails.name : stock.ticker;
-
-            const response = await fetch(`/.netlify/functions/enrich-company-details?ticker=${encodeURIComponent(stock.ticker)}&instrumentName=${encodeURIComponent(instrumentName)}`);
-            const details = await response.json();
-            
             return {
                 ...stock,
-                companyName: details.name,
-                logoUrl: details.logo_url,
+                companyName: instrumentDetails ? instrumentDetails.name : stock.ticker,
             };
-        }));
+        });
         
         const fullPortfolioData = { portfolio: enrichedPortfolio, cash: cashData };
         
@@ -408,7 +469,6 @@ function renderPortfolio(data, error = null) {
                         <div class="value-title">Value</div>
                         <div class="value-amount">€--.--</div>
                     </div>
-                    <button class="refresh-btn" id="refresh-portfolio" title="Refresh Portfolio"><i class="fas fa-sync-alt"></i></button>
                 </div>
             </div>
             <div class="error-message" style="padding: 20px;">
@@ -435,6 +495,16 @@ function renderPortfolio(data, error = null) {
         const valueB = b.currentPrice * b.quantity;
         return valueB - valueA; // Sort descending
     });
+
+    // --- NAME & ICON OVERRIDES ---
+    const nameOverrides = {
+        'Xtrackers NASDAQ 100 UCITS ETF 1C': 'NASDAQ 100',
+        'iShares Core S&P 500 UCITS ETF (Acc)': 'Core S&P 500'
+    };
+    const iconTickerOverrides = {
+        'XNASd': 'XNAS',
+        'SXR8d': 'IVV'
+    };
 
     // --- GOAL PROGRESS BARS LOGIC ---
     const goals = [
@@ -484,9 +554,24 @@ function renderPortfolio(data, error = null) {
         watchlistHTML += `<div class="no-investments">You have no investments yet.</div>`;
     } else {
         portfolioData.forEach(stock => {
-            const baseTicker = stock.ticker.split('_')[0];
-            const companyName = stock.companyName;
-            const iconUrl = stock.logoUrl;
+            let baseTicker = stock.ticker.split('_')[0];
+            
+            // --- APPLY NAME OVERRIDE ---
+            let companyName = stock.companyName;
+            if (nameOverrides[companyName]) {
+                companyName = nameOverrides[companyName];
+            }
+            
+            // --- APPLY ICON OVERRIDE ---
+            if (iconTickerOverrides[baseTicker]) {
+                baseTicker = iconTickerOverrides[baseTicker];
+            }
+
+            // --- DYNAMICALLY ADD CLASS FOR LONG NAMES ---
+            const nameClass = companyName.length > 22 ? 'stock-name-long' : '';
+            
+            // --- USE FORKED GITHUB REPO FOR ICONS ---
+            const iconUrl = `https://raw.githubusercontent.com/labdan/icons/main/png/${baseTicker}.png`;
             
             const currentValue = stock.currentPrice * stock.quantity;
             const changeAmount = stock.ppl;
@@ -500,7 +585,7 @@ function renderPortfolio(data, error = null) {
                         <img src="${iconUrl}" alt="${companyName}" onerror="this.src='https://placehold.co/40x40/EFEFEF/AAAAAA?text=${baseTicker}'; this.onerror=null;">
                     </div>
                     <div class="stock-info-new">
-                        <div class="stock-name-new">${companyName}</div>
+                        <div class="stock-name-new ${nameClass}">${companyName}</div>
                         <div class="stock-shares">${stock.quantity.toFixed(2)} SHARES</div>
                     </div>
                     <div class="stock-pricing-new">
