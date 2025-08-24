@@ -37,13 +37,12 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* --- NEW: 5-column grid layout for the whole page --- */
+/* --- UPDATED: 5-column grid layout for the whole page --- */
 .container {
   max-width: 98%;
   margin: 0 auto;
   padding: 20px 10px;
   display: grid;
-  /* Default to a single column for mobile */
   grid-template-columns: 1fr; 
   gap: 20px;
 }
@@ -55,15 +54,16 @@ body {
 /* --- NEW: Desktop layout with 5 columns --- */
 @media (min-width: 1600px) {
     .container {
-        /* 1fr sidebars, 1.2fr inner columns, 2fr center */
         grid-template-columns: 1fr 1.2fr 2fr 1.2fr 1fr;
+        min-height: 100vh;
     }
     .main-content {
-        /* Make the main content span the 3 central columns */
         grid-column: 2 / 5;
     }
     .left-sidebar, .right-sidebar {
-        display: block; /* Show sidebars on desktop */
+        display: flex; /* Use flex to allow content to grow */
+        flex-direction: column;
+        gap: 20px;
     }
     .left-sidebar {
         grid-column: 1 / 2;
@@ -73,13 +73,19 @@ body {
     }
 }
 
-/* --- ADJUSTMENT: Remove margin from main-content children --- */
-.main-content > header, .main-content > .dashboard-grid, .main-content > footer {
-    max-width: 1600px;
-    margin: 0 auto;
+.main-content > header {
+    margin-bottom: 20px; /* --- FIX: Added margin back to the header --- */
 }
-.main-content > footer {
-     margin-top: 30px;
+
+/* --- NEW: Styles for sidebar widgets to fill height --- */
+.left-sidebar .widget, .right-sidebar .widget {
+    flex-grow: 1; /* Allows the widget to expand vertically */
+    display: flex;
+    flex-direction: column;
+}
+.left-sidebar .news-container, #twitter-feed-container {
+    flex-grow: 1; /* Allows the container to fill the widget space */
+    overflow-y: auto; /* Adds scrolling for long content */
 }
 
 
@@ -621,7 +627,6 @@ header {
 
 /* ---------------- News & Watchlist ---------------- */
 .news-container, .calendar-container {
-  max-height: 400px;
   overflow-y: auto;
   padding-right: 5px;
 }
@@ -939,7 +944,6 @@ footer {
   text-align: center;
   padding: 20px;
   color: var(--secondary-color);
-  margin-top: 30px;
   font-size: 0.9rem;
 }
 

@@ -2,7 +2,7 @@
 
 const https = require('https');
 
-// This function fetches the latest business and technology news headlines.
+// This function fetches the latest headlines from top-tier financial news sources.
 exports.handler = async function(event, context) {
   const API_KEY = process.env.NEWS_API_KEY;
 
@@ -14,11 +14,14 @@ exports.handler = async function(event, context) {
     };
   }
 
-  // Fetch top headlines from business and technology in the US.
-  // NewsAPI.org requires a User-Agent header for all server-side requests.
+  // --- CHANGE: Fetching from specific, high-quality sources and increasing the page size ---
+  const sources = 'bloomberg,reuters,the-wall-street-journal,business-insider';
+  const pageSize = 40;
+  const apiPath = `/v2/top-headlines?sources=${sources}&pageSize=${pageSize}`;
+
   const options = {
     hostname: 'newsapi.org',
-    path: '/v2/top-headlines?country=us&category=business&category=technology&pageSize=20',
+    path: apiPath,
     method: 'GET',
     headers: {
       'User-Agent': 'Productivity-Dashboard/1.0',
