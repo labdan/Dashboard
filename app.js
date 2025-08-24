@@ -47,6 +47,11 @@ const USER_ID = '12345678-12321-1234-1234567890ab';
 
 // --- INITIALIZATION ---
 async function init() {
+    // *** FIX: Force clear the portfolio cache on initial load to ensure fresh data. ***
+    // This resolves the issue of seeing old or incorrect stocks.
+    // This line can be removed after the first successful load if desired.
+    localStorage.removeItem('portfolioCache');
+
     if (!SUPABASE_URL || SUPABASE_URL.includes('YOUR_SUPABASE_URL')) {
         alert("Supabase URL is not set in config.js. To-Do list will not work.");
     }
@@ -289,7 +294,6 @@ function loadQuickLinks() {
                 { name: "Perplexity", url: "https://www.perplexity.ai/" }
             ]
         },
-        // *** FIX: Updated Reddit icon to a more reliable URL ***
         { name: "Reddit", url: "https://www.reddit.com", icon: "https://www.reddit.com/favicon.ico" }
     ];
     quickLinksContainer.innerHTML = '';
@@ -430,19 +434,23 @@ function renderPortfolio(data, error = null) {
             const baseTicker = stock.ticker.split('_')[0];
             const companyName = stock.instrumentName || baseTicker;
 
-            // *** NEW LOGIC: Generate the logo URL slug ***
-            // 1. Check if there's a manual override for this ticker.
-            // 2. If not, create a slug from the company name.
+            // *** NEW, SMARTER LOGIC: Generate the logo URL slug ***
+            // 1. Check for a manual override first (best for ETFs).
+            // 2. If no override, create a clean slug from the company name.
             const slug = logoSlugOverrides[stock.ticker] || companyName
                 .toLowerCase()
-                .replace(/ & /g, ' ')
-                .replace(/ co /g, ' ')
-                .replace(/ group /g, ' ')
-                .replace(/\./g, '')
-                .replace(/,/g, '')
-                .replace(/[^a-z0-9\s]+/g, '') // Remove special chars except space
+                // Remove content in parentheses e.g. (Acc)
+                .replace(/\s*\(.*\)\s*/g, '')
+                // Remove common corporate suffixes. The '$' ensures it only matches at the end.
+                .replace(/(\s+inc|\s+ltd|\s+group|\s+nv|\s+plc|\s+co|\s+technologies|\s+corp|\s+corporation)$/i, '')
+                // Specific replacements like '&'
+                .replace(/\s*&\s*/g, ' ')
+                // Clean up remaining non-alphanumeric characters
+                .replace(/[.,]/g, '') 
+                .replace(/[^a-z0-9\s-]+/g, '') 
                 .trim()
-                .replace(/\s+/g, '-'); // Replace spaces with hyphens
+                // Replace spaces with hyphens
+                .replace(/\s+/g, '-'); 
 
             const iconUrl = `https://s3-symbol-logo.tradingview.com/${slug}--big.svg`;
             
