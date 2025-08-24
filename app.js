@@ -369,14 +369,19 @@ function getTradingViewLogoUrl(ticker) {
     // Map country codes to common TradingView exchange prefixes
     switch (country) {
         case 'US':
-            exchange = 'NASDAQ'; // Default to NASDAQ for US stocks, a common choice
+            exchange = 'NASDAQ'; // Default to NASDAQ for US stocks
             break;
         case 'DE':
             exchange = 'XETR'; // XETRA for German stocks
             break;
         // Add more mappings here as needed for other countries
         default:
-            exchange = 'NASDAQ'; // A sensible default
+            exchange = 'NASDAQ'; // A sensible default for other markets
+    }
+
+    // Special cases for specific tickers on different exchanges
+    if (baseTicker === 'BRK.B' || baseTicker === 'BRK.A') {
+        exchange = 'NYSE';
     }
 
     return `https://s3-symbol-logo.tradingview.com/${exchange}--${baseTicker}.svg`;
