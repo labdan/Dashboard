@@ -43,7 +43,7 @@ const refreshWeatherBtn = document.getElementById('refresh-weather');
 
 // --- STATE ---
 let currentSearchEngine = 'google';
-const USER_ID = '12345678-1234-1234-1234-1234567890ab'; 
+const USER_ID = '12345678-1234-1234-1234567890ab'; 
 
 // --- INITIALIZATION ---
 async function init() {
@@ -349,6 +349,11 @@ async function loadStockWatchlist() {
         }
         const portfolioData = await portfolioRes.json();
         const cashData = await cashRes.json();
+
+        // DEBUGGING: Log the raw data from the API
+        console.log('Received Cash Data:', cashData);
+        console.log('Received Portfolio Data:', portfolioData);
+
         const fullPortfolioData = { portfolio: portfolioData, cash: cashData };
         localStorage.setItem('portfolioCache', JSON.stringify({ timestamp: Date.now(), data: fullPortfolioData }));
         renderPortfolio(fullPortfolioData);
@@ -490,5 +495,6 @@ function renderCalendar() {
     calendarHTML += '</div>';
     calendarContainer.innerHTML = calendarHTML;
 }
+
 // --- START THE APP ---
 init();
