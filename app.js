@@ -48,6 +48,11 @@ const USER_ID = '12345678-12321-1234-1234567890ab';
 
 // --- INITIALIZATION ---
 async function init() {
+    // *** FIX: Force clear the portfolio and company details cache on initial load. ***
+    // This ensures that any old, incorrect data from previous attempts is removed.
+    localStorage.removeItem('portfolioCache');
+    localStorage.removeItem('companyDetailsCache');
+
     if (!SUPABASE_URL || SUPABASE_URL.includes('YOUR_SUPABASE_URL')) {
         alert("Supabase URL is not set in config.js. To-Do list will not work.");
     }
@@ -307,7 +312,7 @@ function loadQuickLinks() {
             }).join('');
             linkItemWrapper.innerHTML = `<div class="link-icon">${iconHTML}</div><span class="link-name">${link.name}</span><div class="popup-menu">${subLinksHTML}</div>`;
         } else {
-            linkItemWrapper.innerHTML = `<a href="${link.url}" target="_blank" title="${link.name}"><div class="link-icon">${iconHTML}</div><span class="link-name">${link.name}</span></a>`;
+            linkItemWrapper.innerHTML = `<a href="${sub.url}" target="_blank" title="${link.name}"><div class="link-icon">${iconHTML}</div><span class="link-name">${link.name}</span></a>`;
             linkItemWrapper.querySelector('a').classList.add('link-item');
         }
         quickLinksContainer.appendChild(linkItemWrapper);
