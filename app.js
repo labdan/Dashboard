@@ -7,7 +7,7 @@ if (typeof config === 'undefined') {
 const { url: SUPABASE_URL, anonKey: SUPABASE_ANON_KEY } = config.supabase;
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes for weather
 const PORTFOLIO_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes for portfolio
-const COMPANY_DETAILS_CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours for company details
+const COMPANY_DETAILS_CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days for company details
 
 // --- SUPABASE CLIENT ---
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -48,10 +48,6 @@ const USER_ID = '12345678-12321-1234-1234567890ab';
 
 // --- INITIALIZATION ---
 async function init() {
-    // Force clear the portfolio and company details cache on initial load.
-    localStorage.removeItem('portfolioCache');
-    localStorage.removeItem('companyDetailsCache');
-
     if (!SUPABASE_URL || SUPABASE_URL.includes('YOUR_SUPABASE_URL')) {
         alert("Supabase URL is not set in config.js. To-Do list will not work.");
     }
@@ -311,7 +307,6 @@ function loadQuickLinks() {
             }).join('');
             linkItemWrapper.innerHTML = `<div class="link-icon">${iconHTML}</div><span class="link-name">${link.name}</span><div class="popup-menu">${subLinksHTML}</div>`;
         } else {
-            // This was the line with the typo. It's now corrected.
             linkItemWrapper.innerHTML = `<a href="${link.url}" target="_blank" title="${link.name}"><div class="link-icon">${iconHTML}</div><span class="link-name">${link.name}</span></a>`;
             linkItemWrapper.querySelector('a').classList.add('link-item');
         }
@@ -336,27 +331,30 @@ function loadStockNews() {
 // --- STOCK WATCHLIST ---
 
 /**
- * Fetches company details (name, logo) for a given ticker.
- * It uses a local cache to avoid redundant API calls.
- * @param {string} ticker - The stock ticker symbol from Trading 212 (e.g., 'AMD_US_EQ').
- * @returns {Promise<object>} A promise that resolves to an object with { name, logoUrl }.
+ * Your "Local Folder" - Fetches and caches company details.
+ * @param {string} ticker - The stock ticker from Trading 212 (e.g., 'AMD_US_EQ').
+ * @param {string} instrumentName - The full name of the instrument from Trading 212.
+ * @returns {Promise<object>} A promise that resolves to { name, logoUrl }.
  */
-async function getCompanyDetails(ticker) {
+async function getCompanyDetails(ticker, instrumentName) {
     let companyDetailsCache = JSON.parse(localStorage.getItem('companyDetailsCache')) || {};
     const cachedItem = companyDetailsCache[ticker];
 
+    // Tier 1: Check the local cache first.
     if (cachedItem && (Date.now() - cachedItem.timestamp < COMPANY_DETAILS_CACHE_DURATION)) {
         return cachedItem.data;
     }
 
     try {
-        const response = await fetch(`/.netlify/functions/get-company-details?ticker=${ticker}`);
+        // If not in cache, call our Netlify function which handles the multi-tiered logic.
+        const response = await fetch(`/.netlify/functions/get-company-details?ticker=${encodeURIComponent(ticker)}&instrumentName=${encodeURIComponent(instrumentName)}`);
         if (!response.ok) {
             console.error(`Failed to get details for ${ticker}`);
-            return { name: ticker.split('_')[0], logoUrl: '' };
+            return { name: instrumentName, logoUrl: '' }; // Fallback
         }
         const details = await response.json();
 
+        // Save the result to our local cache for next time.
         companyDetailsCache[ticker] = {
             timestamp: Date.now(),
             data: details,
@@ -366,7 +364,7 @@ async function getCompanyDetails(ticker) {
         return details;
     } catch (error) {
         console.error(`Error fetching company details for ${ticker}:`, error);
-        return { name: ticker.split('_')[0], logoUrl: '' };
+        return { name: instrumentName, logoUrl: '' }; // Fallback
     }
 }
 
@@ -392,7 +390,8 @@ async function loadStockWatchlist() {
         const cashData = await cashRes.json();
 
         const enrichedPortfolio = await Promise.all(portfolioData.map(async (stock) => {
-            const details = await getCompanyDetails(stock.ticker);
+            // Pass both the ticker and the instrument name to our smart fetcher.
+            const details = await getCompanyDetails(stock.ticker, stock.instrumentName);
             return {
                 ...stock,
                 companyName: details.name,
@@ -469,8 +468,8 @@ function renderPortfolio(data, error = null) {
     } else {
         portfolioData.forEach(stock => {
             const baseTicker = stock.ticker.split('_')[0];
-            const companyName = stock.companyName; // Use the name fetched from our function
-            const iconUrl = stock.logoUrl; // Use the logo URL from our function
+            const companyName = stock.companyName; // Use the name from our enriched data
+            const iconUrl = stock.logoUrl; // Use the logo URL from our enriched data
             
             const currentValue = stock.currentPrice * stock.quantity;
             const changeAmount = stock.ppl;
