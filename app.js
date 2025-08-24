@@ -425,8 +425,8 @@ function renderPortfolio(data, error = null) {
             const companyName = stock.instrumentName || baseTicker;
             
             // --- NEW SIMPLIFIED LOGIC ---
-            // Construct the URL directly from the GitHub repository.
-            const iconUrl = `https://raw.githubusercontent.com/nvstly/icons/main/png/${baseTicker}.png`;
+            // Construct the URL directly from your forked GitHub repository.
+            const iconUrl = `https://raw.githubusercontent.com/labdan/icons/main/png/${baseTicker}.png`;
             
             const currentValue = stock.currentPrice * stock.quantity;
             const changeAmount = stock.ppl;
@@ -467,7 +467,7 @@ function renderCalendar() {
     const weekdays = ["S", "M", "T", "W", "T", "F", "S"];
     weekdays.forEach(day => { calendarHTML += `<div class="calendar-day calendar-weekday">${day}</div>`; });
     for (let i = 1; i <= daysInMonth; i++) {
-        const isToday = i === today.getDate() ? 'current' : '';
+        const isToday = i === today.getDate() ? 'current-date' : '';
         calendarHTML += `<div class="calendar-day"><div class="calendar-date ${isToday}">${i}</div></div>`;
     }
     calendarHTML += '</div>';
