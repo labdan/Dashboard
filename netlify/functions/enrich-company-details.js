@@ -60,16 +60,11 @@ exports.handler = async function(event, context) {
   
   // If no record exists, create one with the basic info first.
   if (!cachedData) {
-    const { data: newData } = await supabase
-      .from('company_details')
-      .insert({ ticker: ticker, name: instrumentName })
-      .select()
-      .single();
-    cachedData = newData;
+    await supabase.from('company_details').insert({ ticker: ticker, name: instrumentName });
   }
 
-  let finalName = cachedData.name || instrumentName;
-  let foundLogoUrl = cachedData.logo_url || '';
+  let finalName = cachedData?.name || instrumentName;
+  let foundLogoUrl = cachedData?.logo_url || '';
 
   // --- Tier 2: Search for Logo (if we don't have one) ---
   if (!foundLogoUrl) {
@@ -89,23 +84,27 @@ exports.handler = async function(event, context) {
     }
   }
 
-  // --- Tier 3: Fallback to Twelve Data API (if still no logo) ---
-  if (!foundLogoUrl) {
+  // --- Tier 3: Fallback to Twelve Data API (if still no logo or name is just the ticker) ---
+  if (!foundLogoUrl || finalName === ticker) {
     try {
       const [profileData, logoData] = await Promise.all([
         fetchJson(`https://api.twelvedata.com/profile?symbol=${baseTicker}&apikey=${TWELVE_DATA_API_KEY}`),
         fetchJson(`https://api.twelvedata.com/logo?symbol=${baseTicker}&apikey=${TWELVE_DATA_API_KEY}`)
       ]);
+      // Only override the name if Twelve Data provides a better one
       if (profileData.name) {
         finalName = profileData.name;
       }
-      foundLogoUrl = logoData.url || '';
+      // Only override the logo if we haven't found one yet
+      if (!foundLogoUrl && logoData.url) {
+        foundLogoUrl = logoData.url;
+      }
     } catch (error) {
       console.error(`Twelve Data fallback failed for ${ticker}:`, error);
     }
   }
 
-  // --- Tier 4: Update the record in Supabase with the new findings ---
+  // --- Tier 4: Update the record in Supabase with all new findings ---
   const { data: updatedData } = await supabase
     .from('company_details')
     .update({ name: finalName, logo_url: foundLogoUrl })
