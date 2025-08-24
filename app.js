@@ -82,6 +82,7 @@ function setupEventListeners() {
     watchlistContainer.addEventListener('click', (e) => {
         if (e.target.closest('#refresh-portfolio')) {
             localStorage.removeItem('portfolioCache');
+            localStorage.removeItem('instrumentCache'); // Also clear instrument cache
             loadStockWatchlist();
         }
     });
@@ -336,7 +337,6 @@ function loadStockNews() {
 async function getInstrumentDictionary() {
     const cachedInstruments = JSON.parse(localStorage.getItem('instrumentCache'));
     if (cachedInstruments && (Date.now() - cachedInstruments.timestamp < INSTRUMENT_CACHE_DURATION)) {
-        // Data is stored as an array, so we convert it back to a Map for fast lookups.
         return new Map(cachedInstruments.data);
     }
 
@@ -345,19 +345,17 @@ async function getInstrumentDictionary() {
         if (!response.ok) throw new Error('Failed to fetch instrument metadata');
         const instrumentList = await response.json();
         
-        // Convert the array to a Map for O(1) lookups. The key is the ticker.
         const instrumentMap = new Map(instrumentList.map(item => [item.ticker, item]));
 
-        // Store the array version in localStorage, as Maps don't serialize well.
         localStorage.setItem('instrumentCache', JSON.stringify({
             timestamp: Date.now(),
-            data: Array.from(instrumentMap.entries()) // Store as an array of [key, value] pairs
+            data: Array.from(instrumentMap.entries())
         }));
 
         return instrumentMap;
     } catch (error) {
         console.error("Could not load instrument dictionary:", error);
-        return new Map(); // Return an empty map on failure
+        return new Map();
     }
 }
 
@@ -366,7 +364,6 @@ async function loadStockWatchlist() {
     watchlistContainer.innerHTML = '<div style="padding: 20px;">Loading portfolio...</div>';
 
     try {
-        // Fetch both the master instrument list and the user's personal portfolio data in parallel.
         const [instrumentDictionary, portfolioRes, cashRes] = await Promise.all([
             getInstrumentDictionary(),
             fetch('/.netlify/functions/get-portfolio'),
@@ -379,12 +376,10 @@ async function loadStockWatchlist() {
         const portfolioData = await portfolioRes.json();
         const cashData = await cashRes.json();
         
-        // Enrich the portfolio data with full names from the dictionary.
         const enrichedPortfolio = portfolioData.map(stock => {
             const instrumentDetails = instrumentDictionary.get(stock.ticker);
             return {
                 ...stock,
-                // Use the official name from the dictionary, or fall back to the ticker if not found.
                 companyName: instrumentDetails ? instrumentDetails.name : stock.ticker,
             };
         });
@@ -423,11 +418,25 @@ function renderPortfolio(data, error = null) {
         return;
     }
 
-    const portfolioData = data.portfolio || [];
+    let portfolioData = data.portfolio || [];
     const cashData = data.cash;
     const cashValue = cashData.free || 0;
     const investmentValue = cashData.invested || 0;
     const totalPortfolioValue = cashData.total || 0;
+
+    // --- SORTING LOGIC ---
+    portfolioData.sort((a, b) => {
+        const valueA = a.currentPrice * a.quantity;
+        const valueB = b.currentPrice * b.quantity;
+        return valueB - valueA; // Sort descending
+    });
+
+    // --- NAME OVERRIDES FOR LONG NAMES ---
+    const nameOverrides = {
+        'Xtrackers NASDAQ 100 UCITS ETF (Acc)': 'Xtrackers NASDAQ 100',
+        'iShares Core S&P 500 UCITS ETF (Acc)': 'iShares S&P 500'
+        // Add more overrides here if needed
+    };
 
     let watchlistHTML = `
         <div class="portfolio-header">
@@ -455,9 +464,14 @@ function renderPortfolio(data, error = null) {
     } else {
         portfolioData.forEach(stock => {
             const baseTicker = stock.ticker.split('_')[0];
-            const companyName = stock.companyName; // Use the enriched name
             
-            // Construct the URL directly from your forked GitHub repository.
+            // --- APPLY NAME OVERRIDE ---
+            let companyName = stock.companyName;
+            if (nameOverrides[companyName]) {
+                companyName = nameOverrides[companyName];
+            }
+            
+            // --- USE FORKED GITHUB REPO FOR ICONS ---
             const iconUrl = `https://raw.githubusercontent.com/labdan/icons/main/png/${baseTicker}.png`;
             
             const currentValue = stock.currentPrice * stock.quantity;
