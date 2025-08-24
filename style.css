@@ -707,6 +707,12 @@ header {
     text-transform: capitalize;
 }
 
+/* --- NEW: Style for long stock names --- */
+.stock-name-long {
+    font-size: 0.85rem; /* Make the font slightly smaller */
+    word-break: break-word; /* Allow the word to break if needed */
+}
+
 .stock-shares {
     font-size: 0.75rem;
     color: var(--secondary-color);
