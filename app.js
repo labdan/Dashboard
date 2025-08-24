@@ -7,7 +7,6 @@ if (typeof config === 'undefined') {
 const { url: SUPABASE_URL, anonKey: SUPABASE_ANON_KEY } = config.supabase;
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes for weather
 const PORTFOLIO_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes for portfolio
-const COMPANY_DETAILS_CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours for company details
 
 // --- SUPABASE CLIENT ---
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -44,7 +43,7 @@ const refreshWeatherBtn = document.getElementById('refresh-weather');
 
 // --- STATE ---
 let currentSearchEngine = 'google';
-const USER_ID = '12345678-1234-1234-1234567890ab'; 
+const USER_ID = '12345678-12321-1234-1234567890ab'; 
 
 // --- INITIALIZATION ---
 async function init() {
@@ -82,8 +81,6 @@ function setupEventListeners() {
     watchlistContainer.addEventListener('click', (e) => {
         if (e.target.closest('#refresh-portfolio')) {
             localStorage.removeItem('portfolioCache');
-            // We also clear the company details cache on a manual refresh
-            localStorage.removeItem('companyDetailsCache');
             loadStockWatchlist();
         }
     });
@@ -292,7 +289,8 @@ function loadQuickLinks() {
                 { name: "Perplexity", url: "https://www.perplexity.ai/" }
             ]
         },
-        { name: "Reddit", url: "https://www.reddit.com", icon: "https://www.redditstatic.com/desktop-assets/Reddit-Favicon-32x32.png" }
+        // *** FIX: Updated Reddit icon to a more reliable URL ***
+        { name: "Reddit", url: "https://www.reddit.com", icon: "https://www.reddit.com/favicon.ico" }
     ];
     quickLinksContainer.innerHTML = '';
     quickLinksData.forEach(link => {
@@ -331,96 +329,45 @@ function loadStockNews() {
 
 // --- STOCK WATCHLIST ---
 
-/**
- * Fetches company details (name, logo) for a given ticker.
- * It uses a local cache to avoid redundant API calls.
- * @param {string} ticker - The stock ticker symbol (e.g., 'AAPL').
- * @returns {Promise<object>} A promise that resolves to an object with { name, logoUrl }.
- */
-async function getCompanyDetails(ticker) {
-    let companyDetailsCache = JSON.parse(localStorage.getItem('companyDetailsCache')) || {};
-    const cachedItem = companyDetailsCache[ticker];
-
-    // Check if a valid, non-expired cache entry exists.
-    if (cachedItem && (Date.now() - cachedItem.timestamp < COMPANY_DETAILS_CACHE_DURATION)) {
-        return cachedItem.data;
-    }
-
-    try {
-        // If not in cache or expired, fetch from our Netlify function.
-        const response = await fetch(`/.netlify/functions/get-company-details?ticker=${ticker}`);
-        if (!response.ok) {
-            // If the function returns an error, we'll just use the ticker as the name.
-            console.error(`Failed to get details for ${ticker}`);
-            return { name: ticker, logoUrl: '' };
-        }
-        const details = await response.json();
-
-        // Save the new data to the cache with a timestamp.
-        companyDetailsCache[ticker] = {
-            timestamp: Date.now(),
-            data: details,
-        };
-        localStorage.setItem('companyDetailsCache', JSON.stringify(companyDetailsCache));
-
-        return details;
-    } catch (error) {
-        console.error(`Error fetching company details for ${ticker}:`, error);
-        // On failure, return the ticker as the name and no logo.
-        return { name: ticker, logoUrl: '' };
-    }
-}
+// A small, targeted map for overriding logo slugs for tickers where the dynamic
+// generation from 'instrumentName' might fail (e.g., complex ETF names).
+const logoSlugOverrides = {
+    'SXR8d_EQ': 'ishares',
+    'XNASd_EQ': 'xtrackers',
+};
 
 async function loadStockWatchlist() {
-    // Check for cached portfolio data first to reduce API calls.
     const cachedPortfolio = JSON.parse(localStorage.getItem('portfolioCache'));
     if (cachedPortfolio && (Date.now() - cachedPortfolio.timestamp < PORTFOLIO_CACHE_DURATION)) {
-        // If we have cached data, render it immediately.
         renderPortfolio(cachedPortfolio.data);
         return;
     }
 
-    // Show loading state while fetching data.
     watchlistContainer.innerHTML = '<div style="padding: 20px;">Loading portfolio...</div>';
 
     try {
-        // Fetch both portfolio and cash data in parallel.
         const [portfolioRes, cashRes] = await Promise.all([
             fetch('/.netlify/functions/get-portfolio'),
             fetch('/.netlify/functions/get-cash')
         ]);
 
-        // Error handling for the fetch requests.
         if (!portfolioRes.ok) throw new Error(`Portfolio API Error: ${portfolioRes.statusText}`);
         if (!cashRes.ok) throw new Error(`Cash API Error: ${cashRes.statusText}`);
 
         const portfolioData = await portfolioRes.json();
         const cashData = await cashRes.json();
-
-        // *** NEW: Enrich the portfolio data with company details (name, logo). ***
-        // We do this by mapping over the portfolio and calling our new helper function.
-        // Promise.all ensures all company details are fetched before we proceed.
-        const enrichedPortfolio = await Promise.all(portfolioData.map(async (stock) => {
-            const baseTicker = stock.ticker.split('_')[0];
-            const details = await getCompanyDetails(baseTicker);
-            return {
-                ...stock, // Copy all original stock data
-                companyName: details.name, // Add the fetched company name
-                logoUrl: details.logoUrl, // Add the fetched logo URL
-            };
-        }));
         
-        const fullPortfolioData = { portfolio: enrichedPortfolio, cash: cashData };
+        const fullPortfolioData = { portfolio: portfolioData, cash: cashData };
 
-        // Cache the newly fetched and enriched data.
+        // Cache the raw data from the API.
         localStorage.setItem('portfolioCache', JSON.stringify({ timestamp: Date.now(), data: fullPortfolioData }));
         
-        // Render the final, enriched data.
+        // Render the portfolio using the fresh data.
         renderPortfolio(fullPortfolioData);
 
     } catch (error) {
         console.error('Error fetching stock watchlist:', error);
-        localStorage.removeItem('portfolioCache'); // Clear cache on error
+        localStorage.removeItem('portfolioCache');
         renderPortfolio(null, error.message);
     }
 }
@@ -481,8 +428,23 @@ function renderPortfolio(data, error = null) {
     } else {
         portfolioData.forEach(stock => {
             const baseTicker = stock.ticker.split('_')[0];
-            const companyName = stock.companyName || baseTicker; // Use enriched name
-            const iconUrl = stock.logoUrl; // Use enriched logo URL
+            const companyName = stock.instrumentName || baseTicker;
+
+            // *** NEW LOGIC: Generate the logo URL slug ***
+            // 1. Check if there's a manual override for this ticker.
+            // 2. If not, create a slug from the company name.
+            const slug = logoSlugOverrides[stock.ticker] || companyName
+                .toLowerCase()
+                .replace(/ & /g, ' ')
+                .replace(/ co /g, ' ')
+                .replace(/ group /g, ' ')
+                .replace(/\./g, '')
+                .replace(/,/g, '')
+                .replace(/[^a-z0-9\s]+/g, '') // Remove special chars except space
+                .trim()
+                .replace(/\s+/g, '-'); // Replace spaces with hyphens
+
+            const iconUrl = `https://s3-symbol-logo.tradingview.com/${slug}--big.svg`;
             
             const currentValue = stock.currentPrice * stock.quantity;
             const changeAmount = stock.ppl;
