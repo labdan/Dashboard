@@ -1,7 +1,8 @@
 // netlify/functions/get-company-details.js
 
 // This function uses the native Node.js 'https' module for making API requests.
-// This is a more stable approach that avoids potential bundling issues with external libraries.
+// This is a more stable approach that avoids potential bundling issues with external libraries
+// and is consistent with your other working Netlify functions.
 const https = require('https');
 
 /**
@@ -11,28 +12,43 @@ const https = require('https');
  * @returns {Promise<object>} A promise that resolves to the parsed JSON data.
  */
 const fetchJson = (url) => {
+  // Set request options, including a User-Agent which is good practice.
+  const options = {
+    method: 'GET',
+    headers: {
+      'User-Agent': 'Productivity-Dashboard/1.0'
+    }
+  };
+
   return new Promise((resolve, reject) => {
-    https.get(url, (res) => {
+    const req = https.request(url, options, (res) => {
       let data = '';
       res.on('data', (chunk) => {
         data += chunk;
       });
       res.on('end', () => {
-        // Only try to parse if the response is not empty
-        if (data) {
+        // Check for successful status codes
+        if (res.statusCode >= 200 && res.statusCode < 300) {
           try {
-            resolve(JSON.parse(data));
+            // If the response is empty, resolve with an empty object.
+            resolve(data ? JSON.parse(data) : {});
           } catch (e) {
             reject(new Error('Failed to parse JSON response.'));
           }
         } else {
-            // If response is empty, resolve with an empty object
-            resolve({});
+          // If the status code is an error, reject the promise.
+          reject(new Error(`API request failed with status ${res.statusCode}: ${data}`));
         }
       });
-    }).on('error', (err) => {
+    });
+
+    // Handle network errors
+    req.on('error', (err) => {
       reject(err);
     });
+
+    // Finalize the request
+    req.end();
   });
 };
 
@@ -54,7 +70,6 @@ exports.handler = async function(event, context) {
 
   try {
     // --- Parallel API Calls ---
-    // Fetch both profile and logo data simultaneously using our helper function.
     const [profileData, logoData] = await Promise.all([
       fetchJson(`https://api.twelvedata.com/profile?symbol=${ticker}&apikey=${API_KEY}`),
       fetchJson(`https://api.twelvedata.com/logo?symbol=${ticker}&apikey=${API_KEY}`)
@@ -62,8 +77,8 @@ exports.handler = async function(event, context) {
 
     // --- Data Consolidation ---
     const companyDetails = {
-      name: profileData.name || rawTicker, // Fallback to the original ticker if name isn't found
-      logoUrl: logoData.url || '', // Fallback to an empty string if no logo URL
+      name: profileData.name || rawTicker, // Fallback to the original ticker
+      logoUrl: logoData.url || '', // Fallback to an empty string
     };
 
     // --- Successful Response ---
@@ -73,10 +88,10 @@ exports.handler = async function(event, context) {
     };
 
   } catch (error) {
-    console.error(`An error occurred in get-company-details for ticker ${rawTicker}:`, error);
+    console.error(`An error in get-company-details for ${rawTicker}:`, error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: `An internal function error occurred: ${error.message}` }),
+      body: JSON.stringify({ error: error.message }),
     };
   }
 };

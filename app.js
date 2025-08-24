@@ -312,7 +312,6 @@ function loadQuickLinks() {
             }).join('');
             linkItemWrapper.innerHTML = `<div class="link-icon">${iconHTML}</div><span class="link-name">${link.name}</span><div class="popup-menu">${subLinksHTML}</div>`;
         } else {
-            // *** FIX: Changed 'sub.url' to 'link.url' to fix the ReferenceError. ***
             linkItemWrapper.innerHTML = `<a href="${link.url}" target="_blank" title="${link.name}"><div class="link-icon">${iconHTML}</div><span class="link-name">${link.name}</span></a>`;
             linkItemWrapper.querySelector('a').classList.add('link-item');
         }
@@ -520,4 +519,4 @@ function renderCalendar() {
 }
 
 // --- START THE APP ---
-init();
+init
