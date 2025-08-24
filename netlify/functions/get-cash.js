@@ -17,7 +17,6 @@ exports.handler = async function(event, context) {
     path: '/api/v0/equity/account/cash',
     method: 'GET',
     headers: {
-      // CORRECTED: Sending only the key, as required by the documentation.
       'Authorization': API_KEY,
       'User-Agent': 'Productivity Dashboard/1.0'
     }
@@ -35,9 +34,12 @@ exports.handler = async function(event, context) {
         if (res.statusCode >= 200 && res.statusCode < 300) {
           try {
             const parsedData = JSON.parse(data);
+            // *** FIX: Return the entire parsed data object from the API. ***
+            // This object contains .free, .invested, and .total properties
+            // which are needed by the frontend.
             resolve({
               statusCode: 200,
-              body: JSON.stringify({ cash: parsedData.free }),
+              body: JSON.stringify(parsedData), 
             });
           } catch (e) {
              console.error('Error parsing JSON from cash API:', e);

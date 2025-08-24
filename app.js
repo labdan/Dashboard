@@ -449,6 +449,7 @@ function renderPortfolio(data, error = null) {
     } else {
         portfolioData.forEach(stock => {
             const iconUrl = getTradingViewLogoUrl(stock.ticker);
+            const baseTicker = stock.ticker.split('_')[0];
             
             const currentValue = stock.currentPrice * stock.quantity;
             const changeAmount = stock.ppl;
@@ -456,10 +457,11 @@ function renderPortfolio(data, error = null) {
             const changePercent = initialValue === 0 ? 0 : (changeAmount / initialValue) * 100;
             const isPositive = changeAmount >= 0;
 
+            // *** FIX: Replaced 'nostockimg.png' with a placeholder service to prevent 404 errors. ***
             watchlistHTML += `
                 <div class="stock-item-new">
                     <div class="stock-icon-new">
-                        <img src="${iconUrl}" alt="${stock.ticker}" onerror="this.src='nostockimg.png'; this.onerror=null;">
+                        <img src="${iconUrl}" alt="${stock.ticker}" onerror="this.src='https://placehold.co/40x40/EFEFEF/AAAAAA?text=${baseTicker}'; this.onerror=null;">
                     </div>
                     <div class="stock-info-new">
                         <div class="stock-name-new">${stock.ticker.replace(/_/g, ' ')}</div>
