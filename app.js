@@ -620,6 +620,7 @@ async function loadQuickLinks() {
 
 
 function loadStockNews() {
+    // This is a placeholder. You would fetch real news here.
     const newsData = [
         { title: "Markets Rally on Lower Than Expected Inflation Data", date: "2h ago" },
         { title: "Tech Giants Report Strong Quarterly Earnings", date: "4h ago" },
