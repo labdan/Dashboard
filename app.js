@@ -13,9 +13,6 @@ const INSTRUMENT_CACHE_DURATION = 24 * 60 * 60 * 1000;
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // --- DOM ELEMENTS ---
-const loginPage = document.getElementById('login-page');
-const dashboardContainer = document.getElementById('dashboard-container');
-const loginBtn = document.getElementById('login-btn');
 const timeElement = document.getElementById('time');
 const dateElement = document.getElementById('date');
 const miniCalendarContainer = document.getElementById('mini-calendar');
@@ -35,11 +32,11 @@ const twitterFeedContainer = document.getElementById('twitter-feed-container');
 const eventsContainer = document.getElementById('events-container');
 
 // Auth DOM Elements
+const loginBtn = document.getElementById('login-btn');
+const logoutBtn = document.getElementById('logout-btn');
 const userProfileElement = document.getElementById('user-profile');
 const userAvatarElement = document.getElementById('user-avatar');
 const userNameElement = document.getElementById('user-name');
-const logoutBtn = document.getElementById('logout-btn');
-const mobileAuthContainer = document.querySelector('.auth-container-mobile');
 
 // Weather DOM Elements
 const weatherIconImg = document.getElementById('weather-icon-img');
@@ -56,11 +53,18 @@ const refreshWeatherBtn = document.getElementById('refresh-weather');
 
 // --- STATE ---
 let currentSearchEngine = 'google';
+const USER_ID = '12345678-12321-1234-1234567890ab'; 
 
 // --- INITIALIZATION ---
 async function init() {
-    handleAuthCallback();
+    applySavedTheme();
+    updateTimeAndDate();
+    setInterval(updateTimeAndDate, 1000);
+    updateQuote();
+    setInterval(updateQuote, 10000);
+    
     await checkLoginStatus();
+    
     setupEventListeners();
 }
 
@@ -98,19 +102,26 @@ async function checkLoginStatus() {
             });
             if (!response.ok) {
                 if (response.status === 401) {
+                    // Token expired or invalid, try to refresh
                     await refreshAccessToken();
-                    return;
+                    // Re-check status after refresh attempt
+                    await checkLoginStatus(); 
+                } else {
+                    throw new Error('Failed to fetch user info');
                 }
-                throw new Error('Failed to fetch user info');
+            } else {
+                const user = await response.json();
+                showUserProfile(user);
+                loadLoggedInContent();
             }
-            const user = await response.json();
-            showDashboard(user);
         } catch (error) {
             console.error("Login check failed:", error);
-            showLoginPage();
+            showLoginButton();
+            renderMiniCalendar(); // Render calendar without events
         }
     } else {
-        showLoginPage();
+        showLoginButton();
+        renderMiniCalendar(); // Render calendar without events
     }
 }
 
@@ -125,72 +136,47 @@ async function refreshAccessToken() {
         if (!response.ok) throw new Error('Failed to refresh token');
         const data = await response.json();
         localStorage.setItem('google_access_token', data.access_token);
-        await checkLoginStatus();
     } catch (error) {
         console.error("Could not refresh token:", error);
         handleLogout();
     }
 }
 
-function showDashboard(user) {
-    loginPage.classList.add('hidden');
-    dashboardContainer.classList.remove('hidden');
-
-    userNameElement.textContent = "Dan Labcovsky";
+function showUserProfile(user) {
+    userNameElement.textContent = user.name;
     userAvatarElement.src = user.picture;
-    
-    const mobileProfile = userProfileElement.cloneNode(true);
-    mobileProfile.id = 'user-profile-mobile';
-    mobileAuthContainer.innerHTML = '';
-    mobileAuthContainer.appendChild(mobileProfile);
-    mobileProfile.querySelector('.auth-btn').addEventListener('click', handleLogout);
-
-    loadDashboardContent();
+    userProfileElement.classList.remove('hidden');
+    loginBtn.classList.add('hidden');
 }
 
-function showLoginPage() {
-    loginPage.classList.remove('hidden');
-    dashboardContainer.classList.add('hidden');
+function showLoginButton() {
+    userProfileElement.classList.add('hidden');
+    loginBtn.classList.remove('hidden');
+    // Clear dynamic content
+    if(eventsContainer) eventsContainer.innerHTML = '<p>Please log in to see your events.</p>';
+    if(watchlistContainer) watchlistContainer.innerHTML = '';
+    if(sideNewsContainer) sideNewsContainer.innerHTML = '';
+    if(twitterFeedContainer) twitterFeedContainer.innerHTML = '';
+    if(todoList) todoList.innerHTML = '';
 }
 
 function handleLogout() {
     localStorage.removeItem('google_access_token');
     localStorage.removeItem('google_refresh_token');
-    showLoginPage();
+    showLoginButton();
 }
 
-function handleAuthCallback() {
-    const params = new URLSearchParams(window.location.search);
-    const accessToken = params.get('access_token');
-    const refreshToken = params.get('refresh_token');
-
-    if (accessToken && refreshToken) {
-        localStorage.setItem('google_access_token', accessToken);
-        localStorage.setItem('google_refresh_token', refreshToken);
-        window.history.replaceState({}, document.title, "/");
-    }
-}
-
-// --- CONTENT LOADING ---
-function loadDashboardContent() {
-    applySavedTheme();
-    updateTimeAndDate();
-    setInterval(updateTimeAndDate, 1000);
-    updateQuote();
-    setInterval(updateQuote, 10000);
-
-    Promise.all([
-        loadQuickLinks().catch(e => console.error("Failed to load Quick Links:", e)),
-        getWeather().catch(e => console.error("Failed to load Weather:", e)),
-        loadStockNews().catch(e => console.error("Failed to load Stock News:", e)),
-        loadStockWatchlist().catch(e => console.error("Failed to load Watchlist:", e)),
-        loadSideNews().catch(e => console.error("Failed to load Side News:", e)),
-        loadXFeed().catch(e => console.error("Failed to load X Feed:", e)),
-        loadTodos().catch(e => console.error("Failed to load Todos:", e)),
-        loadUpcomingEvents().catch(e => console.error("Failed to load Events:", e))
-    ]).then(() => {
-        subscribeToTodoChanges();
-    });
+// --- CONTENT LOADING (for logged-in users) ---
+function loadLoggedInContent() {
+    loadQuickLinks();
+    getWeather();
+    loadStockNews();
+    loadStockWatchlist();
+    loadSideNews();
+    loadXFeed();
+    loadTodos();
+    subscribeToTodoChanges();
+    loadUpcomingEvents();
 }
 
 
@@ -228,7 +214,7 @@ async function loadSideNews() {
         try {
             const cached = JSON.parse(localStorage.getItem("portfolioCache"));
             if (cached?.portfolio) {
-                portfolioTickers = cached.portfolio.map(s => s.ticker.split('_')[0]); // Use base ticker
+                portfolioTickers = cached.portfolio.map(s => s.ticker);
             }
         } catch {}
 
@@ -250,29 +236,50 @@ async function loadSideNews() {
     }
 }
 
-// --- X.COM FEED (with Supabase Caching) ---
+
+// --- NEW X.COM FEED (with highlight) ---
 async function loadXFeed() {
     if (!twitterFeedContainer) return;
+    const listId = "1959714572497006792";
     twitterFeedContainer.innerHTML = '<p style="padding: 20px; text-align: center;">Loading Feed...</p>';
 
+    const cachedFeed = JSON.parse(localStorage.getItem('xFeedCache'));
+    if (cachedFeed && (Date.now() - cachedFeed.timestamp < CACHE_DURATION)) {
+        renderXFeed(cachedFeed.data);
+        return;
+    }
+
     try {
-        const response = await fetch(`/.netlify/functions/get-list-tweets`);
-        if (!response.ok) throw new Error('Failed to fetch tweets from serverless function.');
+        const response = await fetch(`/.netlify/functions/get-list-tweets?listId=${listId}`);
+        if (!response.ok) {
+            if (cachedFeed) {
+                renderXFeed(cachedFeed.data);
+            } else {
+                throw new Error('Failed to fetch tweets and no cache available.');
+            }
+            return;
+        }
         
         const tweetsData = await response.json();
+        
+        localStorage.setItem('xFeedCache', JSON.stringify({
+            timestamp: Date.now(),
+            data: tweetsData
+        }));
+        
         renderXFeed(tweetsData);
 
     } catch (error) {
         console.error('Error loading X Feed:', error);
-        twitterFeedContainer.innerHTML = '<p style="padding: 20px; text-align: center;">Could not load feed.</p>';
+        if (cachedFeed) {
+            renderXFeed(cachedFeed.data);
+        } else {
+            twitterFeedContainer.innerHTML = '<p style="padding: 20px; text-align: center;">Could not load feed.</p>';
+        }
     }
 }
 
 function renderXFeed(tweetsData) {
-    if (!tweetsData || !tweetsData.data) {
-        twitterFeedContainer.innerHTML = '<p style="padding: 20px; text-align: center;">Could not load feed.</p>';
-        return;
-    }
     const tweets = tweetsData.data;
     const users = tweetsData.includes.users;
     const media = tweetsData.includes.media || [];
@@ -281,7 +288,7 @@ function renderXFeed(tweetsData) {
     try {
         const cached = JSON.parse(localStorage.getItem("portfolioCache"));
         if (cached?.portfolio) {
-            portfolioTickers = cached.portfolio.map(s => s.ticker.split('_')[0]); // Use base ticker
+            portfolioTickers = cached.portfolio.map(s => s.ticker);
         }
     } catch {}
 
@@ -317,7 +324,7 @@ function renderXFeed(tweetsData) {
         }
 
         const isHighlight = portfolioTickers.some(ticker =>
-            tweet.text.toUpperCase().includes(`$${ticker}`) || tweet.text.toUpperCase().includes(ticker)
+            tweet.text.toUpperCase().includes(ticker.toUpperCase())
         );
 
         const tweetElement = `
@@ -354,11 +361,12 @@ async function loadTodos() {
         todoList.appendChild(todoItem);
     });
 }
+
 async function handleTodoSubmit(e) {
     e.preventDefault();
     const taskText = todoInput.value.trim();
     if (taskText) {
-        const { error } = await supabaseClient.from('todos').insert({ task: taskText });
+        const { error } = await supabaseClient.from('todos').insert({ task: taskText, user_id: USER_ID });
         if (error) {
             console.error('Error adding todo:', error);
             alert('Could not add task. See console for details.');
@@ -367,6 +375,7 @@ async function handleTodoSubmit(e) {
         }
     }
 }
+
 async function handleTodoClick(e) {
     const item = e.target.closest('.todo-item');
     if (!item) return;
@@ -379,6 +388,7 @@ async function handleTodoClick(e) {
         await supabaseClient.from('todos').delete().eq('id', todoId);
     }
 }
+
 function subscribeToTodoChanges() {
     supabaseClient.channel('todos').on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, loadTodos).subscribe();
 }
@@ -447,6 +457,7 @@ async function loadUpcomingEvents() {
         if (!response.ok) {
             if (response.status === 401) {
                 await refreshAccessToken();
+                await loadUpcomingEvents(); // Retry after refresh
                 return;
             }
             throw new Error(`Failed to fetch events: ${response.statusText}`);
@@ -454,35 +465,18 @@ async function loadUpcomingEvents() {
         
         const { events, holidays } = await response.json();
         
-        const processedEvents = processRecurringEvents([...events, ...holidays]);
+        // Render upcoming events list
+        renderUpcomingEvents(events);
         
-        renderUpcomingEvents(processedEvents);
-        renderMiniCalendar(processedEvents);
+        // Combine events and holidays for mini-calendar highlighting
+        const allEvents = [...events, ...holidays];
+        renderMiniCalendar(allEvents);
 
     } catch (error) {
         console.error("Error loading calendar events:", error);
-        eventsContainer.innerHTML = '<p>Could not load calendar events.</p>';
-        renderMiniCalendar();
+        eventsContainer.innerHTML = '<p>Could not load calendar events. Please try logging in again.</p>';
+        renderMiniCalendar(); // Render calendar without events
     }
-}
-
-function processRecurringEvents(items) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const processed = items.map(event => {
-        if (event.start.date && event.start.date.length === 10 && event.recurrence) {
-            const [year, month, day] = event.start.date.split('-').map(Number);
-            let nextOccurrence = new Date(today.getFullYear(), month - 1, day);
-            if (nextOccurrence < today) {
-                nextOccurrence.setFullYear(today.getFullYear() + 1);
-            }
-            return { ...event, sortDate: nextOccurrence };
-        }
-        return { ...event, sortDate: new Date(event.start.dateTime || event.start.date) };
-    });
-
-    return processed.sort((a, b) => a.sortDate - b.sortDate);
 }
 
 function renderUpcomingEvents(events) {
@@ -491,8 +485,8 @@ function renderUpcomingEvents(events) {
         return;
     }
 
-    let eventsHTML = '';
-    events.slice(0, 5).forEach(event => {
+    let eventsHTML = '<h3>Upcoming Events</h3>';
+    events.forEach(event => {
         const start = event.start.dateTime || event.start.date;
         const eventDate = new Date(start);
         const timeString = event.start.dateTime ? eventDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'All-day';
@@ -542,6 +536,7 @@ function renderMiniCalendar(events = []) {
     miniCalendarContainer.innerHTML = calendarHTML;
 }
 
+
 function updateQuote() {
     const inspirationalQuotes = ["The only way to do great work is to love what you do.", "The best way to predict the future is to create it.", "Success is not final, failure is not fatal: it is the courage to continue that counts."];
     const randomIndex = Math.floor(Math.random() * inspirationalQuotes.length);
@@ -571,7 +566,6 @@ function setSearchEngine(engine) {
     });
 }
 
-// --- QUICK LINKS (FIXED) ---
 async function loadQuickLinks() {
     const { data, error } = await supabaseClient.from('quick_links').select('*').order('sort_order');
 
@@ -587,40 +581,36 @@ async function loadQuickLinks() {
     quickLinksContainer.innerHTML = '';
 
     links.forEach(link => {
-        const childLinks = subLinks.filter(sub => sub.parent_id === link.id);
+        const linkItemWrapper = document.createElement('div');
+        linkItemWrapper.className = 'link-item';
+        
         const iconHTML = link.icon_url.startsWith('fas') || link.icon_url.startsWith('fab')
             ? `<i class="${link.icon_url}"></i>`
             : `<img src="${link.icon_url}" alt="${link.name} icon" onerror="this.src='https://www.google.com/favicon.ico'">`;
 
+        const childLinks = subLinks.filter(sub => sub.parent_id === link.id);
+
         if (childLinks.length > 0) {
-            const linkItemWrapper = document.createElement('div');
-            linkItemWrapper.className = 'link-item';
             const subLinksHTML = childLinks.map(sub => {
-                try {
-                    const faviconUrl = `https://www.google.com/s2/favicons?domain=${new URL(sub.url).hostname}&sz=32`;
-                    return `<a href="${sub.url}" class="link-item" target="_blank" title="${sub.name}"><div class="link-icon"><img src="${faviconUrl}" alt="${sub.name} icon" onerror="this.src='https://www.google.com/favicon.ico'"></div><span class="link-name">${sub.name}</span></a>`;
-                } catch (e) {
-                    console.error(`Invalid URL for sub-link ${sub.name}: ${sub.url}`);
-                    return '';
-                }
+                const faviconUrl = `https://www.google.com/s2/favicons?domain=${new URL(sub.url).hostname}&sz=32`;
+                return `<a href="${sub.url}" class="link-item" target="_blank" title="${sub.name}"><div class="link-icon"><img src="${faviconUrl}" alt="${sub.name} icon" onerror="this.src='https://www.google.com/favicon.ico'"></div><span class="link-name">${sub.name}</span></a>`;
             }).join('');
             linkItemWrapper.innerHTML = `<div class="link-icon">${iconHTML}</div><span class="link-name">${link.name}</span><div class="popup-menu">${subLinksHTML}</div>`;
-            quickLinksContainer.appendChild(linkItemWrapper);
         } else {
             const anchor = document.createElement('a');
-            anchor.className = 'link-item';
             anchor.href = link.url;
             anchor.target = "_blank";
             anchor.title = link.name;
+            anchor.classList.add('link-item'); // Add class to anchor
             anchor.innerHTML = `<div class="link-icon">${iconHTML}</div><span class="link-name">${link.name}</span>`;
-            quickLinksContainer.appendChild(anchor);
+            linkItemWrapper.appendChild(anchor);
         }
+        quickLinksContainer.appendChild(linkItemWrapper);
     });
 }
 
 
 function loadStockNews() {
-    // This is a placeholder. You would fetch real news here.
     const newsData = [
         { title: "Markets Rally on Lower Than Expected Inflation Data", date: "2h ago" },
         { title: "Tech Giants Report Strong Quarterly Earnings", date: "4h ago" },
@@ -660,6 +650,7 @@ async function getInstrumentDictionary() {
     }
 }
 
+
 async function loadStockWatchlist() {
     watchlistContainer.innerHTML = '<div style="padding: 20px;">Loading portfolio...</div>';
 
@@ -692,7 +683,6 @@ async function loadStockWatchlist() {
         
         const fullPortfolioData = { portfolio: enrichedPortfolio, cash: cashData };
         
-        localStorage.setItem('portfolioCache', JSON.stringify(fullPortfolioData));
         renderPortfolio(fullPortfolioData);
 
     } catch (error) {
@@ -816,5 +806,20 @@ function renderPortfolio(data, error = null) {
     watchlistContainer.innerHTML = watchlistHTML;
 }
 
+// --- Handle Auth Callback ---
+function handleAuthCallback() {
+    const params = new URLSearchParams(window.location.search);
+    const accessToken = params.get('access_token');
+    const refreshToken = params.get('refresh_token');
+
+    if (accessToken && refreshToken) {
+        localStorage.setItem('google_access_token', accessToken);
+        localStorage.setItem('google_refresh_token', refreshToken);
+        // Clean the URL
+        window.history.replaceState({}, document.title, "/");
+    }
+}
+
 // --- START THE APP ---
+handleAuthCallback();
 init();
