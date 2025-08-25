@@ -28,7 +28,8 @@ const newsContainer = document.getElementById('news-container');
 const watchlistContainer = document.getElementById('watchlist-container');
 const themeToggleBtn = document.getElementById('theme-toggle');
 const sideNewsContainer = document.getElementById('side-news-container');
-const twitterFeedContainer = document.getElementById('twitter-feed-container');
+// twitterFeedContainer is no longer manipulated by JS
+// const twitterFeedContainer = document.getElementById('twitter-feed-container'); 
 const eventsContainer = document.getElementById('events-container');
 
 // Main Layout Elements
@@ -165,7 +166,7 @@ function showLoginPage() {
     if(eventsContainer) eventsContainer.innerHTML = '';
     if(watchlistContainer) watchlistContainer.innerHTML = '';
     if(sideNewsContainer) sideNewsContainer.innerHTML = '';
-    if(twitterFeedContainer) twitterFeedContainer.innerHTML = '';
+    // if(twitterFeedContainer) twitterFeedContainer.innerHTML = ''; // No longer needed
     if(todoList) todoList.innerHTML = '';
 }
 
@@ -182,7 +183,7 @@ function loadLoggedInContent() {
     loadStockNews();
     loadStockWatchlist();
     loadSideNews();
-    loadXFeed();
+    // loadXFeed(); // This is now handled by an iframe
     loadTodos();
     subscribeToTodoChanges();
     loadUpcomingEvents();
@@ -243,101 +244,6 @@ async function loadSideNews() {
         console.error('Error fetching side news:', error.message);
         sideNewsContainer.innerHTML = `<div class="error-message" style="padding: 20px;">Could not load news.</div>`;
     }
-}
-
-
-// --- NEW X.COM FEED (with server-side caching) ---
-async function loadXFeed() {
-    if (!twitterFeedContainer) return;
-    twitterFeedContainer.innerHTML = '<p style="padding: 20px; text-align: center;">Loading Feed...</p>';
-
-    try {
-        // The Netlify function now handles caching via Supabase
-        const response = await fetch(`/.netlify/functions/get-list-tweets`);
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to fetch tweets.');
-        }
-        
-        const tweetsData = await response.json();
-        renderXFeed(tweetsData);
-
-    } catch (error) {
-        console.error('Error loading X Feed:', error);
-        twitterFeedContainer.innerHTML = `<p style="padding: 20px; text-align: center;">Could not load feed. ${error.message}</p>`;
-    }
-}
-
-function renderXFeed(tweetsData) {
-    if (!tweetsData || !tweetsData.data || !tweetsData.includes) {
-        twitterFeedContainer.innerHTML = '<p style="padding: 20px; text-align: center;">Feed data is unavailable.</p>';
-        return;
-    }
-    const tweets = tweetsData.data;
-    const users = tweetsData.includes.users;
-    const media = tweetsData.includes.media || [];
-
-    let portfolioTickers = [];
-    try {
-        const cached = JSON.parse(localStorage.getItem("portfolioCache"));
-        if (cached?.portfolio) {
-            portfolioTickers = cached.portfolio.map(s => s.ticker);
-        }
-    } catch {}
-
-    twitterFeedContainer.innerHTML = '';
-
-    tweets.forEach(tweet => {
-        const author = users.find(user => user.id === tweet.author_id);
-        if (!author) return;
-
-        let mediaHTML = '';
-        if (tweet.attachments && tweet.attachments.media_keys) {
-            const mediaKey = tweet.attachments.media_keys[0];
-            const mediaItem = media.find(m => m.media_key === mediaKey);
-            if (mediaItem && mediaItem.type === 'photo') {
-                mediaHTML = `<div class="tweet-media"><img src="${mediaItem.url}" alt="Tweet image"></div>`;
-            }
-        }
-
-        let formattedText = tweet.text;
-        if (tweet.entities) {
-            if (tweet.entities.urls) {
-                tweet.entities.urls.forEach(url => {
-                    if (url.media_key) return; // Don't link images again
-                    formattedText = formattedText.replace(url.url,
-                        `<a href="${url.expanded_url}" target="_blank" rel="noopener noreferrer">${url.display_url}</a>`);
-                });
-            }
-            if (tweet.entities.mentions) {
-                tweet.entities.mentions.forEach(mention => {
-                    formattedText = formattedText.replace(`@${mention.username}`,
-                        `<a href="https://x.com/${mention.username}" target="_blank" rel="noopener noreferrer">@${mention.username}</a>`);
-                });
-            }
-        }
-
-        const isHighlight = portfolioTickers.some(ticker =>
-            ` ${tweet.text.toUpperCase()} `.includes(` ${ticker.toUpperCase()} `) ||
-            ` ${tweet.text.toUpperCase()} `.includes(` $${ticker.toUpperCase()} `)
-        );
-
-        const tweetElement = `
-            <div class="tweet ${isHighlight ? "highlight-tweet" : ""}">
-                <img src="${author.profile_image_url}" alt="${author.username}" class="tweet-avatar">
-                <div class="tweet-content">
-                    <div class="tweet-author">
-                        <strong class="tweet-author-name">${author.name}</strong>
-                        <span class="tweet-author-username">@${author.username}</span>
-                    </div>
-                    <div class="tweet-text">${formattedText}</div>
-                    ${mediaHTML}
-                    <div class="tweet-date">${new Date(tweet.created_at).toLocaleString()}</div>
-                </div>
-            </div>
-        `;
-        twitterFeedContainer.innerHTML += tweetElement;
-    });
 }
 
 // --- TO-DO LIST (with Supabase) ---
@@ -595,31 +501,32 @@ async function loadQuickLinks() {
     quickLinksContainer.innerHTML = '';
 
     links.forEach(link => {
-        const linkItemWrapper = document.createElement('div');
-        linkItemWrapper.className = 'link-item';
-        
-        const iconHTML = link.icon_url.startsWith('fas') || link.icon_url.startsWith('fab')
+        const iconHTML = link.icon_url && (link.icon_url.startsWith('fas') || link.icon_url.startsWith('fab'))
             ? `<i class="${link.icon_url}"></i>`
-            : `<img src="${link.icon_url}" alt="${link.name} icon" onerror="this.src='https://www.google.com/favicon.ico'">`;
+            : `<img src="${link.icon_url || 'https://www.google.com/favicon.ico'}" alt="${link.name} icon" onerror="this.src='https://www.google.com/favicon.ico'">`;
 
         const childLinks = subLinks.filter(sub => sub.parent_id === link.id);
 
         if (childLinks.length > 0) {
+            // This is for popups, it's a div. This is correct.
+            const linkItemWrapper = document.createElement('div');
+            linkItemWrapper.className = 'link-item';
             const subLinksHTML = childLinks.map(sub => {
                 const faviconUrl = `https://www.google.com/s2/favicons?domain=${new URL(sub.url).hostname}&sz=32`;
                 return `<a href="${sub.url}" class="link-item" target="_blank" title="${sub.name}"><div class="link-icon"><img src="${faviconUrl}" alt="${sub.name} icon" onerror="this.src='https://www.google.com/favicon.ico'"></div><span class="link-name">${sub.name}</span></a>`;
             }).join('');
             linkItemWrapper.innerHTML = `<div class="link-icon">${iconHTML}</div><span class="link-name">${link.name}</span><div class="popup-menu">${subLinksHTML}</div>`;
+            quickLinksContainer.appendChild(linkItemWrapper);
         } else {
+            // This is for simple links. It should be an anchor tag.
             const anchor = document.createElement('a');
+            anchor.className = 'link-item'; // Use the correct class
             anchor.href = link.url;
             anchor.target = "_blank";
             anchor.title = link.name;
-            anchor.classList.add('link-item-anchor'); // Use a different class to avoid nesting issues
             anchor.innerHTML = `<div class="link-icon">${iconHTML}</div><span class="link-name">${link.name}</span>`;
-            linkItemWrapper.appendChild(anchor);
+            quickLinksContainer.appendChild(anchor);
         }
-        quickLinksContainer.appendChild(linkItemWrapper);
     });
 }
 
