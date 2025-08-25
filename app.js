@@ -349,8 +349,6 @@ function updateWeatherUI(data) {
 
 // --- GOOGLE CALENDAR ---
 async function loadUpcomingEvents() {
-    // This function now only fetches data and caches it.
-    // The rendering is handled by other functions to avoid re-fetching on month change.
     eventsContainer.innerHTML = '<p>Loading events...</p>';
     try {
         const accessToken = localStorage.getItem('google_access_token');
@@ -478,6 +476,7 @@ function setSearchEngine(engine) {
     });
 }
 
+// --- QUICK LINKS (REWRITTEN FOR ROBUSTNESS) ---
 async function loadQuickLinks() {
     const { data, error } = await supabaseClient.from('quick_links').select('*').order('sort_order');
     
@@ -486,7 +485,7 @@ async function loadQuickLinks() {
 
     if (error) {
         console.error('Error fetching quick links:', error);
-        quickLinksContainer.innerHTML = '<p>Could not load quick links.</p>';
+        quickLinksContainer.innerHTML = `<p style="font-size: 0.8rem; opacity: 0.7;">Error: ${error.message}</p>`;
         return;
     }
     if (!data || data.length === 0) {
@@ -499,32 +498,38 @@ async function loadQuickLinks() {
     quickLinksContainer.innerHTML = '';
 
     links.forEach(link => {
-        const iconHTML = link.icon_url && (link.icon_url.startsWith('fas') || link.icon_url.startsWith('fab'))
-            ? `<i class="${link.icon_url}"></i>`
-            : `<img src="${link.icon_url || 'https://www.google.com/favicon.ico'}" alt="${link.name} icon" onerror="this.src='https://www.google.com/favicon.ico'">`;
+        try {
+            const iconHTML = link.icon_url && (link.icon_url.startsWith('fas') || link.icon_url.startsWith('fab'))
+                ? `<i class="${link.icon_url}"></i>`
+                : `<img src="${link.icon_url || 'https://www.google.com/favicon.ico'}" alt="${link.name} icon" onerror="this.src='https://www.google.com/favicon.ico'">`;
 
-        const childLinks = subLinks.filter(sub => sub.parent_id === link.id);
+            const childLinks = subLinks.filter(sub => sub.parent_id === link.id);
 
-        if (childLinks.length > 0) {
-            const linkItemWrapper = document.createElement('div');
-            linkItemWrapper.className = 'link-item';
-            const subLinksHTML = childLinks.map(sub => {
-                let faviconUrl = 'https://www.google.com/favicon.ico';
-                try {
-                    faviconUrl = `https://www.google.com/s2/favicons?domain=${new URL(sub.url).hostname}&sz=32`;
-                } catch (e) { console.error(`Invalid URL for sub-link ${sub.name}: ${sub.url}`); }
-                return `<a href="${sub.url}" class="link-item" target="_blank" title="${sub.name}"><div class="link-icon"><img src="${faviconUrl}" alt="${sub.name} icon"></div><span class="link-name">${sub.name}</span></a>`;
-            }).join('');
-            linkItemWrapper.innerHTML = `<div class="link-icon">${iconHTML}</div><span class="link-name">${link.name}</span><div class="popup-menu">${subLinksHTML}</div>`;
-            quickLinksContainer.appendChild(linkItemWrapper);
-        } else {
-            const anchor = document.createElement('a');
-            anchor.className = 'link-item';
-            anchor.href = link.url;
-            anchor.target = "_blank";
-            anchor.title = link.name;
-            anchor.innerHTML = `<div class="link-icon">${iconHTML}</div><span class="link-name">${link.name}</span>`;
-            quickLinksContainer.appendChild(anchor);
+            if (childLinks.length > 0) {
+                const linkItemWrapper = document.createElement('div');
+                linkItemWrapper.className = 'link-item';
+                const subLinksHTML = childLinks.map(sub => {
+                    let faviconUrl = 'https://www.google.com/favicon.ico';
+                    try {
+                        // This can throw an error if sub.url is not a valid URL
+                        faviconUrl = `https://www.google.com/s2/favicons?domain=${new URL(sub.url).hostname}&sz=32`;
+                    } catch (e) { console.error(`Invalid URL for sub-link '${sub.name}': ${sub.url}`); }
+                    return `<a href="${sub.url}" class="link-item" target="_blank" rel="noopener noreferrer" title="${sub.name}"><div class="link-icon"><img src="${faviconUrl}" alt="${sub.name} icon"></div><span class="link-name">${sub.name}</span></a>`;
+                }).join('');
+                linkItemWrapper.innerHTML = `<div class="link-icon">${iconHTML}</div><span class="link-name">${link.name}</span><div class="popup-menu">${subLinksHTML}</div>`;
+                quickLinksContainer.appendChild(linkItemWrapper);
+            } else {
+                const anchor = document.createElement('a');
+                anchor.className = 'link-item';
+                anchor.href = link.url;
+                anchor.target = "_blank";
+                anchor.rel = "noopener noreferrer";
+                anchor.title = link.name;
+                anchor.innerHTML = `<div class="link-icon">${iconHTML}</div><span class="link-name">${link.name}</span>`;
+                quickLinksContainer.appendChild(anchor);
+            }
+        } catch (e) {
+            console.error(`Failed to render quick link '${link.name}'. Please check its data in the database.`, e);
         }
     });
 }
