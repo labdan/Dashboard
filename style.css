@@ -95,9 +95,6 @@ html, body {
     }
     .main-content {
         grid-column: 2 / 5;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
     }
     .left-sidebar, .right-sidebar {
         display: flex;
@@ -117,6 +114,7 @@ html, body {
     display: flex;
     flex-direction: column;
     height: 100%;
+    overflow: hidden;
 }
 
 .main-content > header {
@@ -129,7 +127,7 @@ html, body {
     flex-direction: column;
     overflow: hidden;
 }
-.left-sidebar .news-container, #benzinga-feed-container {
+.news-container {
     flex-grow: 1;
     overflow-y: auto;
 }
@@ -211,6 +209,20 @@ header {
     top: 15px;
     right: 15px;
     z-index: 2;
+    background: rgba(0,0,0,0.1);
+    border: none;
+    color: var(--text-color);
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+.theme-toggle:hover {
+    transform: scale(1.1) rotate(15deg);
 }
 
 .time-date {
@@ -623,6 +635,7 @@ header {
     padding-bottom: 10px;
     border-bottom: 1px solid var(--border-color);
     color: var(--primary-color);
+    flex-shrink: 0;
 }
 
 .widget:hover {
@@ -654,6 +667,7 @@ header {
   display: flex;
   margin-bottom: 20px;
   gap: 10px;
+  flex-shrink: 0;
 }
 
 .todo-input {
@@ -732,7 +746,7 @@ header {
   transform: scale(1.1);
 }
 
-.events-container, .news-container {
+.events-container {
   overflow-y: auto;
   padding-right: 5px;
   flex-grow: 1;
@@ -773,6 +787,7 @@ header {
 .portfolio-header {
     padding: 20px;
     border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
 }
 
 .portfolio-header .refresh-btn {

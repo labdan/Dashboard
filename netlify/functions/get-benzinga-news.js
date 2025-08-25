@@ -10,6 +10,7 @@ exports.handler = async function () {
     https
       .get(url, { headers: { 'User-Agent': 'Productivity-Dashboard/1.0' } }, (res) => {
         if (res.statusCode < 200 || res.statusCode >= 300) {
+            console.error(`Benzinga feed returned status code: ${res.statusCode}`);
             return resolve({
                 statusCode: res.statusCode,
                 body: JSON.stringify({ error: "Failed to fetch Benzinga feed" }),
@@ -20,13 +21,19 @@ exports.handler = async function () {
         res.on("data", (chunk) => (data += chunk));
         res.on("end", async () => {
           try {
+            // Benzinga feed might not use arrays for single items, so explicitArray: false is safer.
             const parsed = await parseStringPromise(data, { trim: true, explicitArray: false });
-            const items = parsed.rss.channel.item.map((item) => ({
-              title: item.title,
-              link: item.link,
-              pubDate: item.pubDate,
-              description: item.description || "",
-            }));
+            
+            // Ensure channel and item exist before mapping
+            const items = parsed?.rss?.channel?.item ? 
+                          (Array.isArray(parsed.rss.channel.item) ? parsed.rss.channel.item : [parsed.rss.channel.item]) // Ensure item is an array
+                          .map((item) => ({
+                            title: item.title,
+                            link: item.link,
+                            pubDate: item.pubDate,
+                            description: item.description || "",
+                          }))
+                          : [];
 
             resolve({
               statusCode: 200,

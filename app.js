@@ -60,6 +60,7 @@ const refreshWeatherBtn = document.getElementById('refresh-weather');
 // --- STATE ---
 let currentSearchEngine = 'google';
 let calendarDisplayDate = new Date();
+let allUserEvents = []; // Cache for calendar events
 const USER_ID = '12345678-12321-1234-1234567890ab'; 
 
 // --- INITIALIZATION ---
@@ -356,9 +357,9 @@ async function loadUpcomingEvents() {
             throw new Error(`Failed to fetch events: ${response.statusText}`);
         }
         const { events, holidays } = await response.json();
-        const allEvents = [...events, ...holidays];
-        renderUpcomingEvents(allEvents);
-        renderMiniCalendar(allEvents, calendarDisplayDate);
+        allUserEvents = [...events, ...holidays]; // Cache the events
+        renderUpcomingEvents(allUserEvents);
+        renderMiniCalendar(allUserEvents, calendarDisplayDate);
     } catch (error) {
         console.error("Error loading calendar events:", error);
         eventsContainer.innerHTML = '<p>Could not load calendar events.</p>';
@@ -405,7 +406,7 @@ function updateClock() {
 
 function updateDateDisplay() {
     dateElement.textContent = calendarDisplayDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-    loadUpcomingEvents(); // This will also re-render the mini-calendar
+    renderMiniCalendar(allUserEvents, calendarDisplayDate); // Re-render calendar with new date
 }
 
 function renderMiniCalendar(events = [], displayDate) {
