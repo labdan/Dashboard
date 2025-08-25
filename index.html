@@ -8,105 +8,121 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="container">
-    <!-- Left sidebar for news -->
-    <div class="left-sidebar">
-        <div class="widget">
-            <div class="news-container" id="side-news-container"></div>
-        </div>
-    </div>
 
-    <div class="main-content">
-        <header>
-          <!-- Clock -->
-          <div class="time-date header-widget">
-            <div class="auth-container">
-                <div id="user-profile" class="hidden">
-                    <img id="user-avatar" src="" alt="User Avatar">
-                    <span id="user-name"></span>
-                    <button id="logout-btn" class="auth-btn">Logout</button>
-                </div>
-                <button id="login-btn" class="auth-btn">Login with Google</button>
-            </div>
-            <button class="theme-toggle" id="theme-toggle" title="Toggle Theme">
-              <i class="fas fa-moon"></i>
-            </button>
-            <div class="time-display" id="time">00:00:00</div>
-            <div class="date-display" id="date">Monday, January 1, 2023</div>
-            <div class="mini-calendar" id="mini-calendar"></div>
-          </div>
+  <!-- This container is only shown when the user is NOT logged in -->
+  <div id="login-page">
+    <button id="login-btn" class="auth-btn large">Login with Google</button>
+  </div>
 
-          <!-- Search Area & Quick Links -->
-          <div class="search-area">
-            <div class="inspirational-quote" id="quote">"The only way to do great work is to love what you do."</div>
-            <div class="search-container">
-              <input type="text" class="search-input" id="search-input" placeholder="Search the web..." />
-              <div class="search-engines" id="search-engines">
-                <i class="search-engine-icon fab fa-google active" data-engine="google" title="Google"></i>
-                <i class="search-engine-icon fas fa-ghost" data-engine="duckduckgo" title="DuckDuckGo"></i>
-                <i class="search-engine-icon fas fa-shield-halved" data-engine="brave" title="Brave Search"></i>
+  <!-- This container holds the entire dashboard and is shown only AFTER login -->
+  <div id="dashboard-container" class="hidden">
+    <div class="container">
+      <!-- Left sidebar for news -->
+      <div class="left-sidebar">
+          <div class="widget user-profile-widget">
+              <div id="user-profile">
+                  <img id="user-avatar" src="" alt="User Avatar">
+                  <span id="user-name"></span>
+                  <button id="logout-btn" class="auth-btn">Logout</button>
               </div>
-              <button class="search-btn" id="search-btn"><i class="fas fa-search"></i></button>
-            </div>
-            <div class="quick-links-bar">
-              <div class="quick-links" id="quick-links"></div>
-            </div>
-          </div>
-
-          <!-- Weather Widget -->
-          <div class="weather-widget header-widget" id="weather">
-            <button class="refresh-btn" id="refresh-weather"><i class="fas fa-sync-alt"></i></button>
-            <div class="weather-main">
-              <div class="weather-icon"><img id="weather-icon-img" src="" alt="Weather icon" /></div>
-              <div class="weather-details">
-                <div class="weather-temperature">--°C</div>
-                <div class="weather-description">Loading...</div>
-              </div>
-              <div class="weather-high-low">
-                  <div id="weather-high">H: --°</div>
-                  <div id="weather-low">L: --°</div>
-              </div>
-            </div>
-            <div class="chance-of-rain" id="chance-of-rain">--% chance of rain</div>
-            <div class="weather-extra-info">
-              <div class="info-item"><i class="fas fa-sun"></i><span id="sunrise-time">--:--</span><small>Sunrise</small></div>
-              <div class="info-item"><i class="fas fa-moon"></i><span id="sunset-time">--:--</span><small>Sunset</small></div>
-              <div class="info-item"><i class="fas fa-triangle-exclamation"></i><span id="uv-index">--</span><small>UV Index</small></div>
-              <div class="info-item"><i class="fas fa-wind"></i><span id="aqi-index">--</span><small>AQI</small></div>
-            </div>
-            <div class="weather-forecast" id="weather-forecast"></div>
-          </div>
-        </header>
-
-        <!-- Dashboard Grid -->
-        <div class="dashboard-grid">
-          <div class="left-column-widgets">
-             <div class="widget">
-                <div class="events-container" id="events-container"></div>
-             </div>
-             <div class="widget">
-                <form class="todo-form" id="todo-form"><input type="text" class="todo-input" id="todo-input" placeholder="Add a new task..." required /><button type="submit" class="add-btn">Add</button></form>
-                <ul class="todo-list" id="todo-list"></ul>
-             </div>
           </div>
           <div class="widget">
-            <div class="news-container" id="news-container"></div>
+              <div class="news-container" id="side-news-container"></div>
           </div>
-          <div class="right-column-widgets">
-            <div class="widget">
-              <div class="watchlist-container" id="watchlist-container"></div>
-            </div>
-          </div>
-        </div>
-    </div>
+      </div>
 
-    <!-- Right sidebar for X.com feed -->
-    <div class="right-sidebar">
-        <div class="widget">
-            <div id="twitter-feed-container">
-                <p style="padding: 20px; text-align: center; opacity: 0.7;">Loading Feed...</p>
+      <div class="main-content">
+          <header>
+            <!-- Clock -->
+            <div class="time-date header-widget">
+              <div class="auth-container-mobile">
+                <!-- Mobile user profile will be inserted here by JS -->
+              </div>
+              <button class="theme-toggle" id="theme-toggle" title="Toggle Theme">
+                <i class="fas fa-moon"></i>
+              </button>
+              <div class="time-display" id="time">00:00:00</div>
+              <div class="date-display" id="date">Monday, January 1, 2023</div>
+              <div class="mini-calendar" id="mini-calendar"></div>
             </div>
-        </div>
+
+            <!-- Search Area & Quick Links -->
+            <div class="search-area">
+              <div class="inspirational-quote" id="quote">"The only way to do great work is to love what you do."</div>
+              <div class="search-container">
+                <input type="text" class="search-input" id="search-input" placeholder="Search the web..." />
+                <div class="search-engines" id="search-engines">
+                  <i class="search-engine-icon fab fa-google active" data-engine="google" title="Google"></i>
+                  <i class="search-engine-icon fas fa-ghost" data-engine="duckduckgo" title="DuckDuckGo"></i>
+                  <i class="search-engine-icon fas fa-shield-halved" data-engine="brave" title="Brave Search"></i>
+                </div>
+                <button class="search-btn" id="search-btn"><i class="fas fa-search"></i></button>
+              </div>
+              <div class="quick-links-bar">
+                <div class="quick-links" id="quick-links"></div>
+              </div>
+            </div>
+
+            <!-- Weather Widget -->
+            <div class="weather-widget header-widget" id="weather">
+              <button class="refresh-btn" id="refresh-weather"><i class="fas fa-sync-alt"></i></button>
+              <div class="weather-main">
+                <div class="weather-icon"><img id="weather-icon-img" src="" alt="Weather icon" /></div>
+                <div class="weather-details">
+                  <div class="weather-temperature">--°C</div>
+                  <div class="weather-description">Loading...</div>
+                </div>
+                <div class="weather-high-low">
+                    <div id="weather-high">H: --°</div>
+                    <div id="weather-low">L: --°</div>
+                </div>
+              </div>
+              <div class="chance-of-rain" id="chance-of-rain">--% chance of rain</div>
+              <div class="weather-extra-info">
+                <div class="info-item"><i class="fas fa-sun"></i><span id="sunrise-time">--:--</span><small>Sunrise</small></div>
+                <div class="info-item"><i class="fas fa-moon"></i><span id="sunset-time">--:--</span><small>Sunset</small></div>
+                <div class="info-item"><i class="fas fa-triangle-exclamation"></i><span id="uv-index">--</span><small>UV Index</small></div>
+                <div class="info-item"><i class="fas fa-wind"></i><span id="aqi-index">--</span><small>AQI</small></div>
+              </div>
+              <div class="weather-forecast" id="weather-forecast"></div>
+            </div>
+          </header>
+
+          <!-- Dashboard Grid -->
+          <div class="dashboard-grid">
+            <div class="left-column-widgets">
+               <div class="widget">
+                  <h3 class="widget-title">Upcoming Events</h3>
+                  <div class="events-container" id="events-container"></div>
+               </div>
+               <div class="widget">
+                  <h3 class="widget-title">To-Do List</h3>
+                  <form class="todo-form" id="todo-form"><input type="text" class="todo-input" id="todo-input" placeholder="Add a new task..." required /><button type="submit" class="add-btn">Add</button></form>
+                  <ul class="todo-list" id="todo-list"></ul>
+               </div>
+            </div>
+            <div class="widget">
+              <h3 class="widget-title">Stock Market News</h3>
+              <div class="news-container" id="news-container"></div>
+            </div>
+            <div class="right-column-widgets">
+              <div class="widget">
+                <h3 class="widget-title">Portfolio</h3>
+                <div class="watchlist-container" id="watchlist-container"></div>
+              </div>
+            </div>
+          </div>
+      </div>
+
+      <!-- Right sidebar for X.com feed -->
+      <div class="right-sidebar">
+          <div class="widget">
+              <h3 class="widget-title">X.com Feed</h3>
+              <div id="twitter-feed-container">
+                  <p style="padding: 20px; text-align: center; opacity: 0.7;">Loading Feed...</p>
+              </div>
+          </div>
+      </div>
     </div>
   </div>
 
