@@ -68,7 +68,7 @@ async function init() {
     applySavedTheme();
     updateClock();
     setInterval(updateClock, 1000);
-    updateDateDisplay();
+    updateDateDisplay(); // Renders calendar for the current month
     updateQuote();
     setInterval(updateQuote, 10000);
     
@@ -215,6 +215,10 @@ async function loadSideNews() {
         const response = await fetch('/.netlify/functions/get-stock-news');
         if (!response.ok) throw new Error(`News function failed: ${response.statusText}`);
         const data = await response.json();
+        if(!data.articles || data.articles.length === 0) {
+            sideNewsContainer.innerHTML = `<p style="padding: 20px;">No news available.</p>`;
+            return;
+        }
         sideNewsContainer.innerHTML = data.articles.map(article => `
             <div class="news-item">
                 <a href="${article.link}" class="news-title" target="_blank" rel="noopener noreferrer">${article.title}</a>
@@ -233,6 +237,10 @@ async function loadBenzingaFeed() {
         const response = await fetch('/.netlify/functions/get-benzinga-news');
         if (!response.ok) throw new Error(`Benzinga function failed: ${response.statusText}`);
         const data = await response.json();
+        if(!data.articles || data.articles.length === 0) {
+            benzingaFeedContainer.innerHTML = `<p style="padding: 20px;">No news available.</p>`;
+            return;
+        }
         benzingaFeedContainer.innerHTML = data.articles.map(article => `
             <div class="news-item">
                 <a href="${article.link}" class="news-title" target="_blank" rel="noopener noreferrer">${article.title}</a>
@@ -473,7 +481,7 @@ function setSearchEngine(engine) {
 async function loadQuickLinks() {
     const { data, error } = await supabaseClient.from('quick_links').select('*').order('sort_order');
     
-    // Diagnostic log
+    // Diagnostic log to help debug
     console.log("Fetched Quick Links Data:", data);
 
     if (error) {
@@ -485,20 +493,27 @@ async function loadQuickLinks() {
         quickLinksContainer.innerHTML = '<p style="font-size: 0.8rem; opacity: 0.7;">No quick links configured.</p>';
         return;
     }
+    
     const links = data.filter(link => !link.parent_id);
     const subLinks = data.filter(link => link.parent_id);
     quickLinksContainer.innerHTML = '';
+
     links.forEach(link => {
         const iconHTML = link.icon_url && (link.icon_url.startsWith('fas') || link.icon_url.startsWith('fab'))
             ? `<i class="${link.icon_url}"></i>`
             : `<img src="${link.icon_url || 'https://www.google.com/favicon.ico'}" alt="${link.name} icon" onerror="this.src='https://www.google.com/favicon.ico'">`;
+
         const childLinks = subLinks.filter(sub => sub.parent_id === link.id);
+
         if (childLinks.length > 0) {
             const linkItemWrapper = document.createElement('div');
             linkItemWrapper.className = 'link-item';
             const subLinksHTML = childLinks.map(sub => {
-                const faviconUrl = `https://www.google.com/s2/favicons?domain=${new URL(sub.url).hostname}&sz=32`;
-                return `<a href="${sub.url}" class="link-item" target="_blank" title="${sub.name}"><div class="link-icon"><img src="${faviconUrl}" alt="${sub.name} icon" onerror="this.src='https://www.google.com/favicon.ico'"></div><span class="link-name">${sub.name}</span></a>`;
+                let faviconUrl = 'https://www.google.com/favicon.ico';
+                try {
+                    faviconUrl = `https://www.google.com/s2/favicons?domain=${new URL(sub.url).hostname}&sz=32`;
+                } catch (e) { console.error(`Invalid URL for sub-link ${sub.name}: ${sub.url}`); }
+                return `<a href="${sub.url}" class="link-item" target="_blank" title="${sub.name}"><div class="link-icon"><img src="${faviconUrl}" alt="${sub.name} icon"></div><span class="link-name">${sub.name}</span></a>`;
             }).join('');
             linkItemWrapper.innerHTML = `<div class="link-icon">${iconHTML}</div><span class="link-name">${link.name}</span><div class="popup-menu">${subLinksHTML}</div>`;
             quickLinksContainer.appendChild(linkItemWrapper);
