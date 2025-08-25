@@ -8,7 +8,6 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <!-- Login page view, shown when logged out -->
   <div class="login-page-container">
       <button id="login-btn" class="login-page-btn">
           <i class="fab fa-google"></i>
@@ -16,10 +15,8 @@
       </button>
   </div>
 
-  <!-- Main dashboard, hidden until logged in -->
   <div id="main-dashboard" class="hidden">
     <div class="container">
-      <!-- Left sidebar for news -->
       <div class="left-sidebar">
           <div class="widget">
               <h3>Seeking Alpha</h3>
@@ -29,9 +26,7 @@
 
       <div class="main-content">
           <header>
-            <!-- Clock -->
             <div class="time-date header-widget">
-              <!-- User Session Bar is now here -->
               <div id="user-session-bar">
                   <div id="user-profile">
                       <img id="user-avatar" src="" alt="User Avatar">
@@ -55,7 +50,6 @@
               <div class="mini-calendar" id="mini-calendar"></div>
             </div>
 
-            <!-- Search Area & Quick Links -->
             <div class="search-area">
               <div class="inspirational-quote" id="quote">"The only way to do great work is to love what you do."</div>
               <div class="search-container">
@@ -72,7 +66,6 @@
               </div>
             </div>
 
-            <!-- Weather Widget -->
             <div class="weather-widget header-widget" id="weather">
               <button class="refresh-btn" id="refresh-weather"><i class="fas fa-sync-alt"></i></button>
               <div class="weather-main">
@@ -97,7 +90,6 @@
             </div>
           </header>
 
-          <!-- Dashboard Grid -->
           <div class="dashboard-grid">
             <div class="left-column-widgets">
                <div class="widget">
@@ -120,7 +112,6 @@
           </div>
       </div>
 
-      <!-- Right sidebar for Benzinga feed -->
       <div class="right-sidebar">
           <div class="widget">
               <h3>Benzinga News</h3>
@@ -132,7 +123,6 @@
     </div>
   </div>
 
-  <!-- Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
   <script src="config.js"></script>

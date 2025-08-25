@@ -25,15 +25,19 @@ exports.handler = async function () {
             const parsed = await parseStringPromise(data, { trim: true, explicitArray: false });
             
             // Ensure channel and item exist before mapping
-            const items = parsed?.rss?.channel?.item ? 
-                          (Array.isArray(parsed.rss.channel.item) ? parsed.rss.channel.item : [parsed.rss.channel.item]) // Ensure item is an array
-                          .map((item) => ({
-                            title: item.title,
-                            link: item.link,
-                            pubDate: item.pubDate,
-                            description: item.description || "",
-                          }))
-                          : [];
+            let items = [];
+            if (parsed?.rss?.channel?.item) {
+                const rawItems = Array.isArray(parsed.rss.channel.item) 
+                                 ? parsed.rss.channel.item 
+                                 : [parsed.rss.channel.item]; // Ensure item is an array
+                
+                items = rawItems.map((item) => ({
+                    title: item.title,
+                    link: item.link,
+                    pubDate: item.pubDate,
+                    description: item.description || "",
+                }));
+            }
 
             resolve({
               statusCode: 200,

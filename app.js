@@ -60,7 +60,7 @@ const refreshWeatherBtn = document.getElementById('refresh-weather');
 // --- STATE ---
 let currentSearchEngine = 'google';
 let calendarDisplayDate = new Date();
-let allUserEvents = []; // Cache for calendar events
+let allUserEvents = []; // Cache for calendar events to prevent re-fetching
 const USER_ID = '12345678-12321-1234-1234567890ab'; 
 
 // --- INITIALIZATION ---
@@ -189,7 +189,7 @@ function loadLoggedInContent() {
     loadBenzingaFeed();
     loadTodos();
     subscribeToTodoChanges();
-    loadUpcomingEvents();
+    loadUpcomingEvents(); // Fetches events and renders calendar
 }
 
 
@@ -341,6 +341,8 @@ function updateWeatherUI(data) {
 
 // --- GOOGLE CALENDAR ---
 async function loadUpcomingEvents() {
+    // This function now only fetches data and caches it.
+    // The rendering is handled by other functions to avoid re-fetching on month change.
     eventsContainer.innerHTML = '<p>Loading events...</p>';
     try {
         const accessToken = localStorage.getItem('google_access_token');
@@ -362,7 +364,8 @@ async function loadUpcomingEvents() {
         renderMiniCalendar(allUserEvents, calendarDisplayDate);
     } catch (error) {
         console.error("Error loading calendar events:", error);
-        eventsContainer.innerHTML = '<p>Could not load calendar events.</p>';
+        allUserEvents = [];
+        renderUpcomingEvents([]);
         renderMiniCalendar([], calendarDisplayDate);
     }
 }
@@ -406,7 +409,7 @@ function updateClock() {
 
 function updateDateDisplay() {
     dateElement.textContent = calendarDisplayDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-    renderMiniCalendar(allUserEvents, calendarDisplayDate); // Re-render calendar with new date
+    renderMiniCalendar(allUserEvents, calendarDisplayDate); // Re-render calendar with new date using cached events
 }
 
 function renderMiniCalendar(events = [], displayDate) {
@@ -469,6 +472,10 @@ function setSearchEngine(engine) {
 
 async function loadQuickLinks() {
     const { data, error } = await supabaseClient.from('quick_links').select('*').order('sort_order');
+    
+    // Diagnostic log
+    console.log("Fetched Quick Links Data:", data);
+
     if (error) {
         console.error('Error fetching quick links:', error);
         quickLinksContainer.innerHTML = '<p>Could not load quick links.</p>';
