@@ -31,6 +31,10 @@ const sideNewsContainer = document.getElementById('side-news-container');
 const twitterFeedContainer = document.getElementById('twitter-feed-container');
 const eventsContainer = document.getElementById('events-container');
 
+// Main Layout Elements
+const mainDashboard = document.getElementById('main-dashboard');
+const loginPageContainer = document.querySelector('.login-page-container');
+
 // Auth DOM Elements
 const loginBtn = document.getElementById('login-btn');
 const logoutBtn = document.getElementById('logout-btn');
@@ -63,9 +67,8 @@ async function init() {
     updateQuote();
     setInterval(updateQuote, 10000);
     
-    await checkLoginStatus();
-    
     setupEventListeners();
+    await checkLoginStatus();
 }
 
 function setupEventListeners() {
@@ -106,6 +109,7 @@ async function checkLoginStatus() {
                     await refreshAccessToken();
                     // Re-check status after refresh attempt
                     await checkLoginStatus(); 
+                    return; // Exit to prevent double rendering
                 } else {
                     throw new Error('Failed to fetch user info');
                 }
@@ -116,12 +120,10 @@ async function checkLoginStatus() {
             }
         } catch (error) {
             console.error("Login check failed:", error);
-            showLoginButton();
-            renderMiniCalendar(); // Render calendar without events
+            showLoginPage();
         }
     } else {
-        showLoginButton();
-        renderMiniCalendar(); // Render calendar without events
+        showLoginPage();
     }
 }
 
@@ -129,7 +131,8 @@ async function refreshAccessToken() {
     const refreshToken = localStorage.getItem('google_refresh_token');
     if (!refreshToken) {
         handleLogout();
-        return;
+        // Throw an error to stop the execution chain in checkLoginStatus
+        throw new Error("No refresh token available.");
     }
     try {
         const response = await fetch(`/.netlify/functions/auth-google-refresh?refresh_token=${refreshToken}`);
@@ -139,21 +142,27 @@ async function refreshAccessToken() {
     } catch (error) {
         console.error("Could not refresh token:", error);
         handleLogout();
+        // Propagate error
+        throw error;
     }
 }
 
 function showUserProfile(user) {
     userNameElement.textContent = user.name;
     userAvatarElement.src = user.picture;
-    userProfileElement.classList.remove('hidden');
-    loginBtn.classList.add('hidden');
+    
+    // Show dashboard, hide login page
+    mainDashboard.classList.remove('hidden');
+    loginPageContainer.classList.add('hidden');
 }
 
-function showLoginButton() {
-    userProfileElement.classList.add('hidden');
-    loginBtn.classList.remove('hidden');
-    // Clear dynamic content
-    if(eventsContainer) eventsContainer.innerHTML = '<p>Please log in to see your events.</p>';
+function showLoginPage() {
+    // Hide dashboard, show login page
+    mainDashboard.classList.add('hidden');
+    loginPageContainer.classList.remove('hidden');
+    
+    // Clear dynamic content to prevent data flashing on next login
+    if(eventsContainer) eventsContainer.innerHTML = '';
     if(watchlistContainer) watchlistContainer.innerHTML = '';
     if(sideNewsContainer) sideNewsContainer.innerHTML = '';
     if(twitterFeedContainer) twitterFeedContainer.innerHTML = '';
@@ -163,7 +172,7 @@ function showLoginButton() {
 function handleLogout() {
     localStorage.removeItem('google_access_token');
     localStorage.removeItem('google_refresh_token');
-    showLoginButton();
+    showLoginPage();
 }
 
 // --- CONTENT LOADING (for logged-in users) ---
@@ -237,49 +246,33 @@ async function loadSideNews() {
 }
 
 
-// --- NEW X.COM FEED (with highlight) ---
+// --- NEW X.COM FEED (with server-side caching) ---
 async function loadXFeed() {
     if (!twitterFeedContainer) return;
-    const listId = "1959714572497006792";
     twitterFeedContainer.innerHTML = '<p style="padding: 20px; text-align: center;">Loading Feed...</p>';
 
-    const cachedFeed = JSON.parse(localStorage.getItem('xFeedCache'));
-    if (cachedFeed && (Date.now() - cachedFeed.timestamp < CACHE_DURATION)) {
-        renderXFeed(cachedFeed.data);
-        return;
-    }
-
     try {
-        const response = await fetch(`/.netlify/functions/get-list-tweets?listId=${listId}`);
+        // The Netlify function now handles caching via Supabase
+        const response = await fetch(`/.netlify/functions/get-list-tweets`);
         if (!response.ok) {
-            if (cachedFeed) {
-                renderXFeed(cachedFeed.data);
-            } else {
-                throw new Error('Failed to fetch tweets and no cache available.');
-            }
-            return;
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to fetch tweets.');
         }
         
         const tweetsData = await response.json();
-        
-        localStorage.setItem('xFeedCache', JSON.stringify({
-            timestamp: Date.now(),
-            data: tweetsData
-        }));
-        
         renderXFeed(tweetsData);
 
     } catch (error) {
         console.error('Error loading X Feed:', error);
-        if (cachedFeed) {
-            renderXFeed(cachedFeed.data);
-        } else {
-            twitterFeedContainer.innerHTML = '<p style="padding: 20px; text-align: center;">Could not load feed.</p>';
-        }
+        twitterFeedContainer.innerHTML = `<p style="padding: 20px; text-align: center;">Could not load feed. ${error.message}</p>`;
     }
 }
 
 function renderXFeed(tweetsData) {
+    if (!tweetsData || !tweetsData.data || !tweetsData.includes) {
+        twitterFeedContainer.innerHTML = '<p style="padding: 20px; text-align: center;">Feed data is unavailable.</p>';
+        return;
+    }
     const tweets = tweetsData.data;
     const users = tweetsData.includes.users;
     const media = tweetsData.includes.media || [];
@@ -311,6 +304,7 @@ function renderXFeed(tweetsData) {
         if (tweet.entities) {
             if (tweet.entities.urls) {
                 tweet.entities.urls.forEach(url => {
+                    if (url.media_key) return; // Don't link images again
                     formattedText = formattedText.replace(url.url,
                         `<a href="${url.expanded_url}" target="_blank" rel="noopener noreferrer">${url.display_url}</a>`);
                 });
@@ -324,7 +318,8 @@ function renderXFeed(tweetsData) {
         }
 
         const isHighlight = portfolioTickers.some(ticker =>
-            tweet.text.toUpperCase().includes(ticker.toUpperCase())
+            ` ${tweet.text.toUpperCase()} `.includes(` ${ticker.toUpperCase()} `) ||
+            ` ${tweet.text.toUpperCase()} `.includes(` $${ticker.toUpperCase()} `)
         );
 
         const tweetElement = `
@@ -465,39 +460,53 @@ async function loadUpcomingEvents() {
         
         const { events, holidays } = await response.json();
         
-        // Render upcoming events list
-        renderUpcomingEvents(events);
-        
-        // Combine events and holidays for mini-calendar highlighting
         const allEvents = [...events, ...holidays];
+
+        renderUpcomingEvents(allEvents);
         renderMiniCalendar(allEvents);
 
     } catch (error) {
         console.error("Error loading calendar events:", error);
-        eventsContainer.innerHTML = '<p>Could not load calendar events. Please try logging in again.</p>';
+        eventsContainer.innerHTML = '<h3>Upcoming Events</h3><p>Could not load calendar events. Please try logging in again.</p>';
         renderMiniCalendar(); // Render calendar without events
     }
 }
 
 function renderUpcomingEvents(events) {
-    if (!events || events.length === 0) {
-        eventsContainer.innerHTML = '<p>No upcoming events found.</p>';
-        return;
-    }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Set to start of day for accurate date comparison
+
+    // Process events: create a valid start date, filter past events, and sort
+    const futureEvents = events
+        .map(event => {
+            const start = new Date(event.start.dateTime || event.start.date);
+            // Adjust for timezone offset if it's an all-day event (date only)
+            if (event.start.date) {
+                start.setMinutes(start.getMinutes() + start.getTimezoneOffset());
+            }
+            return { ...event, startDate: start };
+        })
+        .filter(event => event.startDate >= today)
+        .sort((a, b) => a.startDate - b.startDate);
 
     let eventsHTML = '<h3>Upcoming Events</h3>';
-    events.forEach(event => {
-        const start = event.start.dateTime || event.start.date;
-        const eventDate = new Date(start);
-        const timeString = event.start.dateTime ? eventDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'All-day';
-        
-        eventsHTML += `
-            <div class="event-item">
-                <div class="event-title">${event.summary}</div>
-                <div class="event-time">${eventDate.toLocaleDateString()} - ${timeString}</div>
-            </div>
-        `;
-    });
+    if (futureEvents.length === 0) {
+        eventsHTML += '<p>No upcoming events found.</p>';
+    } else {
+        // Render all future events; CSS handles the scrolling container
+        futureEvents.forEach(event => {
+            const timeString = event.start.dateTime 
+                ? event.startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
+                : 'All-day';
+            
+            eventsHTML += `
+                <div class="event-item">
+                    <div class="event-title">${event.summary}</div>
+                    <div class="event-time">${event.startDate.toLocaleDateString()} - ${timeString}</div>
+                </div>
+            `;
+        });
+    }
     eventsContainer.innerHTML = eventsHTML;
 }
 
@@ -571,7 +580,12 @@ async function loadQuickLinks() {
 
     if (error) {
         console.error('Error fetching quick links:', error);
-        quickLinksContainer.innerHTML = 'Could not load quick links.';
+        quickLinksContainer.innerHTML = '<p>Could not load quick links.</p>';
+        return;
+    }
+    
+    if (!data || data.length === 0) {
+        quickLinksContainer.innerHTML = '<p style="font-size: 0.8rem; opacity: 0.7;">No quick links configured.</p>';
         return;
     }
 
@@ -601,7 +615,7 @@ async function loadQuickLinks() {
             anchor.href = link.url;
             anchor.target = "_blank";
             anchor.title = link.name;
-            anchor.classList.add('link-item'); // Add class to anchor
+            anchor.classList.add('link-item-anchor'); // Use a different class to avoid nesting issues
             anchor.innerHTML = `<div class="link-icon">${iconHTML}</div><span class="link-name">${link.name}</span>`;
             linkItemWrapper.appendChild(anchor);
         }
