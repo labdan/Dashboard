@@ -16,6 +16,8 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const timeElement = document.getElementById('time');
 const dateElement = document.getElementById('date');
 const miniCalendarContainer = document.getElementById('mini-calendar');
+const prevMonthBtn = document.getElementById('prev-month-btn');
+const nextMonthBtn = document.getElementById('next-month-btn');
 const quoteElement = document.getElementById('quote');
 const searchInput = document.getElementById('search-input');
 const searchBtn = document.getElementById('search-btn');
@@ -28,8 +30,7 @@ const newsContainer = document.getElementById('news-container');
 const watchlistContainer = document.getElementById('watchlist-container');
 const themeToggleBtn = document.getElementById('theme-toggle');
 const sideNewsContainer = document.getElementById('side-news-container');
-// twitterFeedContainer is no longer manipulated by JS
-// const twitterFeedContainer = document.getElementById('twitter-feed-container'); 
+const benzingaFeedContainer = document.getElementById('benzinga-feed-container');
 const eventsContainer = document.getElementById('events-container');
 
 // Main Layout Elements
@@ -58,13 +59,15 @@ const refreshWeatherBtn = document.getElementById('refresh-weather');
 
 // --- STATE ---
 let currentSearchEngine = 'google';
+let calendarDisplayDate = new Date();
 const USER_ID = '12345678-12321-1234-1234567890ab'; 
 
 // --- INITIALIZATION ---
 async function init() {
     applySavedTheme();
-    updateTimeAndDate();
-    setInterval(updateTimeAndDate, 1000);
+    updateClock();
+    setInterval(updateClock, 1000);
+    updateDateDisplay();
     updateQuote();
     setInterval(updateQuote, 10000);
     
@@ -94,6 +97,14 @@ function setupEventListeners() {
     });
     todoList.addEventListener('click', handleTodoClick);
     themeToggleBtn.addEventListener('click', toggleTheme);
+    prevMonthBtn.addEventListener('click', () => {
+        calendarDisplayDate.setMonth(calendarDisplayDate.getMonth() - 1);
+        updateDateDisplay();
+    });
+    nextMonthBtn.addEventListener('click', () => {
+        calendarDisplayDate.setMonth(calendarDisplayDate.getMonth() + 1);
+        updateDateDisplay();
+    });
 }
 
 // --- AUTHENTICATION ---
@@ -106,11 +117,9 @@ async function checkLoginStatus() {
             });
             if (!response.ok) {
                 if (response.status === 401) {
-                    // Token expired or invalid, try to refresh
                     await refreshAccessToken();
-                    // Re-check status after refresh attempt
                     await checkLoginStatus(); 
-                    return; // Exit to prevent double rendering
+                    return;
                 } else {
                     throw new Error('Failed to fetch user info');
                 }
@@ -132,7 +141,6 @@ async function refreshAccessToken() {
     const refreshToken = localStorage.getItem('google_refresh_token');
     if (!refreshToken) {
         handleLogout();
-        // Throw an error to stop the execution chain in checkLoginStatus
         throw new Error("No refresh token available.");
     }
     try {
@@ -143,7 +151,6 @@ async function refreshAccessToken() {
     } catch (error) {
         console.error("Could not refresh token:", error);
         handleLogout();
-        // Propagate error
         throw error;
     }
 }
@@ -151,22 +158,17 @@ async function refreshAccessToken() {
 function showUserProfile(user) {
     userNameElement.textContent = user.name;
     userAvatarElement.src = user.picture;
-    
-    // Show dashboard, hide login page
     mainDashboard.classList.remove('hidden');
     loginPageContainer.classList.add('hidden');
 }
 
 function showLoginPage() {
-    // Hide dashboard, show login page
     mainDashboard.classList.add('hidden');
     loginPageContainer.classList.remove('hidden');
-    
-    // Clear dynamic content to prevent data flashing on next login
     if(eventsContainer) eventsContainer.innerHTML = '';
     if(watchlistContainer) watchlistContainer.innerHTML = '';
     if(sideNewsContainer) sideNewsContainer.innerHTML = '';
-    // if(twitterFeedContainer) twitterFeedContainer.innerHTML = ''; // No longer needed
+    if(benzingaFeedContainer) benzingaFeedContainer.innerHTML = '';
     if(todoList) todoList.innerHTML = '';
 }
 
@@ -183,7 +185,7 @@ function loadLoggedInContent() {
     loadStockNews();
     loadStockWatchlist();
     loadSideNews();
-    // loadXFeed(); // This is now handled by an iframe
+    loadBenzingaFeed();
     loadTodos();
     subscribeToTodoChanges();
     loadUpcomingEvents();
@@ -205,44 +207,40 @@ function toggleTheme() {
     themeToggleBtn.innerHTML = newTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
 }
 
-// --- SIDEBAR NEWS (Seeking Alpha + Highlight) ---
-function highlightIfTicker(text, tickers) {
-    return tickers.some(ticker =>
-        text.toUpperCase().includes(ticker.toUpperCase())
-    );
-}
-
+// --- NEWS FEEDS ---
 async function loadSideNews() {
     if (!sideNewsContainer) return;
-
     try {
         const response = await fetch('/.netlify/functions/get-stock-news');
         if (!response.ok) throw new Error(`News function failed: ${response.statusText}`);
         const data = await response.json();
-
-        let portfolioTickers = [];
-        try {
-            const cached = JSON.parse(localStorage.getItem("portfolioCache"));
-            if (cached?.portfolio) {
-                portfolioTickers = cached.portfolio.map(s => s.ticker);
-            }
-        } catch {}
-
-        sideNewsContainer.innerHTML = data.articles.map(article => {
-            if (!article.title || article.title === '[Removed]') return '';
-            const isHighlight = highlightIfTicker(article.title, portfolioTickers) ||
-                                highlightIfTicker(article.description || '', portfolioTickers);
-
-            return `
-                <div class="news-item ${isHighlight ? "highlight-news" : ""}">
-                    <a href="${article.link}" class="news-title" target="_blank" rel="noopener noreferrer">${article.title}</a>
-                    <div class="news-date">${new Date(article.pubDate).toLocaleString()}</div>
-                </div>
-            `;
-        }).join('');
+        sideNewsContainer.innerHTML = data.articles.map(article => `
+            <div class="news-item">
+                <a href="${article.link}" class="news-title" target="_blank" rel="noopener noreferrer">${article.title}</a>
+                <div class="news-date">${new Date(article.pubDate).toLocaleString()}</div>
+            </div>
+        `).join('');
     } catch (error) {
         console.error('Error fetching side news:', error.message);
         sideNewsContainer.innerHTML = `<div class="error-message" style="padding: 20px;">Could not load news.</div>`;
+    }
+}
+
+async function loadBenzingaFeed() {
+    if (!benzingaFeedContainer) return;
+    try {
+        const response = await fetch('/.netlify/functions/get-benzinga-news');
+        if (!response.ok) throw new Error(`Benzinga function failed: ${response.statusText}`);
+        const data = await response.json();
+        benzingaFeedContainer.innerHTML = data.articles.map(article => `
+            <div class="news-item">
+                <a href="${article.link}" class="news-title" target="_blank" rel="noopener noreferrer">${article.title}</a>
+                <div class="news-date">${new Date(article.pubDate).toLocaleString()}</div>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Error fetching Benzinga news:', error.message);
+        benzingaFeedContainer.innerHTML = `<div class="error-message" style="padding: 20px;">Could not load news.</div>`;
     }
 }
 
@@ -318,21 +316,17 @@ function updateWeatherUI(data) {
     weatherTemp.textContent = `${Math.round(data.current.temp)}°C`;
     weatherDesc.textContent = data.current.weather[0].description;
     weatherIconImg.src = `https://openweathermap.org/img/wn/${data.current.weather[0].icon}@2x.png`;
-    
     weatherHigh.textContent = `H: ${Math.round(todayForecast.temp.max)}°`;
     weatherLow.textContent = `L: ${Math.round(todayForecast.temp.min)}°`;
-    
     if (data.aiAssistant && data.aiAssistant.answer) {
         chanceOfRainElement.textContent = data.aiAssistant.answer;
     } else {
         chanceOfRainElement.textContent = "AI weather assistant unavailable.";
     }
-    
     sunriseElement.textContent = new Date(data.current.sunrise * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     sunsetElement.textContent = new Date(data.current.sunset * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     uvIndexElement.textContent = Math.round(data.current.uvi);
     aqiIndexElement.textContent = 'N/A';
-
     const forecastContainer = document.getElementById('weather-forecast');
     forecastContainer.innerHTML = '';
     data.daily.slice(1, 8).forEach(day => {
@@ -350,43 +344,34 @@ async function loadUpcomingEvents() {
     try {
         const accessToken = localStorage.getItem('google_access_token');
         if (!accessToken) throw new Error("Not logged in");
-
         const response = await fetch('/.netlify/functions/get-google-events', {
             headers: { 'Authorization': `Bearer ${accessToken}` }
         });
-
         if (!response.ok) {
             if (response.status === 401) {
                 await refreshAccessToken();
-                await loadUpcomingEvents(); // Retry after refresh
+                await loadUpcomingEvents();
                 return;
             }
             throw new Error(`Failed to fetch events: ${response.statusText}`);
         }
-        
         const { events, holidays } = await response.json();
-        
         const allEvents = [...events, ...holidays];
-
         renderUpcomingEvents(allEvents);
-        renderMiniCalendar(allEvents);
-
+        renderMiniCalendar(allEvents, calendarDisplayDate);
     } catch (error) {
         console.error("Error loading calendar events:", error);
-        eventsContainer.innerHTML = '<h3>Upcoming Events</h3><p>Could not load calendar events. Please try logging in again.</p>';
-        renderMiniCalendar(); // Render calendar without events
+        eventsContainer.innerHTML = '<p>Could not load calendar events.</p>';
+        renderMiniCalendar([], calendarDisplayDate);
     }
 }
 
 function renderUpcomingEvents(events) {
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // Set to start of day for accurate date comparison
-
-    // Process events: create a valid start date, filter past events, and sort
+    today.setHours(0, 0, 0, 0);
     const futureEvents = events
         .map(event => {
             const start = new Date(event.start.dateTime || event.start.date);
-            // Adjust for timezone offset if it's an all-day event (date only)
             if (event.start.date) {
                 start.setMinutes(start.getMinutes() + start.getTimezoneOffset());
             }
@@ -394,39 +379,39 @@ function renderUpcomingEvents(events) {
         })
         .filter(event => event.startDate >= today)
         .sort((a, b) => a.startDate - b.startDate);
-
-    let eventsHTML = '<h3>Upcoming Events</h3>';
+    
     if (futureEvents.length === 0) {
-        eventsHTML += '<p>No upcoming events found.</p>';
+        eventsContainer.innerHTML = '<p>No upcoming events found.</p>';
     } else {
-        // Render all future events; CSS handles the scrolling container
-        futureEvents.forEach(event => {
+        eventsContainer.innerHTML = futureEvents.map(event => {
             const timeString = event.start.dateTime 
                 ? event.startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
                 : 'All-day';
-            
-            eventsHTML += `
+            return `
                 <div class="event-item">
                     <div class="event-title">${event.summary}</div>
                     <div class="event-time">${event.startDate.toLocaleDateString()} - ${timeString}</div>
                 </div>
             `;
-        });
+        }).join('');
     }
-    eventsContainer.innerHTML = eventsHTML;
 }
 
-// --- OTHER UI FUNCTIONS ---
-function updateTimeAndDate() {
+// --- TIME, DATE, & CALENDAR UI ---
+function updateClock() {
     const now = new Date();
     timeElement.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    dateElement.textContent = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-function renderMiniCalendar(events = []) {
+function updateDateDisplay() {
+    dateElement.textContent = calendarDisplayDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    loadUpcomingEvents(); // This will also re-render the mini-calendar
+}
+
+function renderMiniCalendar(events = [], displayDate) {
     const today = new Date();
-    const month = today.getMonth();
-    const year = today.getFullYear();
+    const month = displayDate.getMonth();
+    const year = displayDate.getFullYear();
     const firstDayOfMonth = new Date(year, month, 1);
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const startingDay = (firstDayOfMonth.getDay() + 6) % 7;
@@ -444,7 +429,7 @@ function renderMiniCalendar(events = []) {
     dayNames.forEach(day => { calendarHTML += `<div class="mini-calendar-cell mini-calendar-day-name">${day}</div>`; });
     for (let i = 0; i < startingDay; i++) { calendarHTML += `<div class="mini-calendar-cell"></div>`; }
     for (let i = 1; i <= daysInMonth; i++) {
-        const isToday = i === today.getDate() ? 'current' : '';
+        const isToday = i === today.getDate() && month === today.getMonth() && year === today.getFullYear() ? 'current' : '';
         const hasEvent = eventDays.has(i) ? 'has-event' : '';
         calendarHTML += `<div class="mini-calendar-cell mini-calendar-day-number ${isToday} ${hasEvent}">${i}</div>`;
     }
@@ -483,32 +468,24 @@ function setSearchEngine(engine) {
 
 async function loadQuickLinks() {
     const { data, error } = await supabaseClient.from('quick_links').select('*').order('sort_order');
-
     if (error) {
         console.error('Error fetching quick links:', error);
         quickLinksContainer.innerHTML = '<p>Could not load quick links.</p>';
         return;
     }
-    
     if (!data || data.length === 0) {
         quickLinksContainer.innerHTML = '<p style="font-size: 0.8rem; opacity: 0.7;">No quick links configured.</p>';
         return;
     }
-
     const links = data.filter(link => !link.parent_id);
     const subLinks = data.filter(link => link.parent_id);
-
     quickLinksContainer.innerHTML = '';
-
     links.forEach(link => {
         const iconHTML = link.icon_url && (link.icon_url.startsWith('fas') || link.icon_url.startsWith('fab'))
             ? `<i class="${link.icon_url}"></i>`
             : `<img src="${link.icon_url || 'https://www.google.com/favicon.ico'}" alt="${link.name} icon" onerror="this.src='https://www.google.com/favicon.ico'">`;
-
         const childLinks = subLinks.filter(sub => sub.parent_id === link.id);
-
         if (childLinks.length > 0) {
-            // This is for popups, it's a div. This is correct.
             const linkItemWrapper = document.createElement('div');
             linkItemWrapper.className = 'link-item';
             const subLinksHTML = childLinks.map(sub => {
@@ -518,9 +495,8 @@ async function loadQuickLinks() {
             linkItemWrapper.innerHTML = `<div class="link-icon">${iconHTML}</div><span class="link-name">${link.name}</span><div class="popup-menu">${subLinksHTML}</div>`;
             quickLinksContainer.appendChild(linkItemWrapper);
         } else {
-            // This is for simple links. It should be an anchor tag.
             const anchor = document.createElement('a');
-            anchor.className = 'link-item'; // Use the correct class
+            anchor.className = 'link-item';
             anchor.href = link.url;
             anchor.target = "_blank";
             anchor.title = link.name;
@@ -551,19 +527,15 @@ async function getInstrumentDictionary() {
     if (cachedInstruments && (Date.now() - cachedInstruments.timestamp < INSTRUMENT_CACHE_DURATION)) {
         return new Map(cachedInstruments.data);
     }
-
     try {
         const response = await fetch('/.netlify/functions/get-instruments');
         if (!response.ok) throw new Error('Failed to fetch instrument metadata');
         const instrumentList = await response.json();
-        
         const instrumentMap = new Map(instrumentList.map(item => [item.ticker, item]));
-
         localStorage.setItem('instrumentCache', JSON.stringify({
             timestamp: Date.now(),
             data: Array.from(instrumentMap.entries())
         }));
-
         return instrumentMap;
     } catch (error) {
         console.error("Could not load instrument dictionary:", error);
@@ -574,38 +546,25 @@ async function getInstrumentDictionary() {
 
 async function loadStockWatchlist() {
     watchlistContainer.innerHTML = '<div style="padding: 20px;">Loading portfolio...</div>';
-
     try {
         const [instrumentDictionary, portfolioRes, cashRes] = await Promise.all([
             getInstrumentDictionary(),
             fetch('/.netlify/functions/get-portfolio'),
             fetch('/.netlify/functions/get-cash')
         ]);
-
         if (!portfolioRes.ok) throw new Error(`Portfolio API Error: ${portfolioRes.statusText}`);
         if (!cashRes.ok) throw new Error(`Cash API Error: ${cashRes.statusText}`);
-
         const portfolioData = await portfolioRes.json();
         const cashData = await cashRes.json();
-        
         const enrichedPortfolio = await Promise.all(portfolioData.map(async (stock) => {
             const instrumentDetails = instrumentDictionary.get(stock.ticker);
             const instrumentName = instrumentDetails ? instrumentDetails.name : stock.ticker;
-
             const response = await fetch(`/.netlify/functions/enrich-company-details?ticker=${encodeURIComponent(stock.ticker)}&instrumentName=${encodeURIComponent(instrumentName)}`);
             const details = await response.json();
-            
-            return {
-                ...stock,
-                companyName: details.name,
-                logoUrl: details.logo_url,
-            };
+            return { ...stock, companyName: details.name, logoUrl: details.logo_url };
         }));
-        
         const fullPortfolioData = { portfolio: enrichedPortfolio, cash: cashData };
-        
         renderPortfolio(fullPortfolioData);
-
     } catch (error) {
         console.error('Error fetching stock watchlist:', error);
         renderPortfolio(null, error.message);
@@ -624,35 +583,25 @@ function renderPortfolio(data, error = null) {
                 </div>
             </div>
             <div class="error-message" style="padding: 20px;">
-                Could not load portfolio data.
-                <small>Reason: ${error}</small>
+                Could not load portfolio data. <small>Reason: ${error}</small>
             </div>`;
         return;
     }
-
     if (!data || !data.cash) {
         renderPortfolio(null, "Invalid data structure received from API.");
         return;
     }
-
     let portfolioData = data.portfolio || [];
     const cashData = data.cash;
     const cashValue = cashData.free || 0;
     const investmentValue = cashData.invested || 0;
     const totalPortfolioValue = cashData.total || 0;
-
-    portfolioData.sort((a, b) => {
-        const valueA = a.currentPrice * a.quantity;
-        const valueB = b.currentPrice * b.quantity;
-        return valueB - valueA;
-    });
-    
+    portfolioData.sort((a, b) => (b.currentPrice * b.quantity) - (a.currentPrice * a.quantity));
     const goals = [
         { label: '25k', value: 25000 },
         { label: '250k', value: 250000 },
         { label: '1M', value: 1000000 }
     ];
-
     const progressBarsHTML = goals.map(goal => {
         const percentage = Math.min((totalPortfolioValue / goal.value) * 100, 100);
         return `
@@ -661,11 +610,8 @@ function renderPortfolio(data, error = null) {
                 <div class="progress-bar-container">
                     <div class="progress-bar-fill" style="width: ${percentage}%;"></div>
                 </div>
-            </div>
-        `;
+            </div>`;
     }).join('');
-
-
     let watchlistHTML = `
         <div class="portfolio-header">
              <button class="refresh-btn" id="refresh-portfolio" title="Refresh Portfolio"><i class="fas fa-sync-alt"></i></button>
@@ -674,9 +620,7 @@ function renderPortfolio(data, error = null) {
                     <div class="value-title">Value</div>
                     <div class="value-amount">€${totalPortfolioValue.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                 </div>
-                <div class="portfolio-goals">
-                    ${progressBarsHTML}
-                </div>
+                <div class="portfolio-goals">${progressBarsHTML}</div>
             </div>
             <div class="portfolio-details">
                 <div class="detail-item">
@@ -689,7 +633,6 @@ function renderPortfolio(data, error = null) {
                 </div>
             </div>
         </div>`;
-    
     if (portfolioData.length === 0) {
         watchlistHTML += `<div class="no-investments">You have no investments yet.</div>`;
     } else {
@@ -697,13 +640,11 @@ function renderPortfolio(data, error = null) {
             const baseTicker = stock.ticker.split('_')[0];
             const companyName = stock.companyName;
             const iconUrl = stock.logoUrl;
-            
             const currentValue = stock.currentPrice * stock.quantity;
             const changeAmount = stock.ppl;
             const initialValue = currentValue - changeAmount;
             const changePercent = initialValue === 0 ? 0 : (changeAmount / initialValue) * 100;
             const isPositive = changeAmount >= 0;
-
             watchlistHTML += `
                 <div class="stock-item-new">
                     <div class="stock-icon-new">
@@ -719,11 +660,9 @@ function renderPortfolio(data, error = null) {
                             ${isPositive ? '+' : ''}€${changeAmount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${changePercent.toFixed(2)}%)
                         </div>
                     </div>
-                </div>
-            `;
+                </div>`;
         });
     }
-
     watchlistContainer.innerHTML = watchlistHTML;
 }
 
@@ -732,11 +671,9 @@ function handleAuthCallback() {
     const params = new URLSearchParams(window.location.search);
     const accessToken = params.get('access_token');
     const refreshToken = params.get('refresh_token');
-
     if (accessToken && refreshToken) {
         localStorage.setItem('google_access_token', accessToken);
         localStorage.setItem('google_refresh_token', refreshToken);
-        // Clean the URL
         window.history.replaceState({}, document.title, "/");
     }
 }
