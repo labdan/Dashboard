@@ -159,81 +159,111 @@ async function loadXFeed() {
     const listId = "1959714572497006792";
     twitterFeedContainer.innerHTML = '<p style="padding: 20px; text-align: center;">Loading Feed...</p>';
 
+    // Try to load from cache first
+    const cachedFeed = JSON.parse(localStorage.getItem('xFeedCache'));
+    if (cachedFeed && (Date.now() - cachedFeed.timestamp < CACHE_DURATION)) {
+        renderXFeed(cachedFeed.data);
+        return;
+    }
+
     try {
         const response = await fetch(`/.netlify/functions/get-list-tweets?listId=${listId}`);
-        if (!response.ok) throw new Error('Failed to fetch tweets from serverless function.');
+        if (!response.ok) {
+            // If API fails, use cached data if available
+            if (cachedFeed) {
+                renderXFeed(cachedFeed.data);
+            } else {
+                throw new Error('Failed to fetch tweets and no cache available.');
+            }
+            return;
+        }
         
         const tweetsData = await response.json();
-        const tweets = tweetsData.data;
-        const users = tweetsData.includes.users;
-        const media = tweetsData.includes.media || [];
-
-        // get portfolio tickers
-        let portfolioTickers = [];
-        try {
-            const cached = JSON.parse(localStorage.getItem("portfolioCache"));
-            if (cached?.portfolio) {
-                portfolioTickers = cached.portfolio.map(s => s.ticker);
-            }
-        } catch {}
-
-        twitterFeedContainer.innerHTML = '';
-
-        tweets.forEach(tweet => {
-            const author = users.find(user => user.id === tweet.author_id);
-
-            let mediaHTML = '';
-            if (tweet.attachments && tweet.attachments.media_keys) {
-                const mediaKey = tweet.attachments.media_keys[0];
-                const mediaItem = media.find(m => m.media_key === mediaKey);
-                if (mediaItem && mediaItem.type === 'photo') {
-                    mediaHTML = `<div class="tweet-media"><img src="${mediaItem.url}" alt="Tweet image"></div>`;
-                }
-            }
-
-            // Format tweet text
-            let formattedText = tweet.text;
-            if (tweet.entities) {
-                if (tweet.entities.urls) {
-                    tweet.entities.urls.forEach(url => {
-                        formattedText = formattedText.replace(url.url,
-                            `<a href="${url.expanded_url}" target="_blank" rel="noopener noreferrer">${url.display_url}</a>`);
-                    });
-                }
-                if (tweet.entities.mentions) {
-                    tweet.entities.mentions.forEach(mention => {
-                        formattedText = formattedText.replace(`@${mention.username}`,
-                            `<a href="https://x.com/${mention.username}" target="_blank" rel="noopener noreferrer">@${mention.username}</a>`);
-                    });
-                }
-            }
-
-            // Highlight if contains portfolio tickers
-            const isHighlight = portfolioTickers.some(ticker =>
-                tweet.text.toUpperCase().includes(ticker.toUpperCase())
-            );
-
-            const tweetElement = `
-                <div class="tweet ${isHighlight ? "highlight-tweet" : ""}">
-                    <img src="${author.profile_image_url}" alt="${author.username}" class="tweet-avatar">
-                    <div class="tweet-content">
-                        <div class="tweet-author">
-                            <strong class="tweet-author-name">${author.name}</strong>
-                            <span class="tweet-author-username">@${author.username}</span>
-                        </div>
-                        <div class="tweet-text">${formattedText}</div>
-                        ${mediaHTML}
-                        <div class="tweet-date">${new Date(tweet.created_at).toLocaleString()}</div>
-                    </div>
-                </div>
-            `;
-            twitterFeedContainer.innerHTML += tweetElement;
-        });
+        
+        // Save to cache
+        localStorage.setItem('xFeedCache', JSON.stringify({
+            timestamp: Date.now(),
+            data: tweetsData
+        }));
+        
+        renderXFeed(tweetsData);
 
     } catch (error) {
         console.error('Error loading X Feed:', error);
-        twitterFeedContainer.innerHTML = '<p style="padding: 20px; text-align: center;">Could not load feed.</p>';
+        if (cachedFeed) {
+            renderXFeed(cachedFeed.data); // Fallback to cache on error
+        } else {
+            twitterFeedContainer.innerHTML = '<p style="padding: 20px; text-align: center;">Could not load feed.</p>';
+        }
     }
+}
+
+function renderXFeed(tweetsData) {
+    const tweets = tweetsData.data;
+    const users = tweetsData.includes.users;
+    const media = tweetsData.includes.media || [];
+
+    // get portfolio tickers
+    let portfolioTickers = [];
+    try {
+        const cached = JSON.parse(localStorage.getItem("portfolioCache"));
+        if (cached?.portfolio) {
+            portfolioTickers = cached.portfolio.map(s => s.ticker);
+        }
+    } catch {}
+
+    twitterFeedContainer.innerHTML = '';
+
+    tweets.forEach(tweet => {
+        const author = users.find(user => user.id === tweet.author_id);
+
+        let mediaHTML = '';
+        if (tweet.attachments && tweet.attachments.media_keys) {
+            const mediaKey = tweet.attachments.media_keys[0];
+            const mediaItem = media.find(m => m.media_key === mediaKey);
+            if (mediaItem && mediaItem.type === 'photo') {
+                mediaHTML = `<div class="tweet-media"><img src="${mediaItem.url}" alt="Tweet image"></div>`;
+            }
+        }
+
+        // Format tweet text
+        let formattedText = tweet.text;
+        if (tweet.entities) {
+            if (tweet.entities.urls) {
+                tweet.entities.urls.forEach(url => {
+                    formattedText = formattedText.replace(url.url,
+                        `<a href="${url.expanded_url}" target="_blank" rel="noopener noreferrer">${url.display_url}</a>`);
+                });
+            }
+            if (tweet.entities.mentions) {
+                tweet.entities.mentions.forEach(mention => {
+                    formattedText = formattedText.replace(`@${mention.username}`,
+                        `<a href="https://x.com/${mention.username}" target="_blank" rel="noopener noreferrer">@${mention.username}</a>`);
+                });
+            }
+        }
+
+        // Highlight if contains portfolio tickers
+        const isHighlight = portfolioTickers.some(ticker =>
+            tweet.text.toUpperCase().includes(ticker.toUpperCase())
+        );
+
+        const tweetElement = `
+            <div class="tweet ${isHighlight ? "highlight-tweet" : ""}">
+                <img src="${author.profile_image_url}" alt="${author.username}" class="tweet-avatar">
+                <div class="tweet-content">
+                    <div class="tweet-author">
+                        <strong class="tweet-author-name">${author.name}</strong>
+                        <span class="tweet-author-username">@${author.username}</span>
+                    </div>
+                    <div class="tweet-text">${formattedText}</div>
+                    ${mediaHTML}
+                    <div class="tweet-date">${new Date(tweet.created_at).toLocaleString()}</div>
+                </div>
+            </div>
+        `;
+        twitterFeedContainer.innerHTML += tweetElement;
+    });
 }
 
 
@@ -314,7 +344,12 @@ function updateWeatherUI(data) {
     weatherHigh.textContent = `H: ${Math.round(todayForecast.temp.max)}°`;
     weatherLow.textContent = `L: ${Math.round(todayForecast.temp.min)}°`;
     
-    chanceOfRainElement.textContent = getRainPrediction(data.hourly, todayForecast);
+    // Use the AI assistant response
+    if (data.aiAssistant && data.aiAssistant.answer) {
+        chanceOfRainElement.textContent = data.aiAssistant.answer;
+    } else {
+        chanceOfRainElement.textContent = "AI weather assistant unavailable.";
+    }
     
     sunriseElement.textContent = new Date(data.current.sunrise * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     sunsetElement.textContent = new Date(data.current.sunset * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -395,46 +430,32 @@ function setSearchEngine(engine) {
     });
 }
 
-function loadQuickLinks() {
-    const quickLinksData = [
-        { name: "Gmail", url: "https://mail.google.com", icon: "https://ssl.gstatic.com/ui/v1/icons/mail/rfr/gmail.ico" },
-        { name: "Drive", url: "https://drive.google.com", icon: "https://ssl.gstatic.com/images/branding/product/2x/drive_2020q4_48dp.png" },
-        { name: "Udemy", url: "https://www.udemy.com", icon: "https://www.udemy.com/favicon.ico" },
-        { name: "FMHY", url: "https://fmhy.net", icon: "https://fmhy.net/favicon.ico" },
-        {
-            name: "Media",
-            icon: "fas fa-tv",
-            subLinks: [
-                { name: "YouTube", url: "https://youtube.com" },
-                { name: "Cineby", url: "https://www.cineby.app/" },
-                { name: "MMA Full", url: "https://watchmmafull.com/" },
-                { name: "NBA Streams", url: "https://top.rnbastreams.com/" },
-                { name: "1337x", url: "https://1337x.to/" }
-            ]
-        },
-        { name: "Trading212", url: "https://app.trading212.com/", icon: "https://www.trading212.com/favicon.ico" },
-        { name: "X.com", url: "https://x.com", icon: "https://abs.twimg.com/favicons/twitter.ico" },
-        {
-            name: "AI",
-            icon: "fas fa-robot",
-            subLinks: [
-                { name: "Gemini", url: "https://gemini.google.com/" },
-                { name: "ChatGPT", url: "https://chat.openai.com/" },
-                { name: "DeepSeek", url: "https://chat.deepseek.com/" },
-                { name: "Perplexity", url: "https://www.perplexity.ai/" }
-            ]
-        },
-        { name: "Reddit", url: "https://www.reddit.com", icon: "https://www.reddit.com/favicon.ico" }
-    ];
+async function loadQuickLinks() {
+    const { data, error } = await supabaseClient.from('quick_links').select('*').order('sort_order');
+
+    if (error) {
+        console.error('Error fetching quick links:', error);
+        quickLinksContainer.innerHTML = 'Could not load quick links.';
+        return;
+    }
+
+    const links = data.filter(link => !link.parent_id);
+    const subLinks = data.filter(link => link.parent_id);
+
     quickLinksContainer.innerHTML = '';
-    quickLinksData.forEach(link => {
+
+    links.forEach(link => {
         const linkItemWrapper = document.createElement('div');
         linkItemWrapper.className = 'link-item';
-        const iconHTML = link.icon.startsWith('fas') || link.icon.startsWith('fab')
-            ? `<i class="${link.icon}"></i>`
-            : `<img src="${link.icon}" alt="${link.name} icon" onerror="this.src='https://www.google.com/favicon.ico'">`;
-        if (link.subLinks) {
-            const subLinksHTML = link.subLinks.map(sub => {
+        
+        const iconHTML = link.icon_url.startsWith('fas') || link.icon_url.startsWith('fab')
+            ? `<i class="${link.icon_url}"></i>`
+            : `<img src="${link.icon_url}" alt="${link.name} icon" onerror="this.src='https://www.google.com/favicon.ico'">`;
+
+        const childLinks = subLinks.filter(sub => sub.parent_id === link.id);
+
+        if (childLinks.length > 0) {
+            const subLinksHTML = childLinks.map(sub => {
                 const faviconUrl = `https://www.google.com/s2/favicons?domain=${new URL(sub.url).hostname}&sz=32`;
                 return `<a href="${sub.url}" class="link-item" target="_blank" title="${sub.name}"><div class="link-icon"><img src="${faviconUrl}" alt="${sub.name} icon" onerror="this.src='https://www.google.com/favicon.ico'"></div><span class="link-name">${sub.name}</span></a>`;
             }).join('');
@@ -446,6 +467,7 @@ function loadQuickLinks() {
         quickLinksContainer.appendChild(linkItemWrapper);
     });
 }
+
 
 function loadStockNews() {
     const newsData = [
