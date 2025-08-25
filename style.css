@@ -14,9 +14,9 @@
 [data-theme="dark"] {
   --primary-color: #6b98d6;
   --secondary-color: #a0aec0;
-  --background-color: #171923; /* Dark background */
-  --card-background: rgba(45, 55, 72, 0.7); /* Lighter dark for cards */
-  --text-color: #e2e8f0; /* Light text */
+  --background-color: #171923;
+  --card-background: rgba(45, 55, 72, 0.7);
+  --text-color: #e2e8f0;
   --shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   --border-color: rgba(255, 255, 255, 0.1);
   --success-color: #38c172;
@@ -35,10 +35,9 @@ body {
   color: var(--text-color);
   min-height: 100vh;
   transition: background-color 0.3s ease, color 0.3s ease;
-  overflow: hidden; /* Prevent body from scrolling */
+  overflow: hidden;
 }
 
-/* --- UPDATED: 5-column grid layout for the whole page --- */
 .container {
   max-width: 98%;
   margin: 0 auto;
@@ -46,14 +45,13 @@ body {
   display: grid;
   grid-template-columns: 1fr; 
   gap: 20px;
-  height: 100vh; /* Make container viewport height */
+  height: 100vh;
 }
 
 .left-sidebar, .right-sidebar {
-    display: none; /* Hidden on mobile by default */
+    display: none;
 }
 
-/* --- NEW: Desktop layout with 5 columns --- */
 @media (min-width: 1600px) {
     .container {
         grid-template-columns: 1fr 1.2fr 2fr 1.2fr 1fr;
@@ -63,13 +61,13 @@ body {
         grid-column: 2 / 5;
         display: flex;
         flex-direction: column;
-        overflow: hidden; /* Prevent main content from overflowing */
+        overflow: hidden;
     }
     .left-sidebar, .right-sidebar {
         display: flex;
         flex-direction: column;
         gap: 20px;
-        overflow: hidden; /* Prevent sidebars from overflowing */
+        overflow: hidden;
     }
     .left-sidebar {
         grid-column: 1 / 2;
@@ -82,24 +80,18 @@ body {
 .main-content > header {
     margin-bottom: 20px;
 }
-.main-content > footer {
-     margin-top: auto; /* Push footer to the bottom */
-     padding-top: 30px;
-}
 
-/* --- NEW: Styles for sidebar widgets to fill height --- */
 .left-sidebar .widget, .right-sidebar .widget {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
-    overflow: hidden; /* Allow internal scrolling */
+    overflow: hidden;
 }
 .left-sidebar .news-container, #twitter-feed-container {
     flex-grow: 1;
     overflow-y: auto;
 }
 
-/* ---------------- Header ---------------- */
 header {
   display: grid;
   grid-template-columns: 1fr 2fr 1fr; 
@@ -121,11 +113,10 @@ header {
   position: relative;
 }
 
-/* Theme Toggle */
 .theme-toggle {
     position: absolute;
     top: 15px;
-    left: 15px;
+    right: 15px;
     background: rgba(0,0,0,0.1);
     border: none;
     color: var(--text-color);
@@ -142,7 +133,6 @@ header {
     transform: scale(1.1) rotate(15deg);
 }
 
-/* Clock (Time/Date) */
 .time-date {
   text-align: center;
   gap: 10px; 
@@ -158,7 +148,6 @@ header {
   opacity: 0.8;
 }
 
-/* Mini Calendar */
 .mini-calendar {
   padding: 10px 0 0;
   border-top: 1px solid var(--border-color);
@@ -188,7 +177,6 @@ header {
   color: white;
 }
 
-/* ---------------- Search & Quick Links ---------------- */
 .search-area {
   display: flex;
   flex-direction: column;
@@ -277,7 +265,6 @@ header {
   background: #3a5f90;
 }
 
-/* Quick Links */
 .quick-links-bar {
   width: 100%;
   display: flex;
@@ -346,7 +333,6 @@ header {
   font-weight: 500;
 }
 
-/* Quick Link Popups */
 .popup-menu {
   position: absolute;
   top: 110%;
@@ -377,7 +363,6 @@ header {
   margin: 0;
 }
 
-/* ---------------- Weather Widget ---------------- */
 .weather-widget {
   gap: 5px;
 }
@@ -416,13 +401,13 @@ header {
 
 .weather-high-low {
     display: flex;
-    flex-direction: row; /* Changed to row */
+    flex-direction: row;
     align-items: center;
     justify-content: center;
     font-size: 0.9rem;
     opacity: 0.8;
     padding-left: 15px;
-    gap: 10px; /* Added gap between H and L */
+    gap: 10px;
 }
 
 .chance-of-rain {
@@ -489,16 +474,15 @@ header {
   opacity: 0.8;
 }
 
-/* ---------------- Dashboard Layout ---------------- */
 .dashboard-grid {
   display: grid;
   grid-template-columns: 1fr 2fr 1fr;
   gap: 20px;
-  flex-grow: 1; /* Allow grid to fill space */
-  overflow: hidden; /* Prevent grid from overflowing */
+  flex-grow: 1;
+  overflow: hidden;
 }
 
-.right-column-widgets {
+.left-column-widgets, .right-column-widgets {
     display: flex;
     flex-direction: column;
     gap: 20px;
@@ -515,8 +499,8 @@ header {
   display: flex;
   flex-direction: column;
   transition: all 0.3s ease;
-  position: relative; /* Needed for absolute positioning of refresh button */
-  overflow: hidden; /* Prevent widget content from overflowing */
+  position: relative;
+  overflow: hidden;
 }
 
 .widget:hover {
@@ -556,7 +540,6 @@ header {
   transform: rotate(180deg);
 }
 
-/* ---------------- To-Do List ---------------- */
 .todo-form {
   display: flex;
   margin-bottom: 20px;
@@ -598,9 +581,10 @@ header {
 
 .todo-list {
   list-style-type: none;
-  overflow-y: auto; /* Make todo list scrollable */
+  overflow-y: auto;
   flex-grow: 1;
   padding-right: 5px;
+  max-height: 150px; /* Shorter to-do list */
 }
 
 .todo-item {
@@ -639,19 +623,17 @@ header {
   transform: scale(1.1);
 }
 
-/* ---------------- News & Watchlist ---------------- */
-.news-container, .calendar-container {
+.news-container, .calendar-container, .events-container {
   overflow-y: auto;
   padding-right: 5px;
   flex-grow: 1;
 }
 .watchlist-container {
-  padding: 0 !important; /* Override widget padding */
+  padding: 0 !important;
   overflow-y: auto;
   flex-grow: 1;
 }
 
-/* --- UPDATED: News item layout --- */
 .news-item {
   padding: 15px 0;
   border-bottom: 1px solid var(--border-color);
@@ -662,7 +644,6 @@ header {
 
 .news-item:last-child { border-bottom: none; }
 
-/* --- NEW: Style for news images --- */
 .news-image {
     width: 100px;
     height: 75px;
@@ -692,7 +673,6 @@ header {
   color: var(--secondary-color);
 }
 
-/* --- UPDATED/NEW PORTFOLIO STYLES --- */
 .portfolio-header {
     padding: 20px;
     border-bottom: 1px solid var(--border-color);
@@ -744,7 +724,7 @@ header {
     font-size: 0.8rem;
     font-weight: 500;
     color: var(--secondary-color);
-    width: 35px; /* Fixed width for alignment */
+    width: 35px;
 }
 
 .progress-bar-container {
@@ -819,7 +799,7 @@ header {
 
 .stock-info-new {
     flex-grow: 1;
-    min-width: 0; /* Prevents flexbox from overflowing */
+    min-width: 0;
 }
 
 .stock-name-new {
@@ -870,89 +850,23 @@ header {
     word-break: break-word;
 }
 
-/* ---------------- Calendar ---------------- */
-.calendar-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
+.calendar-date.has-event {
+  position: relative;
 }
 
-.calendar-nav { display: flex; gap: 10px; }
-
-.calendar-nav-btn {
-  background: rgba(0, 0, 0, 0.05);
-  border: none;
-  color: var(--primary-color);
-  cursor: pointer;
-  font-size: 1rem;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease;
-}
-
-.calendar-nav-btn:hover {
-  background: rgba(0, 0, 0, 0.1);
-}
-
-.calendar-month {
-  font-weight: bold;
-  font-size: 1.1rem;
-  color: var(--primary-color);
-}
-
-.calendar-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 5px;
-  margin-bottom: 15px;
-}
-
-.calendar-day {
-  text-align: center;
-  padding: 5px;
-  font-size: 0.85rem;
-}
-
-.calendar-weekday {
-  font-weight: bold;
-  color: var(--secondary-color);
-  font-size: 0.75rem;
-  text-transform: uppercase;
-}
-
-.calendar-date {
-  border-radius: 50%;
-  width: 30px;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto;
-  transition: all 0.3s ease;
-  font-weight: 500;
-}
-
-.calendar-date:hover { background-color: rgba(0, 0, 0, 0.05); }
-
-.current-date {
-  background: var(--primary-color);
-  color: white;
-}
-
-.has-event::after {
+.calendar-date.has-event::after {
   content: "";
   display: block;
-  width: 4px;
-  height: 4px;
-  background-color: var(--primary-color);
+  width: 5px;
+  height: 5px;
+  background-color: var(--danger-color);
   border-radius: 50%;
-  margin: 2px auto 0;
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
 }
+
 
 .event-item {
   padding: 10px 0;
@@ -972,15 +886,6 @@ header {
   color: var(--secondary-color);
 }
 
-/* ---------------- Footer ---------------- */
-footer {
-  text-align: center;
-  padding: 20px;
-  color: var(--secondary-color);
-  font-size: 0.9rem;
-}
-
-/* ---------------- Scrollbar ---------------- */
 ::-webkit-scrollbar {
   width: 8px;
 }
@@ -994,16 +899,12 @@ footer {
   background-color: rgba(0, 0, 0, 0.3);
 }
 
-/* ---------------- Responsive Design ---------------- */
-
-/* Tablet and below */
 @media (max-width: 1599px) { 
   .main-content > header, .main-content > .dashboard-grid {
     grid-template-columns: 1fr;
   }
 }
 
-/* Mobile */
 @media (max-width: 768px) {
   .container {
     padding: 10px;
@@ -1034,7 +935,6 @@ footer {
   }
 }
 
-/* ---------------- X.com Feed ---------------- */
 .tweet {
   display: flex;
   align-items: flex-start;
@@ -1056,7 +956,7 @@ footer {
 
 .tweet-content {
   flex: 1;
-  min-width: 0; /* prevent text overflow */
+  min-width: 0;
 }
 
 .tweet-author {
@@ -1113,7 +1013,6 @@ footer {
   margin-top: 6px;
 }
 
-/* Highlighted news/tweets */
 .highlight-news {
   background-color: rgba(40, 167, 69, 0.1);
   border-left: 4px solid var(--success-color);
@@ -1124,4 +1023,43 @@ footer {
   background-color: rgba(40, 167, 69, 0.1);
   border-left: 4px solid var(--success-color);
   padding-left: 12px;
+}
+
+/* Auth and User Profile */
+.auth-container {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    z-index: 10;
+}
+
+.auth-btn {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.3s ease;
+}
+
+.auth-btn:hover {
+    background: #3a5f90;
+}
+
+#user-profile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#user-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+}
+
+.hidden {
+    display: none !important;
 }

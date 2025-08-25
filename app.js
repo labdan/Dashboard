@@ -5,9 +5,9 @@ if (typeof config === 'undefined') {
     alert("Configuration file (config.js) is missing or not loaded.");
 }
 const { url: SUPABASE_URL, anonKey: SUPABASE_ANON_KEY } = config.supabase;
-const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes for weather
-const PORTFOLIO_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes for portfolio
-const INSTRUMENT_CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours for the master instrument list
+const CACHE_DURATION = 30 * 60 * 1000;
+const PORTFOLIO_CACHE_DURATION = 5 * 60 * 1000;
+const INSTRUMENT_CACHE_DURATION = 24 * 60 * 60 * 1000;
 
 // --- SUPABASE CLIENT ---
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -26,11 +26,17 @@ const todoInput = document.getElementById('todo-input');
 const todoList = document.getElementById('todo-list');
 const newsContainer = document.getElementById('news-container');
 const watchlistContainer = document.getElementById('watchlist-container');
-const calendarContainer = document.getElementById('calendar-container');
 const themeToggleBtn = document.getElementById('theme-toggle');
 const sideNewsContainer = document.getElementById('side-news-container');
 const twitterFeedContainer = document.getElementById('twitter-feed-container');
+const eventsContainer = document.getElementById('events-container');
 
+// Auth DOM Elements
+const loginBtn = document.getElementById('login-btn');
+const logoutBtn = document.getElementById('logout-btn');
+const userProfileElement = document.getElementById('user-profile');
+const userAvatarElement = document.getElementById('user-avatar');
+const userNameElement = document.getElementById('user-name');
 
 // Weather DOM Elements
 const weatherIconImg = document.getElementById('weather-icon-img');
@@ -51,29 +57,20 @@ const USER_ID = '12345678-12321-1234-1234567890ab';
 
 // --- INITIALIZATION ---
 async function init() {
-    if (!SUPABASE_URL || SUPABASE_URL.includes('YOUR_SUPABASE_URL')) {
-        alert("Supabase URL is not set in config.js. To-Do list will not work.");
-    }
-    
     applySavedTheme();
     updateTimeAndDate();
     setInterval(updateTimeAndDate, 1000);
     updateQuote();
     setInterval(updateQuote, 10000);
-    renderMiniCalendar();
-    loadQuickLinks();
-    getWeather();
-    loadStockNews();
-    loadStockWatchlist();
-    renderCalendar();
-    loadSideNews();
-    loadXFeed(); // <-- Changed from loadTwitterWidget
-    await loadTodos();
-    subscribeToTodoChanges();
+    
+    await checkLoginStatus();
+    
     setupEventListeners();
 }
 
 function setupEventListeners() {
+    loginBtn.addEventListener('click', () => window.location.href = '/.netlify/functions/auth-google');
+    logoutBtn.addEventListener('click', handleLogout);
     searchBtn.addEventListener('click', handleSearch);
     searchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSearch(); });
     todoForm.addEventListener('submit', handleTodoSubmit);
@@ -94,6 +91,94 @@ function setupEventListeners() {
     todoList.addEventListener('click', handleTodoClick);
     themeToggleBtn.addEventListener('click', toggleTheme);
 }
+
+// --- AUTHENTICATION ---
+async function checkLoginStatus() {
+    const accessToken = localStorage.getItem('google_access_token');
+    if (accessToken) {
+        try {
+            const response = await fetch('https://www.googleapis.com/oauth2/v1/userinfo', {
+                headers: { 'Authorization': `Bearer ${accessToken}` }
+            });
+            if (!response.ok) {
+                if (response.status === 401) {
+                    // Token expired or invalid, try to refresh
+                    await refreshAccessToken();
+                    // Re-check status after refresh attempt
+                    await checkLoginStatus(); 
+                } else {
+                    throw new Error('Failed to fetch user info');
+                }
+            } else {
+                const user = await response.json();
+                showUserProfile(user);
+                loadLoggedInContent();
+            }
+        } catch (error) {
+            console.error("Login check failed:", error);
+            showLoginButton();
+            renderMiniCalendar(); // Render calendar without events
+        }
+    } else {
+        showLoginButton();
+        renderMiniCalendar(); // Render calendar without events
+    }
+}
+
+async function refreshAccessToken() {
+    const refreshToken = localStorage.getItem('google_refresh_token');
+    if (!refreshToken) {
+        handleLogout();
+        return;
+    }
+    try {
+        const response = await fetch(`/.netlify/functions/auth-google-refresh?refresh_token=${refreshToken}`);
+        if (!response.ok) throw new Error('Failed to refresh token');
+        const data = await response.json();
+        localStorage.setItem('google_access_token', data.access_token);
+    } catch (error) {
+        console.error("Could not refresh token:", error);
+        handleLogout();
+    }
+}
+
+function showUserProfile(user) {
+    userNameElement.textContent = user.name;
+    userAvatarElement.src = user.picture;
+    userProfileElement.classList.remove('hidden');
+    loginBtn.classList.add('hidden');
+}
+
+function showLoginButton() {
+    userProfileElement.classList.add('hidden');
+    loginBtn.classList.remove('hidden');
+    // Clear dynamic content
+    if(eventsContainer) eventsContainer.innerHTML = '<p>Please log in to see your events.</p>';
+    if(watchlistContainer) watchlistContainer.innerHTML = '';
+    if(sideNewsContainer) sideNewsContainer.innerHTML = '';
+    if(twitterFeedContainer) twitterFeedContainer.innerHTML = '';
+    if(todoList) todoList.innerHTML = '';
+}
+
+function handleLogout() {
+    localStorage.removeItem('google_access_token');
+    localStorage.removeItem('google_refresh_token');
+    showLoginButton();
+}
+
+// --- CONTENT LOADING (for logged-in users) ---
+function loadLoggedInContent() {
+    loadQuickLinks();
+    getWeather();
+    loadStockNews();
+    loadStockWatchlist();
+    loadSideNews();
+    loadXFeed();
+    loadTodos();
+    subscribeToTodoChanges();
+    loadUpcomingEvents();
+}
+
 
 // --- THEME ---
 function applySavedTheme() {
@@ -125,7 +210,6 @@ async function loadSideNews() {
         if (!response.ok) throw new Error(`News function failed: ${response.statusText}`);
         const data = await response.json();
 
-        // get tickers from your cached portfolio
         let portfolioTickers = [];
         try {
             const cached = JSON.parse(localStorage.getItem("portfolioCache"));
@@ -159,7 +243,6 @@ async function loadXFeed() {
     const listId = "1959714572497006792";
     twitterFeedContainer.innerHTML = '<p style="padding: 20px; text-align: center;">Loading Feed...</p>';
 
-    // Try to load from cache first
     const cachedFeed = JSON.parse(localStorage.getItem('xFeedCache'));
     if (cachedFeed && (Date.now() - cachedFeed.timestamp < CACHE_DURATION)) {
         renderXFeed(cachedFeed.data);
@@ -169,7 +252,6 @@ async function loadXFeed() {
     try {
         const response = await fetch(`/.netlify/functions/get-list-tweets?listId=${listId}`);
         if (!response.ok) {
-            // If API fails, use cached data if available
             if (cachedFeed) {
                 renderXFeed(cachedFeed.data);
             } else {
@@ -180,7 +262,6 @@ async function loadXFeed() {
         
         const tweetsData = await response.json();
         
-        // Save to cache
         localStorage.setItem('xFeedCache', JSON.stringify({
             timestamp: Date.now(),
             data: tweetsData
@@ -191,7 +272,7 @@ async function loadXFeed() {
     } catch (error) {
         console.error('Error loading X Feed:', error);
         if (cachedFeed) {
-            renderXFeed(cachedFeed.data); // Fallback to cache on error
+            renderXFeed(cachedFeed.data);
         } else {
             twitterFeedContainer.innerHTML = '<p style="padding: 20px; text-align: center;">Could not load feed.</p>';
         }
@@ -203,7 +284,6 @@ function renderXFeed(tweetsData) {
     const users = tweetsData.includes.users;
     const media = tweetsData.includes.media || [];
 
-    // get portfolio tickers
     let portfolioTickers = [];
     try {
         const cached = JSON.parse(localStorage.getItem("portfolioCache"));
@@ -216,6 +296,7 @@ function renderXFeed(tweetsData) {
 
     tweets.forEach(tweet => {
         const author = users.find(user => user.id === tweet.author_id);
+        if (!author) return;
 
         let mediaHTML = '';
         if (tweet.attachments && tweet.attachments.media_keys) {
@@ -226,7 +307,6 @@ function renderXFeed(tweetsData) {
             }
         }
 
-        // Format tweet text
         let formattedText = tweet.text;
         if (tweet.entities) {
             if (tweet.entities.urls) {
@@ -243,7 +323,6 @@ function renderXFeed(tweetsData) {
             }
         }
 
-        // Highlight if contains portfolio tickers
         const isHighlight = portfolioTickers.some(ticker =>
             tweet.text.toUpperCase().includes(ticker.toUpperCase())
         );
@@ -265,8 +344,6 @@ function renderXFeed(tweetsData) {
         twitterFeedContainer.innerHTML += tweetElement;
     });
 }
-
-
 
 // --- TO-DO LIST (with Supabase) ---
 async function loadTodos() {
@@ -344,7 +421,6 @@ function updateWeatherUI(data) {
     weatherHigh.textContent = `H: ${Math.round(todayForecast.temp.max)}°`;
     weatherLow.textContent = `L: ${Math.round(todayForecast.temp.min)}°`;
     
-    // Use the AI assistant response
     if (data.aiAssistant && data.aiAssistant.answer) {
         chanceOfRainElement.textContent = data.aiAssistant.answer;
     } else {
@@ -367,13 +443,62 @@ function updateWeatherUI(data) {
     });
 }
 
-function getRainPrediction(hourlyData, todayForecast) {
-    const nextRainHour = hourlyData.find(hour => hour.pop > 0.3);
-    if (nextRainHour) {
-        const rainTime = new Date(nextRainHour.dt * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-        return `Rain likely around ${rainTime}`;
+// --- GOOGLE CALENDAR ---
+async function loadUpcomingEvents() {
+    eventsContainer.innerHTML = '<p>Loading events...</p>';
+    try {
+        const accessToken = localStorage.getItem('google_access_token');
+        if (!accessToken) throw new Error("Not logged in");
+
+        const response = await fetch('/.netlify/functions/get-google-events', {
+            headers: { 'Authorization': `Bearer ${accessToken}` }
+        });
+
+        if (!response.ok) {
+            if (response.status === 401) {
+                await refreshAccessToken();
+                await loadUpcomingEvents(); // Retry after refresh
+                return;
+            }
+            throw new Error(`Failed to fetch events: ${response.statusText}`);
+        }
+        
+        const { events, holidays } = await response.json();
+        
+        // Render upcoming events list
+        renderUpcomingEvents(events);
+        
+        // Combine events and holidays for mini-calendar highlighting
+        const allEvents = [...events, ...holidays];
+        renderMiniCalendar(allEvents);
+
+    } catch (error) {
+        console.error("Error loading calendar events:", error);
+        eventsContainer.innerHTML = '<p>Could not load calendar events. Please try logging in again.</p>';
+        renderMiniCalendar(); // Render calendar without events
     }
-    return `${Math.round(todayForecast.pop * 100)}% chance of rain today`;
+}
+
+function renderUpcomingEvents(events) {
+    if (!events || events.length === 0) {
+        eventsContainer.innerHTML = '<p>No upcoming events found.</p>';
+        return;
+    }
+
+    let eventsHTML = '<h3>Upcoming Events</h3>';
+    events.forEach(event => {
+        const start = event.start.dateTime || event.start.date;
+        const eventDate = new Date(start);
+        const timeString = event.start.dateTime ? eventDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'All-day';
+        
+        eventsHTML += `
+            <div class="event-item">
+                <div class="event-title">${event.summary}</div>
+                <div class="event-time">${eventDate.toLocaleDateString()} - ${timeString}</div>
+            </div>
+        `;
+    });
+    eventsContainer.innerHTML = eventsHTML;
 }
 
 // --- OTHER UI FUNCTIONS ---
@@ -383,23 +508,34 @@ function updateTimeAndDate() {
     dateElement.textContent = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-function renderMiniCalendar() {
+function renderMiniCalendar(events = []) {
     const today = new Date();
     const month = today.getMonth();
     const year = today.getFullYear();
     const firstDayOfMonth = new Date(year, month, 1);
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const startingDay = (firstDayOfMonth.getDay() + 6) % 7;
+
+    const eventDays = new Set(events.map(event => {
+        const eventDate = new Date(event.start.date || event.start.dateTime);
+        if (eventDate.getMonth() === month && eventDate.getFullYear() === year) {
+            return eventDate.getDate();
+        }
+        return null;
+    }).filter(Boolean));
+
     let calendarHTML = '';
     const dayNames = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
     dayNames.forEach(day => { calendarHTML += `<div class="mini-calendar-cell mini-calendar-day-name">${day}</div>`; });
     for (let i = 0; i < startingDay; i++) { calendarHTML += `<div class="mini-calendar-cell"></div>`; }
     for (let i = 1; i <= daysInMonth; i++) {
         const isToday = i === today.getDate() ? 'current' : '';
-        calendarHTML += `<div class="mini-calendar-cell mini-calendar-day-number ${isToday}">${i}</div>`;
+        const hasEvent = eventDays.has(i) ? 'has-event' : '';
+        calendarHTML += `<div class="mini-calendar-cell mini-calendar-day-number ${isToday} ${hasEvent}">${i}</div>`;
     }
     miniCalendarContainer.innerHTML = calendarHTML;
 }
+
 
 function updateQuote() {
     const inspirationalQuotes = ["The only way to do great work is to love what you do.", "The best way to predict the future is to create it.", "Success is not final, failure is not fatal: it is the courage to continue that counts."];
@@ -461,8 +597,13 @@ async function loadQuickLinks() {
             }).join('');
             linkItemWrapper.innerHTML = `<div class="link-icon">${iconHTML}</div><span class="link-name">${link.name}</span><div class="popup-menu">${subLinksHTML}</div>`;
         } else {
-            linkItemWrapper.innerHTML = `<a href="${link.url}" target="_blank" title="${link.name}"><div class="link-icon">${iconHTML}</div><span class="link-name">${link.name}</span></a>`;
-            linkItemWrapper.querySelector('a').classList.add('link-item');
+            const anchor = document.createElement('a');
+            anchor.href = link.url;
+            anchor.target = "_blank";
+            anchor.title = link.name;
+            anchor.classList.add('link-item'); // Add class to anchor
+            anchor.innerHTML = `<div class="link-icon">${iconHTML}</div><span class="link-name">${link.name}</span>`;
+            linkItemWrapper.appendChild(anchor);
         }
         quickLinksContainer.appendChild(linkItemWrapper);
     });
@@ -484,11 +625,6 @@ function loadStockNews() {
 }
 
 // --- STOCK WATCHLIST ---
-
-/**
- * Fetches the master list of all instruments, caching it for efficiency.
- * @returns {Promise<Map<string, object>>} A promise that resolves to a Map where keys are tickers.
- */
 async function getInstrumentDictionary() {
     const cachedInstruments = JSON.parse(localStorage.getItem('instrumentCache'));
     if (cachedInstruments && (Date.now() - cachedInstruments.timestamp < INSTRUMENT_CACHE_DURATION)) {
@@ -584,14 +720,12 @@ function renderPortfolio(data, error = null) {
     const investmentValue = cashData.invested || 0;
     const totalPortfolioValue = cashData.total || 0;
 
-    // --- SORTING LOGIC ---
     portfolioData.sort((a, b) => {
         const valueA = a.currentPrice * a.quantity;
         const valueB = b.currentPrice * b.quantity;
-        return valueB - valueA; // Sort descending
+        return valueB - valueA;
     });
     
-    // --- GOAL PROGRESS BARS LOGIC ---
     const goals = [
         { label: '25k', value: 25000 },
         { label: '250k', value: 250000 },
@@ -672,22 +806,20 @@ function renderPortfolio(data, error = null) {
     watchlistContainer.innerHTML = watchlistHTML;
 }
 
-function renderCalendar() {
-    const today = new Date();
-    const month = today.getMonth();
-    const year = today.getFullYear();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-    let calendarHTML = `<div class="calendar-header"><div class="calendar-month">${monthNames[month]} ${year}</div></div><div class="calendar-grid">`;
-    const weekdays = ["S", "M", "T", "W", "T", "F", "S"];
-    weekdays.forEach(day => { calendarHTML += `<div class="calendar-day calendar-weekday">${day}</div>`; });
-    for (let i = 1; i <= daysInMonth; i++) {
-        const isToday = i === today.getDate() ? 'current-date' : '';
-        calendarHTML += `<div class="calendar-day"><div class="calendar-date ${isToday}">${i}</div></div>`;
+// --- Handle Auth Callback ---
+function handleAuthCallback() {
+    const params = new URLSearchParams(window.location.search);
+    const accessToken = params.get('access_token');
+    const refreshToken = params.get('refresh_token');
+
+    if (accessToken && refreshToken) {
+        localStorage.setItem('google_access_token', accessToken);
+        localStorage.setItem('google_refresh_token', refreshToken);
+        // Clean the URL
+        window.history.replaceState({}, document.title, "/");
     }
-    calendarHTML += '</div>';
-    calendarContainer.innerHTML = calendarHTML;
 }
 
 // --- START THE APP ---
+handleAuthCallback();
 init();
