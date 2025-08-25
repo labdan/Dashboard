@@ -59,12 +59,8 @@ let currentSearchEngine = 'google';
 
 // --- INITIALIZATION ---
 async function init() {
-    // The order here is critical to fix the login loop.
-    // 1. Handle the redirect from Google first and save tokens.
     handleAuthCallback();
-    // 2. NOW check the login status using the potentially new tokens.
     await checkLoginStatus();
-    // 3. Set up event listeners last.
     setupEventListeners();
 }
 
@@ -600,8 +596,13 @@ async function loadQuickLinks() {
             const linkItemWrapper = document.createElement('div');
             linkItemWrapper.className = 'link-item';
             const subLinksHTML = childLinks.map(sub => {
-                const faviconUrl = `https://www.google.com/s2/favicons?domain=${new URL(sub.url).hostname}&sz=32`;
-                return `<a href="${sub.url}" class="link-item" target="_blank" title="${sub.name}"><div class="link-icon"><img src="${faviconUrl}" alt="${sub.name} icon" onerror="this.src='https://www.google.com/favicon.ico'"></div><span class="link-name">${sub.name}</span></a>`;
+                try {
+                    const faviconUrl = `https://www.google.com/s2/favicons?domain=${new URL(sub.url).hostname}&sz=32`;
+                    return `<a href="${sub.url}" class="link-item" target="_blank" title="${sub.name}"><div class="link-icon"><img src="${faviconUrl}" alt="${sub.name} icon" onerror="this.src='https://www.google.com/favicon.ico'"></div><span class="link-name">${sub.name}</span></a>`;
+                } catch (e) {
+                    console.error(`Invalid URL for sub-link ${sub.name}: ${sub.url}`);
+                    return '';
+                }
             }).join('');
             linkItemWrapper.innerHTML = `<div class="link-icon">${iconHTML}</div><span class="link-name">${link.name}</span><div class="popup-menu">${subLinksHTML}</div>`;
             quickLinksContainer.appendChild(linkItemWrapper);
