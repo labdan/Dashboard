@@ -59,8 +59,12 @@ let currentSearchEngine = 'google';
 
 // --- INITIALIZATION ---
 async function init() {
+    // The order here is critical to fix the login loop.
+    // 1. Handle the redirect from Google first and save tokens.
     handleAuthCallback();
+    // 2. NOW check the login status using the potentially new tokens.
     await checkLoginStatus();
+    // 3. Set up event listeners last.
     setupEventListeners();
 }
 
@@ -179,7 +183,6 @@ function loadDashboardContent() {
     updateQuote();
     setInterval(updateQuote, 10000);
 
-    // Load all widgets, with error handling for each
     Promise.all([
         loadQuickLinks().catch(e => console.error("Failed to load Quick Links:", e)),
         getWeather().catch(e => console.error("Failed to load Weather:", e)),
@@ -211,6 +214,12 @@ function toggleTheme() {
 }
 
 // --- SIDEBAR NEWS (Seeking Alpha + Highlight) ---
+function highlightIfTicker(text, tickers) {
+    return tickers.some(ticker =>
+        text.toUpperCase().includes(ticker.toUpperCase())
+    );
+}
+
 async function loadSideNews() {
     if (!sideNewsContainer) return;
 
@@ -223,7 +232,7 @@ async function loadSideNews() {
         try {
             const cached = JSON.parse(localStorage.getItem("portfolioCache"));
             if (cached?.portfolio) {
-                portfolioTickers = cached.portfolio.map(s => s.ticker);
+                portfolioTickers = cached.portfolio.map(s => s.ticker.split('_')[0]); // Use base ticker
             }
         } catch {}
 
@@ -264,6 +273,10 @@ async function loadXFeed() {
 }
 
 function renderXFeed(tweetsData) {
+    if (!tweetsData || !tweetsData.data) {
+        twitterFeedContainer.innerHTML = '<p style="padding: 20px; text-align: center;">Could not load feed.</p>';
+        return;
+    }
     const tweets = tweetsData.data;
     const users = tweetsData.includes.users;
     const media = tweetsData.includes.media || [];
@@ -272,7 +285,7 @@ function renderXFeed(tweetsData) {
     try {
         const cached = JSON.parse(localStorage.getItem("portfolioCache"));
         if (cached?.portfolio) {
-            portfolioTickers = cached.portfolio.map(s => s.ticker);
+            portfolioTickers = cached.portfolio.map(s => s.ticker.split('_')[0]); // Use base ticker
         }
     } catch {}
 
@@ -308,7 +321,7 @@ function renderXFeed(tweetsData) {
         }
 
         const isHighlight = portfolioTickers.some(ticker =>
-            tweet.text.toUpperCase().includes(ticker.toUpperCase())
+            tweet.text.toUpperCase().includes(`$${ticker}`) || tweet.text.toUpperCase().includes(ticker)
         );
 
         const tweetElement = `
