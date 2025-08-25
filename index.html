@@ -9,15 +9,12 @@
 </head>
 <body>
 
-  <!-- This container is only shown when the user is NOT logged in -->
   <div id="login-page">
     <button id="login-btn" class="auth-btn large">Login with Google</button>
   </div>
 
-  <!-- This container holds the entire dashboard and is shown only AFTER login -->
   <div id="dashboard-container" class="hidden">
     <div class="container">
-      <!-- Left sidebar for news -->
       <div class="left-sidebar">
           <div class="widget user-profile-widget">
               <div id="user-profile">
@@ -27,17 +24,16 @@
               </div>
           </div>
           <div class="widget">
+              <h3 class="widget-title">Latest News</h3>
               <div class="news-container" id="side-news-container"></div>
           </div>
       </div>
 
       <div class="main-content">
           <header>
-            <!-- Clock -->
             <div class="time-date header-widget">
               <div class="auth-container-mobile">
-                <!-- Mobile user profile will be inserted here by JS -->
-              </div>
+                </div>
               <button class="theme-toggle" id="theme-toggle" title="Toggle Theme">
                 <i class="fas fa-moon"></i>
               </button>
@@ -46,7 +42,6 @@
               <div class="mini-calendar" id="mini-calendar"></div>
             </div>
 
-            <!-- Search Area & Quick Links -->
             <div class="search-area">
               <div class="inspirational-quote" id="quote">"The only way to do great work is to love what you do."</div>
               <div class="search-container">
@@ -63,7 +58,6 @@
               </div>
             </div>
 
-            <!-- Weather Widget -->
             <div class="weather-widget header-widget" id="weather">
               <button class="refresh-btn" id="refresh-weather"><i class="fas fa-sync-alt"></i></button>
               <div class="weather-main">
@@ -88,7 +82,6 @@
             </div>
           </header>
 
-          <!-- Dashboard Grid -->
           <div class="dashboard-grid">
             <div class="left-column-widgets">
                <div class="widget">
@@ -114,7 +107,6 @@
           </div>
       </div>
 
-      <!-- Right sidebar for X.com feed -->
       <div class="right-sidebar">
           <div class="widget">
               <h3 class="widget-title">X.com Feed</h3>
@@ -126,7 +118,6 @@
     </div>
   </div>
 
-  <!-- Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
   <script src="config.js"></script>
