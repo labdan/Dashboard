@@ -968,7 +968,7 @@ function renderPortfolio(data, error = null) {
     }).join('');
     let watchlistHTML = `
         <div class="portfolio-header">
-             <button class="refresh-btn" id="refresh-portfolio" title="Refresh Portfolio"><i class="fas fa-sync-alt"></i></button>
+<button class="refresh-btn" id="refresh-portfolio" title="Refresh Portfolio"><i class="fas fa-rotate"></i></button>
              <div class="portfolio-title-bar">
                 <div class="portfolio-value">
                     <div class="value-title">Value</div>
