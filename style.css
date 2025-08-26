@@ -65,14 +65,11 @@ body {
     width: 250px; 
     cursor: pointer;
     transition: all 0.3s ease;
-    /* Use a drop-shadow for a clean initial look that follows the image shape */
     filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.2));
 }
 
 .login-page-btn:hover {
-    /* Make the button slightly larger on hover */
     transform: scale(1.05);
-    /* Add a more pronounced and slightly glowing shadow */
     filter: drop-shadow(0 8px 15px rgba(0, 0, 0, 0.3)) brightness(1.05);
 }
 
@@ -437,14 +434,11 @@ header {
     transform: scale(1.1);
 }
 
-/* --- THIS IS THE FIX --- */
 .link-icon img {
   max-width: 24px;
   max-height: 24px;
   object-fit: contain;
 }
-/* ----------------------- */
-
 
 .link-name {
   font-size: 0.8rem;
@@ -1082,7 +1076,6 @@ header {
     margin-bottom: 10px;
     align-items: center;
 }
-
 .ql-input {
     flex: 1;
     padding: 8px 12px;
@@ -1097,12 +1090,8 @@ header {
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px rgba(74, 111, 165, 0.2);
 }
-.ql-input[data-field="url"] { flex-basis: 40%; }
-.ql-input[data-field="icon_url"] { flex-basis: 30%; }
-.ql-input-small {
-    flex: 0 0 70px;
-}
-
+.ql-input[data-field="name"] { flex-basis: 30%; }
+.ql-input[data-field="url"] { flex-basis: 50%; }
 
 .delete-link-btn {
     background: none;
@@ -1208,6 +1197,7 @@ header {
 [data-theme="dark"] .ql-snow .ql-stroke.ql-fill {
     fill: var(--secondary-color);
 }
+
 /* --- Styles for Draggable Quick Links --- */
 .quick-link-edit-row {
     align-items: center; /* Vertically align items in the row */
@@ -1229,33 +1219,7 @@ header {
     opacity: 0.4;
     background-color: var(--primary-color) !important;
 }
-/* --- Styles for Indented Quick Links in Editor --- */
-.quick-link-edit-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-left: 0; /* Default, no indent */
-    transition: margin-left 0.2s ease-in-out;
-}
 
 .quick-link-edit-row.is-child {
     margin-left: 40px; /* This creates the visual indentation */
-}
-
-.indent-controls {
-    display: flex;
-    gap: 5px;
-    color: var(--secondary-color);
-}
-
-.indent-btn {
-    cursor: pointer;
-    padding: 5px;
-    border-radius: 4px;
-    transition: background-color 0.2s ease;
-}
-
-.indent-btn:hover {
-    background-color: var(--border-color);
-    color: var(--primary-color);
 }

@@ -577,7 +577,6 @@ async function openQuickLinksEditor() {
     if (sortableInstance) {
         sortableInstance.destroy();
     }
-    // Fetch all data, sorted by the final order
     const { data, error } = await supabaseClient.from('quick_links').select('*').order('sort_order');
     if (error) {
         alert('Could not load links for editing. See console for details.');
@@ -585,7 +584,6 @@ async function openQuickLinksEditor() {
         return;
     }
 
-    // NEW LOGIC: Create a structured list for rendering
     const sortedData = [];
     const parents = data.filter(link => !link.parent_id);
     const children = data.filter(link => link.parent_id);
@@ -598,7 +596,6 @@ async function openQuickLinksEditor() {
 
     linkIdsToDelete = [];
     quickLinksEditor.innerHTML = '';
-    // Use the new structured list to render the rows
     sortedData.forEach(link => {
         const row = addQuickLinkRow(link);
         if (link.parent_id) {
@@ -610,11 +607,21 @@ async function openQuickLinksEditor() {
         animation: 150,
         handle: '.drag-handle',
         ghostClass: 'sortable-ghost',
+        onEnd: function (evt) {
+            const itemEl = evt.item; // The dragged item
+            const previousEl = itemEl.previousElementSibling;
+            
+            // Check if the item was dropped under a parent
+            if (previousEl && previousEl.querySelector('[data-field="url"]').value === '') {
+                itemEl.classList.add('is-child');
+            } else {
+                itemEl.classList.remove('is-child');
+            }
+        }
     });
 
     settingsModal.classList.remove('hidden');
 }
-
 
 function addQuickLinkRow(link = {}) {
     const row = document.createElement('div');
@@ -623,10 +630,6 @@ function addQuickLinkRow(link = {}) {
     
     row.innerHTML = `
         <i class="fas fa-grip-vertical drag-handle"></i>
-        <div class="indent-controls">
-            <i class="fas fa-long-arrow-alt-left indent-btn" data-action="outdent"></i>
-            <i class="fas fa-long-arrow-alt-right indent-btn" data-action="indent"></i>
-        </div>
         <input type="text" class="ql-input" data-field="name" placeholder="Name" value="${link.name || ''}">
         <input type="text" class="ql-input" data-field="url" placeholder="URL (leave empty for parent)" value="${link.url || ''}">
         <button class="delete-link-btn"><i class="fas fa-trash"></i></button>
@@ -638,9 +641,6 @@ function addQuickLinkRow(link = {}) {
         }
         row.remove();
     });
-    
-    row.querySelector('[data-action="indent"]').addEventListener('click', () => row.classList.add('is-child'));
-    row.querySelector('[data-action="outdent"]').addEventListener('click', () => row.classList.remove('is-child'));
 
     quickLinksEditor.appendChild(row);
     return row;
@@ -656,40 +656,76 @@ async function saveQuickLinks() {
             if (deleteError) throw deleteError;
         }
 
-        const rows = quickLinksEditor.querySelectorAll('.quick-link-edit-row');
+        const rows = Array.from(quickLinksEditor.querySelectorAll('.quick-link-edit-row'));
+        const newParents = {}; // To store the new IDs of newly created parents
+
+        // FIRST PASS: Insert new parent items to get their IDs
+        const newParentInserts = rows
+            .filter(row => row.dataset.id.startsWith('new-') && !row.querySelector('[data-field="url"]').value)
+            .map((row, index) => ({
+                temp_id: row.dataset.id,
+                name: row.querySelector('[data-field="name"]').value,
+                url: null,
+                sort_order: rows.indexOf(row) // Use the overall index for now
+            }));
+
+        if (newParentInserts.length > 0) {
+            const { data: insertedParents, error: insertError } = await supabaseClient
+                .from('quick_links')
+                .insert(newParentInserts.map(p => ({ name: p.name, url: p.url, sort_order: p.sort_order })))
+                .select();
+            if (insertError) throw insertError;
+            
+            insertedParents.forEach((parent, index) => {
+                const tempId = newParentInserts[index].temp_id;
+                newParents[tempId] = parent.id;
+            });
+        }
+
+        // SECOND PASS: Prepare all other upserts
         const upsertData = [];
         let lastParentId = null;
-        
+
         rows.forEach((row, index) => {
             const id = row.dataset.id;
-            const urlInput = row.querySelector('[data-field="url"]').value;
+            const url = row.querySelector('[data-field="url"]').value || null;
             const isNew = id.startsWith('new-');
+            
+            // Skip new parents as they've already been inserted
+            if (isNew && !url) return;
 
             const linkData = {
+                id: isNew ? undefined : id,
                 name: row.querySelector('[data-field="name"]').value,
-                url: urlInput || null,
+                url: url,
                 sort_order: index,
                 parent_id: null
             };
-            
-            if (!isNew) {
-                linkData.id = id;
+
+            // Determine parentage
+            if (!url) { // This row is an existing parent
+                lastParentId = id;
+            } else if (row.classList.contains('is-child')) {
+                const potentialParentRow = row.previousElementSibling;
+                if(potentialParentRow) {
+                    const parentUrl = potentialParentRow.querySelector('[data-field="url"]').value;
+                    if(!parentUrl) { // It's a parent
+                        let parentId = potentialParentRow.dataset.id;
+                        if(parentId.startsWith('new-')) {
+                            lastParentId = newParents[parentId];
+                        } else {
+                            lastParentId = parentId;
+                        }
+                    }
+                }
+                linkData.parent_id = lastParentId;
+            } else { // This is a top-level link
+                lastParentId = null;
             }
 
-            if (!urlInput) { // This item is a parent
-                lastParentId = isNew ? null : id; // It can only be a parent if it already exists
-            } else if (row.classList.contains('is-child') && lastParentId) {
-                linkData.parent_id = lastParentId;
-            } else {
-                lastParentId = null; // Reset if we hit a non-indented child
-            }
-            
             upsertData.push(linkData);
         });
 
-        // This approach has a limitation: a NEW item cannot be a parent to another NEW item in the same save.
-        // It's a complex problem (chicken-and-egg). This logic handles all other cases correctly.
-        
         if (upsertData.length > 0) {
             const { error: upsertError } = await supabaseClient.from('quick_links').upsert(upsertData);
             if (upsertError) throw upsertError;
@@ -709,7 +745,6 @@ async function saveQuickLinks() {
     settingsModal.classList.add('hidden');
     await loadQuickLinks();
 }
-
 
 // --- EDITOR ---
 async function initializeEditor() {
