@@ -109,7 +109,8 @@ async function init() {
 
 function runDemoMode() {
     showUserProfile({ name: 'Demo User', picture: 'nostockimg.png' });
-    document.querySelectorAll('.demo-hide').forEach(el => el.style.display = 'none');
+    // Keep settings icon visible, but hide functionality that writes to DB
+    document.querySelectorAll('.demo-hide-interactive').forEach(el => el.style.display = 'none');
     
     // Load real data
     loadSideNews();
@@ -170,9 +171,12 @@ function loadDemoPortfolio() {
 
 function loadDemoQuickLinks() {
     const demoLinks = [
-        { name: 'Media', url: null, parent_id: null, id: 'parent1' },
-        { name: 'YouTube', url: 'https://youtube.com', parent_id: 'parent1', id: 'child1' },
-        { name: 'Gmail', url: 'https://gmail.com', parent_id: null, id: 'parent2' }
+        { id: 'p1', name: 'Media', url: null, parent_id: null, sort_order: 0 },
+        { id: 'c1', name: 'YouTube', url: 'https://youtube.com', parent_id: 'p1', sort_order: 1 },
+        { id: 'c2', name: 'Cineby', url: 'https://cineby.app', parent_id: 'p1', sort_order: 2 },
+        { id: 'p2', name: 'AI Tools', url: null, parent_id: null, sort_order: 3 },
+        { id: 'c3', name: 'ChatGPT', url: 'https://chat.openai.com', parent_id: 'p2', sort_order: 4 },
+        { id: 'p3', name: 'Gmail', url: 'https://gmail.com', parent_id: null, sort_order: 5 }
     ];
     
     const links = demoLinks.filter(link => !link.parent_id);
@@ -232,6 +236,10 @@ function setupEventListeners() {
     });
     watchlistContainer.addEventListener('click', (e) => {
         if (e.target.closest('#refresh-portfolio')) {
+            if(isDemoMode) {
+                alert("Portfolio refresh is disabled in demo mode.");
+                return;
+            }
             localStorage.removeItem('portfolioCache');
             localStorage.removeItem('instrumentCache'); 
             loadStockWatchlist();
@@ -248,25 +256,31 @@ function setupEventListeners() {
         updateDateDisplay();
     });
 
-    if (!isDemoMode) {
-        if (editQuicklinksBtn) editQuicklinksBtn.addEventListener('click', openQuickLinksEditor);
-        if (themeSelectBtn) themeSelectBtn.addEventListener('click', () => themeModal.classList.remove('hidden'));
-        if (closeSettingsBtn) closeSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
-        if (settingsModal) settingsModal.addEventListener('click', (e) => { if (e.target === settingsModal) settingsModal.classList.add('hidden'); });
-        if (saveQuickLinksBtn) saveQuickLinksBtn.addEventListener('click', saveQuickLinks);
-        if (openAddLinkModalBtn) openAddLinkModalBtn.addEventListener('click', handleAddLinkModalOpen);
-        if (closeAddLinkBtn) closeAddLinkBtn.addEventListener('click', () => addLinkModal.classList.add('hidden'));
-        if (addLinkModal) addLinkModal.addEventListener('click', (e) => { if (e.target === addLinkModal) addLinkModal.classList.add('hidden'); });
-        if (addLinkForm) addLinkForm.addEventListener('submit', (e) => { e.preventDefault(); handleAddNewLink(); });
-        if (addNewLinkBtn) addNewLinkBtn.addEventListener('click', handleAddNewLink);
-        if(saveNoteBtn) saveNoteBtn.addEventListener('click', saveNote);
-    }
+    // Settings Menu and Modal Listeners
+    if (editQuicklinksBtn) editQuicklinksBtn.addEventListener('click', openQuickLinksEditor);
+    if (themeSelectBtn) themeSelectBtn.addEventListener('click', () => themeModal.classList.remove('hidden'));
+    
+    if (closeSettingsBtn) closeSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
+    if (settingsModal) settingsModal.addEventListener('click', (e) => { if (e.target === settingsModal) settingsModal.classList.add('hidden'); });
+    if (saveQuickLinksBtn) saveQuickLinksBtn.addEventListener('click', saveQuickLinks);
+    
+    // Add Link Modal Listeners
+    if (openAddLinkModalBtn) openAddLinkModalBtn.addEventListener('click', handleAddLinkModalOpen);
+    if (closeAddLinkBtn) closeAddLinkBtn.addEventListener('click', () => addLinkModal.classList.add('hidden'));
+    if (addLinkModal) addLinkModal.addEventListener('click', (e) => { if (e.target === addLinkModal) addLinkModal.classList.add('hidden'); });
+    if (addLinkForm) addLinkForm.addEventListener('submit', (e) => { e.preventDefault(); handleAddNewLink(); });
+    if (addNewLinkBtn) addNewLinkBtn.addEventListener('click', handleAddNewLink);
 
+    // Theme Modal Listeners
     if (closeThemeBtn) closeThemeBtn.addEventListener('click', () => themeModal.classList.add('hidden'));
     if (themeModal) themeModal.addEventListener('click', (e) => { if (e.target === themeModal) themeModal.classList.add('hidden'); });
     if (setNormalThemeBtn) setNormalThemeBtn.addEventListener('click', () => applyTheme({ type: 'normal' }));
     if (setDynamicThemeBtn) setDynamicThemeBtn.addEventListener('click', () => applyTheme({ type: 'dynamic' }));
+
+    // Editor Listener
+    if(saveNoteBtn) saveNoteBtn.addEventListener('click', saveNote);
 }
+
 // --- THEME ---
 function applySavedTheme() {
     const savedTheme = JSON.parse(localStorage.getItem('themeConfig')) || { type: 'normal', mode: 'light' };
@@ -277,30 +291,19 @@ function applyTheme(config, isInitialLoad = false) {
     const currentConfig = JSON.parse(localStorage.getItem('themeConfig')) || { type: 'normal', mode: 'light' };
     const newConfig = { ...currentConfig, ...config };
 
-    localStorage.setItem('themeConfig', JSON.stringify(newConfig));
+    if (!isDemoMode) {
+        localStorage.setItem('themeConfig', JSON.stringify(newConfig));
+    }
 
     document.body.setAttribute('data-theme', newConfig.mode);
     themeToggleBtn.innerHTML = newConfig.mode === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
 
     if (newConfig.type === 'dynamic') {
         document.body.classList.add('dynamic-theme');
-        const today = new Date().toDateString();
-        const lastFetchDate = localStorage.getItem('bgFetchDate');
-        
-        if (!isInitialLoad || lastFetchDate !== today) {
-            fetchAndSetBackgroundImage(newConfig.mode);
-        } else {
-            const cachedImage = localStorage.getItem('dynamicBg');
-            if (cachedImage) {
-                document.body.style.backgroundImage = `url(${cachedImage})`;
-            } else {
-                fetchAndSetBackgroundImage(newConfig.mode);
-            }
-        }
-    } else { // Normal theme
+        fetchAndSetBackgroundImage(newConfig.mode);
+    } else { 
         document.body.classList.remove('dynamic-theme');
         document.body.style.backgroundImage = 'none';
-        document.body.style.backgroundColor = ''; // Reset background color
     }
     
     if(themeModal) themeModal.classList.add('hidden');
@@ -313,36 +316,12 @@ function toggleTheme() {
 }
 
 async function fetchAndSetBackgroundImage(mode) {
-    try {
-        const query = mode === 'dark' ? 'dark,green,nature' : 'light,beach';
-        const response = await fetch(`/.netlify/functions/get-background-image?query=${query}`);
-        if (!response.ok) throw new Error('Failed to fetch background image from server function.');
+    const imageUrl = mode === 'dark' 
+        ? 'https://i.redd.it/3y5ptawmvr081.jpg' 
+        : 'https://i.pinimg.com/originals/1a/32/6a/1a326a11c2a8a1b2e53b49463b73315a.jpg';
 
-        const data = await response.json();
-        const imageUrl = data.imageUrl;
-
-        if (imageUrl) {
-            localStorage.setItem('dynamicBg', imageUrl);
-            localStorage.setItem('bgFetchDate', new Date().toDateString());
-            document.body.style.backgroundImage = `url(${imageUrl})`;
-        }
-    } catch (error) {
-        console.error("Could not set dynamic background:", error);
-    }
+    document.body.style.backgroundImage = `url(${imageUrl})`;
 }
-setInterval(() => checkNewDay(), 5 * 60 * 1000);
-
-function checkNewDay() {
-    const lastFetchDate = localStorage.getItem('bgFetchDate');
-    const today = new Date().toDateString();
-    if (lastFetchDate !== today) {
-        const currentConfig = JSON.parse(localStorage.getItem('themeConfig'));
-        if (currentConfig && currentConfig.type === 'dynamic') {
-            fetchAndSetBackgroundImage(currentConfig.mode);
-        }
-    }
-}
-
 // --- AUTHENTICATION ---
 async function checkLoginStatus() {
     const accessToken = localStorage.getItem('google_access_token');
@@ -503,7 +482,7 @@ async function handleTodoSubmit(e) {
             alert('Could not add task. See console for details.');
         } else {
             todoInput.value = '';
-            await loadTodos(); // **THE FIX**: Refresh the list after adding
+            await loadTodos();
         }
     }
 }
