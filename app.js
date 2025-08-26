@@ -49,7 +49,12 @@ const settingsModal = document.getElementById('settings-modal');
 const closeSettingsBtn = document.getElementById('close-settings-btn');
 const saveQuickLinksBtn = document.getElementById('save-quick-links-btn');
 const quickLinksEditor = document.getElementById('quick-links-editor');
-const addQuickLinkBtn = document.getElementById('add-quick-link-btn');
+const openAddLinkModalBtn = document.getElementById('open-add-link-modal-btn');
+const addLinkModal = document.getElementById('add-link-modal');
+const closeAddLinkBtn = document.getElementById('close-add-link-btn');
+const addNewLinkBtn = document.getElementById('add-new-link-btn');
+const addLinkForm = document.getElementById('add-link-form');
+
 
 // Editor DOM Elements
 const saveNoteBtn = document.getElementById('save-note-btn');
@@ -127,7 +132,16 @@ function setupEventListeners() {
     if (closeSettingsBtn) closeSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
     if (settingsModal) settingsModal.addEventListener('click', (e) => { if (e.target === settingsModal) settingsModal.classList.add('hidden'); });
     if (saveQuickLinksBtn) saveQuickLinksBtn.addEventListener('click', saveQuickLinks);
-    if (addQuickLinkBtn) addQuickLinkBtn.addEventListener('click', () => addQuickLinkRow());
+    
+    // Add Link Modal Listeners
+    if (openAddLinkModalBtn) openAddLinkModalBtn.addEventListener('click', handleAddLinkModalOpen);
+    if (closeAddLinkBtn) closeAddLinkBtn.addEventListener('click', () => addLinkModal.classList.add('hidden'));
+    if (addLinkModal) addLinkModal.addEventListener('click', (e) => { if (e.target === addLinkModal) addLinkModal.classList.add('hidden'); });
+    if (addLinkForm) addLinkForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        handleAddNewLink();
+    });
+    if (addNewLinkBtn) addNewLinkBtn.addEventListener('click', handleAddNewLink);
 
     // Editor Listener
     if(saveNoteBtn) saveNoteBtn.addEventListener('click', saveNote);
@@ -299,10 +313,9 @@ async function handleTodoSubmit(e) {
     e.preventDefault();
     const taskText = todoInput.value.trim();
     if (taskText) {
-        // **THE FIX**: Removed user_id from the insert object
         const { error } = await supabaseClient.from('todos').insert({ task: taskText });
         if (error) {
-            console.error('Error adding todo:', error); // Improved logging
+            console.error("Error adding todo:", error);
             alert('Could not add task. See console for details.');
         } else {
             todoInput.value = '';
@@ -623,6 +636,7 @@ async function openQuickLinksEditor() {
     settingsModal.classList.remove('hidden');
 }
 
+
 function addQuickLinkRow(link = {}) {
     const row = document.createElement('div');
     row.className = 'quick-link-edit-row';
@@ -646,6 +660,75 @@ function addQuickLinkRow(link = {}) {
     return row;
 }
 
+async function handleAddLinkModalOpen() {
+    const { data, error } = await supabaseClient.from('quick_links').select('id, name').is('url', null).order('sort_order');
+    
+    if (error) {
+        alert('Could not load parent links. See console for details.');
+        console.error(error);
+        return;
+    }
+
+    const parentSelect = document.getElementById('new-link-parent');
+    parentSelect.innerHTML = '<option value="">No Parent (Top Level)</option>'; // Reset
+    data.forEach(parent => {
+        const option = document.createElement('option');
+        option.value = parent.id;
+        option.textContent = parent.name;
+        parentSelect.appendChild(option);
+    });
+
+    addLinkForm.reset();
+    addLinkModal.classList.remove('hidden');
+}
+
+async function handleAddNewLink() {
+    const name = document.getElementById('new-link-name').value;
+    const url = document.getElementById('new-link-url').value || null;
+    const parentId = document.getElementById('new-link-parent').value || null;
+
+    if (!name) {
+        alert('Please enter a name for the link.');
+        return;
+    }
+
+    // Get the highest sort_order to append the new link at the end
+    const { data: maxOrderData, error: maxOrderError } = await supabaseClient
+        .from('quick_links')
+        .select('sort_order')
+        .order('sort_order', { ascending: false })
+        .limit(1)
+        .single();
+    
+    if (maxOrderError && maxOrderError.code !== 'PGRST116') { // Ignore "no rows" error
+        alert('Could not determine sort order.');
+        console.error(maxOrderError);
+        return;
+    }
+
+    const newSortOrder = maxOrderData ? maxOrderData.sort_order + 1 : 0;
+
+    const { error: insertError } = await supabaseClient
+        .from('quick_links')
+        .insert({
+            name: name,
+            url: url,
+            parent_id: parentId,
+            sort_order: newSortOrder
+        });
+
+    if (insertError) {
+        alert('Could not add new link. See console for details.');
+        console.error(insertError);
+        return;
+    }
+
+    addLinkModal.classList.add('hidden');
+    await openQuickLinksEditor(); // Refresh the editor view
+    await loadQuickLinks(); // Refresh the dashboard view
+}
+
+
 async function saveQuickLinks() {
     saveQuickLinksBtn.textContent = 'Saving...';
     saveQuickLinksBtn.disabled = true;
@@ -657,30 +740,31 @@ async function saveQuickLinks() {
         }
 
         const rows = Array.from(quickLinksEditor.querySelectorAll('.quick-link-edit-row'));
-        const newParents = {};
-
-        const newParentInserts = rows
-            .filter(row => row.dataset.id.startsWith('new-') && !row.querySelector('[data-field="url"]').value)
-            .map(row => ({
-                temp_id: row.dataset.id,
-                name: row.querySelector('[data-field="name"]').value,
-                url: null,
-                sort_order: rows.indexOf(row)
-            }));
-
-        if (newParentInserts.length > 0) {
-            const { data: insertedParents, error: insertError } = await supabaseClient
+        
+        // This is a complex problem. The most robust way is a two-pass save.
+        // First pass: Save all new parents to get their IDs.
+        const newParentRows = rows.filter(row => row.dataset.id.startsWith('new-') && !row.querySelector('[data-field="url"]').value);
+        const newParentData = newParentRows.map(row => ({
+            temp_id: row.dataset.id,
+            name: row.querySelector('[data-field="name"]').value,
+            url: null
+        }));
+        
+        const newParentIdMap = new Map();
+        if (newParentData.length > 0) {
+            const { data: insertedParents, error: parentInsertError } = await supabaseClient
                 .from('quick_links')
-                .insert(newParentInserts.map(p => ({ name: p.name, url: p.url, sort_order: p.sort_order })))
+                .insert(newParentData.map(p => ({ name: p.name, url: p.url })))
                 .select();
-            if (insertError) throw insertError;
             
-            insertedParents.forEach((parent, index) => {
-                const tempId = newParentInserts[index].temp_id;
-                newParents[tempId] = parent.id;
+            if (parentInsertError) throw parentInsertError;
+
+            insertedParents.forEach((p, i) => {
+                newParentIdMap.set(newParentData[i].temp_id, p.id);
             });
         }
 
+        // Second pass: Prepare all data for upsert
         const upsertData = [];
         let lastParentId = null;
 
@@ -688,7 +772,8 @@ async function saveQuickLinks() {
             const id = row.dataset.id;
             const url = row.querySelector('[data-field="url"]').value || null;
             const isNew = id.startsWith('new-');
-            
+
+            // Skip new parents; they are already inserted.
             if (isNew && !url) return;
 
             const linkData = {
@@ -702,19 +787,24 @@ async function saveQuickLinks() {
             const previousEl = row.previousElementSibling;
             if (row.classList.contains('is-child') && previousEl) {
                 const prevUrl = previousEl.querySelector('[data-field="url"]').value;
-                if (!prevUrl) { // Previous item is a parent
-                    let parentId = previousEl.dataset.id;
-                    if (parentId.startsWith('new-')) {
-                        lastParentId = newParents[parentId];
+                if (!prevUrl) { // Previous item is a parent.
+                    const prevId = previousEl.dataset.id;
+                    if (prevId.startsWith('new-')) {
+                        lastParentId = newParentIdMap.get(prevId); // Get the real ID
                     } else {
-                        lastParentId = parentId;
+                        lastParentId = prevId;
                     }
                 }
-                 linkData.parent_id = lastParentId;
+            } else if (!url && !isNew) {
+                lastParentId = id; // This item is an existing parent.
             } else {
-                lastParentId = isNew ? null : id;
+                lastParentId = null; // It's a top-level item or its parent isn't valid.
             }
             
+            if (row.classList.contains('is-child')) {
+                linkData.parent_id = lastParentId;
+            }
+
             upsertData.push(linkData);
         });
         
@@ -737,6 +827,8 @@ async function saveQuickLinks() {
     settingsModal.classList.add('hidden');
     await loadQuickLinks();
 }
+
+
 
 
 // --- EDITOR ---
