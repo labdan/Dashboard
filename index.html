@@ -128,15 +128,36 @@
       <div class="modal-content">
           <div class="modal-header">
               <h2>Edit Quick Links</h2>
+              <span id="open-add-link-modal-btn" class="add-link-icon" title="Add New Link"><i class="fas fa-plus"></i></span>
               <button id="close-settings-btn" class="close-btn">&times;</button>
           </div>
           <div class="modal-body" id="quick-links-editor">
               </div>
           <div class="modal-footer">
-              <button id="add-quick-link-btn" class="btn-secondary">Add New Link</button>
               <button id="save-quick-links-btn" class="btn-primary">Save Changes</button>
           </div>
       </div>
+  </div>
+
+  <div id="add-link-modal" class="modal-container hidden">
+    <div class="modal-content small">
+        <div class="modal-header">
+            <h2>Add New Link</h2>
+            <button id="close-add-link-btn" class="close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="add-link-form" class="add-link-form">
+                <input type="text" id="new-link-name" class="ql-input" placeholder="Name" required>
+                <input type="text" id="new-link-url" class="ql-input" placeholder="URL (leave empty for parent)">
+                <select id="new-link-parent" class="ql-input">
+                    <option value="">No Parent (Top Level)</option>
+                    </select>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button id="add-new-link-btn" class="btn-primary">Add Link</button>
+        </div>
+    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

@@ -1223,3 +1223,40 @@ header {
 .quick-link-edit-row.is-child {
     margin-left: 40px; /* This creates the visual indentation */
 }
+/* --- Styles for New "Add Link" Functionality --- */
+.modal-header {
+    position: relative;
+}
+
+.add-link-icon {
+    position: absolute;
+    left: 170px; /* Position it next to the title */
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: var(--secondary-color);
+    font-size: 1.1rem;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.add-link-icon:hover {
+    color: var(--primary-color);
+    background-color: var(--border-color);
+    transform: translateY(-50%) scale(1.1);
+}
+
+.modal-content.small {
+    max-width: 450px;
+}
+
+.add-link-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
