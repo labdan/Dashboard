@@ -497,7 +497,7 @@ async function loadQuickLinks() {
     const { data, error } = await supabaseClient.from('quick_links').select('*').order('sort_order');
     
     if (error) {
-        console.error('Error fetching quick links:', error.message);
+        console.error('Error fetching quick links:', error);
         quickLinksContainer.innerHTML = `<p style="font-size: 0.8rem; opacity: 0.7;">Error: ${error.message}</p>`;
         return;
     }
@@ -512,21 +512,11 @@ async function loadQuickLinks() {
 
     links.forEach(link => {
         try {
-            // **REMOVED FONT AWESOME LOGIC**
-            let imgSrc = link.icon_url; 
-            
-            if (!imgSrc && link.url) {
-                try {
-                    const hostname = new URL(link.url).hostname;
-                    imgSrc = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
-                } catch (e) {
-                    // Fails silently, fallback will be used
-                }
-            }
-            
-            const finalSrc = imgSrc || 'nostockimg.png';
+            // **NEW ICON LOGIC**
+            const iconName = link.name.toLowerCase().replace(/\s+/g, '');
+            const iconSrc = `${iconName}.ico`;
             const fallbackSrc = 'nostockimg.png';
-            const iconHTML = `<img src="${finalSrc}" alt="${link.name} icon" onerror="this.onerror=null; this.src='${fallbackSrc}'">`;
+            const iconHTML = `<img src="${iconSrc}" alt="${link.name} icon" onerror="this.onerror=null; this.src='${fallbackSrc}'">`;
 
             const childLinks = subLinks.filter(sub => sub.parent_id === link.id);
 
@@ -534,7 +524,7 @@ async function loadQuickLinks() {
                 const linkItemWrapper = document.createElement('div');
                 linkItemWrapper.className = 'link-item';
                 const subLinksHTML = childLinks.map(sub => {
-                    let faviconUrl = 'nostockimg.png';
+                    let faviconUrl = 'nostockimg.png'; // Default to local fallback
                     try {
                         const hostname = new URL(sub.url).hostname;
                         faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
@@ -580,10 +570,10 @@ function addQuickLinkRow(link = {}) {
     row.className = 'quick-link-edit-row';
     row.dataset.id = link.id || `new-${Date.now()}`;
     
+    // **REMOVED icon_url input**
     row.innerHTML = `
         <input type="text" class="ql-input" data-field="name" placeholder="Name" value="${link.name || ''}">
         <input type="text" class="ql-input" data-field="url" placeholder="URL" value="${link.url || ''}">
-        <input type="text" class="ql-input" data-field="icon_url" placeholder="Icon URL (optional)" value="${link.icon_url || ''}">
         <input type="number" class="ql-input ql-input-small" data-field="sort_order" placeholder="Order" value="${link.sort_order || '0'}">
         <button class="delete-link-btn"><i class="fas fa-trash"></i></button>
     `;
@@ -625,10 +615,9 @@ async function saveQuickLinks() {
         const linkData = {
             name: row.querySelector('[data-field="name"]').value,
             url: row.querySelector('[data-field="url"]').value,
-            icon_url: row.querySelector('[data-field="icon_url"]').value,
             sort_order: parseInt(row.querySelector('[data-field="sort_order"]').value) || 0,
         };
-        // **FIX: Only include the ID for existing items.**
+        
         if (!id.startsWith('new-')) {
             linkData.id = parseInt(id);
         }
