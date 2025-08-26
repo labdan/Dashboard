@@ -577,6 +577,7 @@ async function openQuickLinksEditor() {
     if (sortableInstance) {
         sortableInstance.destroy();
     }
+    // Fetch all data, sorted by the final order
     const { data, error } = await supabaseClient.from('quick_links').select('*').order('sort_order');
     if (error) {
         alert('Could not load links for editing. See console for details.');
@@ -584,9 +585,21 @@ async function openQuickLinksEditor() {
         return;
     }
 
+    // NEW LOGIC: Create a structured list for rendering
+    const sortedData = [];
+    const parents = data.filter(link => !link.parent_id);
+    const children = data.filter(link => link.parent_id);
+
+    parents.forEach(parent => {
+        sortedData.push(parent);
+        const parentChildren = children.filter(child => child.parent_id === parent.id);
+        sortedData.push(...parentChildren);
+    });
+
     linkIdsToDelete = [];
     quickLinksEditor.innerHTML = '';
-    data.forEach(link => {
+    // Use the new structured list to render the rows
+    sortedData.forEach(link => {
         const row = addQuickLinkRow(link);
         if (link.parent_id) {
             row.classList.add('is-child');
@@ -601,6 +614,7 @@ async function openQuickLinksEditor() {
 
     settingsModal.classList.remove('hidden');
 }
+
 
 function addQuickLinkRow(link = {}) {
     const row = document.createElement('div');
@@ -649,35 +663,33 @@ async function saveQuickLinks() {
         rows.forEach((row, index) => {
             const id = row.dataset.id;
             const urlInput = row.querySelector('[data-field="url"]').value;
-            
+            const isNew = id.startsWith('new-');
+
             const linkData = {
                 name: row.querySelector('[data-field="name"]').value,
                 url: urlInput || null,
                 sort_order: index,
-                parent_id: null // Default to null
+                parent_id: null
             };
-
-            // If it's a parent (no URL), update the lastParentId
-            if (!urlInput) {
-                lastParentId = id.startsWith('new-') ? null : id; // Can't be a parent if it's new and doesn't have a real ID yet. This is a limitation for now.
+            
+            if (!isNew) {
+                linkData.id = id;
             }
-            // If it is indented and there's a parent available, assign it
-            else if (row.classList.contains('is-child') && lastParentId) {
+
+            if (!urlInput) { // This item is a parent
+                lastParentId = isNew ? null : id; // It can only be a parent if it already exists
+            } else if (row.classList.contains('is-child') && lastParentId) {
                 linkData.parent_id = lastParentId;
             } else {
                 lastParentId = null; // Reset if we hit a non-indented child
             }
             
-            if (!id.startsWith('new-')) {
-                linkData.id = id;
-            }
             upsertData.push(linkData);
         });
 
-        // The logic for assigning parent_id for NEW items needs a second pass,
-        // but for now, this will work for existing items and new top-level items.
-        // A full solution would require saving parents first, getting their new IDs, then saving children.
-
+        // This approach has a limitation: a NEW item cannot be a parent to another NEW item in the same save.
+        // It's a complex problem (chicken-and-egg). This logic handles all other cases correctly.
+        
         if (upsertData.length > 0) {
             const { error: upsertError } = await supabaseClient.from('quick_links').upsert(upsertData);
             if (upsertError) throw upsertError;
