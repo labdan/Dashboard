@@ -12,7 +12,7 @@ const INSTRUMENT_CACHE_DURATION = 24 * 60 * 60 * 1000;
 // --- SUPABASE CLIENT ---
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// --- DOM ELEMENTS ---
+// --- DOM ELEMENTS (Consolidated and Corrected) ---
 const timeElement = document.getElementById('time');
 const dateElement = document.getElementById('date');
 const miniCalendarContainer = document.getElementById('mini-calendar');
@@ -31,15 +31,6 @@ const themeToggleBtn = document.getElementById('theme-toggle');
 const sideNewsContainer = document.getElementById('side-news-container');
 const benzingaFeedContainer = document.getElementById('benzinga-feed-container');
 const eventsContainer = document.getElementById('events-container');
-const settingsIcon = document.querySelector('.settings-icon');
-const editQuicklinksBtn = document.getElementById('edit-quicklinks-btn');
-const themeSelectBtn = document.getElementById('theme-select-btn');
-
-// Theme Modal DOM Elements
-const themeModal = document.getElementById('theme-modal');
-const closeThemeBtn = document.getElementById('close-theme-btn');
-const setNormalThemeBtn = document.getElementById('set-normal-theme-btn');
-const setDynamicThemeBtn = document.getElementById('set-dynamic-theme-btn');
 
 // Main Layout Elements
 const mainDashboard = document.getElementById('main-dashboard');
@@ -53,24 +44,26 @@ const userAvatarElement = document.getElementById('user-avatar');
 const userNameElement = document.getElementById('user-name');
 const settingsIcon = document.querySelector('.settings-icon');
 
-// Settings Modal DOM Elements
+// Settings Menu and Modals
+const editQuicklinksBtn = document.getElementById('edit-quicklinks-btn');
+const themeSelectBtn = document.getElementById('theme-select-btn');
 const settingsModal = document.getElementById('settings-modal');
 const closeSettingsBtn = document.getElementById('close-settings-btn');
 const saveQuickLinksBtn = document.getElementById('save-quick-links-btn');
 const quickLinksEditor = document.getElementById('quick-links-editor');
-
-// Add Link Modal DOM Elements
 const openAddLinkModalBtn = document.getElementById('open-add-link-modal-btn');
 const addLinkModal = document.getElementById('add-link-modal');
 const closeAddLinkBtn = document.getElementById('close-add-link-btn');
 const addNewLinkBtn = document.getElementById('add-new-link-btn');
 const addLinkForm = document.getElementById('add-link-form');
-
+const themeModal = document.getElementById('theme-modal');
+const closeThemeBtn = document.getElementById('close-theme-btn');
+const setNormalThemeBtn = document.getElementById('set-normal-theme-btn');
+const setDynamicThemeBtn = document.getElementById('set-dynamic-theme-btn');
 
 // Editor DOM Elements
 const saveNoteBtn = document.getElementById('save-note-btn');
 const saveStatus = document.getElementById('save-status');
-
 
 // Weather DOM Elements
 const weatherIconImg = document.getElementById('weather-icon-img');
@@ -88,19 +81,19 @@ const refreshWeatherBtn = document.getElementById('refresh-weather');
 // --- STATE ---
 let currentSearchEngine = 'google';
 let calendarDisplayDate = new Date();
-let allUserEvents = []; // Cache for calendar events to prevent re-fetching
+let allUserEvents = []; 
 const USER_ID = '12345678-12321-1234-1234567890ab'; 
-let linkIdsToDelete = []; // For settings editor
-let quillEditor; // To hold the editor instance
-let saveTimeout; // To manage auto-saving
+let linkIdsToDelete = []; 
+let quillEditor;
+let saveTimeout;
 let sortableInstance;
 
 // --- INITIALIZATION ---
 async function init() {
-    applySavedTheme(); // This is now the first thing to run
+    applySavedTheme(); 
     updateClock();
     setInterval(updateClock, 1000);
-    updateDateDisplay(); // Renders calendar for the current month
+    updateDateDisplay(); 
     updateQuote();
     setInterval(updateQuote, 10000);
     
@@ -138,20 +131,14 @@ function setupEventListeners() {
         calendarDisplayDate.setMonth(calendarDisplayDate.getMonth() + 1);
         updateDateDisplay();
     });
-    // Settings Modal Listeners
-    if (settingsIcon) settingsIcon.addEventListener('click', openQuickLinksEditor);
+
+    // Settings Menu and Modal Listeners
+    if (editQuicklinksBtn) editQuicklinksBtn.addEventListener('click', openQuickLinksEditor);
+    if (themeSelectBtn) themeSelectBtn.addEventListener('click', () => themeModal.classList.remove('hidden'));
+    
     if (closeSettingsBtn) closeSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
     if (settingsModal) settingsModal.addEventListener('click', (e) => { if (e.target === settingsModal) settingsModal.classList.add('hidden'); });
     if (saveQuickLinksBtn) saveQuickLinksBtn.addEventListener('click', saveQuickLinks);
-
-    if (editQuicklinksBtn) editQuicklinksBtn.addEventListener('click', openQuickLinksEditor);
-    if (themeSelectBtn) themeSelectBtn.addEventListener('click', () => themeModal.classList.remove('hidden'));
-    if (closeThemeBtn) closeThemeBtn.addEventListener('click', () => themeModal.classList.add('hidden'));
-    if (themeModal) themeModal.addEventListener('click', (e) => { if (e.target === themeModal) themeModal.classList.add('hidden'); });
-    if (setNormalThemeBtn) setNormalThemeBtn.addEventListener('click', () => applyTheme({ type: 'normal' }));
-    if (setDynamicThemeBtn) setDynamicThemeBtn.addEventListener('click', () => applyTheme({ type: 'dynamic' }));
-
-
     
     // Add Link Modal Listeners
     if (openAddLinkModalBtn) openAddLinkModalBtn.addEventListener('click', handleAddLinkModalOpen);
@@ -163,6 +150,12 @@ function setupEventListeners() {
     });
     if (addNewLinkBtn) addNewLinkBtn.addEventListener('click', handleAddNewLink);
 
+    // Theme Modal Listeners
+    if (closeThemeBtn) closeThemeBtn.addEventListener('click', () => themeModal.classList.add('hidden'));
+    if (themeModal) themeModal.addEventListener('click', (e) => { if (e.target === themeModal) themeModal.classList.add('hidden'); });
+    if (setNormalThemeBtn) setNormalThemeBtn.addEventListener('click', () => applyTheme({ type: 'normal' }));
+    if (setDynamicThemeBtn) setDynamicThemeBtn.addEventListener('click', () => applyTheme({ type: 'dynamic' }));
+
     // Editor Listener
     if(saveNoteBtn) saveNoteBtn.addEventListener('click', saveNote);
 }
@@ -170,12 +163,12 @@ function setupEventListeners() {
 // --- THEME ---
 function applySavedTheme() {
     const savedTheme = JSON.parse(localStorage.getItem('themeConfig')) || { type: 'normal', mode: 'light' };
-    applyTheme(savedTheme, true); // Apply theme without fetching a new image on initial load
+    applyTheme(savedTheme, true);
 }
 
 function applyTheme(config, isInitialLoad = false) {
-    const currentMode = document.body.getAttribute('data-theme');
-    const newConfig = { ...config, mode: config.mode || currentMode || 'light' };
+    const currentConfig = JSON.parse(localStorage.getItem('themeConfig')) || { type: 'normal', mode: 'light' };
+    const newConfig = { ...currentConfig, ...config };
 
     localStorage.setItem('themeConfig', JSON.stringify(newConfig));
 
@@ -184,14 +177,17 @@ function applyTheme(config, isInitialLoad = false) {
 
     if (newConfig.type === 'dynamic') {
         document.body.classList.add('dynamic-theme');
-        if (!isInitialLoad) { // Only fetch a new image when the theme is actively changed
+        const today = new Date().toDateString();
+        const lastFetchDate = localStorage.getItem('bgFetchDate');
+
+        if (!isInitialLoad || lastFetchDate !== today) {
             fetchAndSetBackgroundImage(newConfig.mode);
-        } else { // On initial load, use the cached image
+        } else {
             const cachedImage = localStorage.getItem('dynamicBg');
             if (cachedImage) {
                 document.body.style.backgroundImage = `url(${cachedImage})`;
             } else {
-                fetchAndSetBackgroundImage(newConfig.mode); // Fetch if no cache
+                fetchAndSetBackgroundImage(newConfig.mode);
             }
         }
     } else { // Normal theme
@@ -199,9 +195,8 @@ function applyTheme(config, isInitialLoad = false) {
         document.body.style.backgroundImage = 'none';
     }
     
-    themeModal.classList.add('hidden');
+    if(themeModal) themeModal.classList.add('hidden');
 }
-
 
 function toggleTheme() {
     const currentConfig = JSON.parse(localStorage.getItem('themeConfig')) || { type: 'normal', mode: 'light' };
@@ -213,12 +208,12 @@ async function fetchAndSetBackgroundImage(mode) {
     const query = mode === 'dark' ? 'dark,nature' : 'light,nature';
     const imageUrl = `https://source.unsplash.com/random/1920x1080/?${query}`;
     
-    // Cache the image URL and the date it was fetched
     localStorage.setItem('dynamicBg', imageUrl);
     localStorage.setItem('bgFetchDate', new Date().toDateString());
 
     document.body.style.backgroundImage = `url(${imageUrl})`;
 }
+
 
 // Check if a new day has started to fetch a new background
 function checkNewDay() {
