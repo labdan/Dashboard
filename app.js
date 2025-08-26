@@ -512,39 +512,46 @@ async function loadQuickLinks() {
 
     links.forEach(link => {
         try {
-            // **REMOVED FONT AWESOME LOGIC**
-            let imgSrc = link.icon_url; 
-            
-            if (!imgSrc && link.url) {
+            let iconSrc;
+            const fallbackSrc = 'nostockimg.png';
+
+            // If it's a parent link (no URL), use the local icon convention.
+            if (!link.url) {
+                const iconName = link.name.toLowerCase().replace(/\s+/g, '');
+                iconSrc = `${iconName}.ico`;
+            } 
+            // Otherwise, it's a child link, so fetch its favicon.
+            else {
                 try {
                     const hostname = new URL(link.url).hostname;
-                    imgSrc = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
+                    iconSrc = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
                 } catch (e) {
-                    // Fails silently, fallback will be used
+                    iconSrc = fallbackSrc; // Use fallback if URL is invalid
                 }
             }
-            
-            const finalSrc = imgSrc || 'nostockimg.png';
-            const fallbackSrc = 'nostockimg.png';
-            const iconHTML = `<img src="${finalSrc}" alt="${link.name} icon" onerror="this.onerror=null; this.src='${fallbackSrc}'">`;
 
+            const iconHTML = `<img src="${iconSrc}" alt="${link.name} icon" onerror="this.onerror=null; this.src='${fallbackSrc}'">`;
+            
             const childLinks = subLinks.filter(sub => sub.parent_id === link.id);
 
+            // This part handles the dropdown menu for parent links
             if (childLinks.length > 0) {
                 const linkItemWrapper = document.createElement('div');
                 linkItemWrapper.className = 'link-item';
                 const subLinksHTML = childLinks.map(sub => {
-                    let faviconUrl = 'nostockimg.png';
+                    let faviconUrl = fallbackSrc;
                     try {
                         const hostname = new URL(sub.url).hostname;
                         faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
                     } catch (e) { console.error(`Invalid URL for sub-link '${sub.name}': ${sub.url}`); }
                     
-                    return `<a href="${sub.url}" class="link-item" target="_blank" rel="noopener noreferrer" title="${sub.name}"><div class="link-icon"><img src="${faviconUrl}" alt="${sub.name} icon" onerror="this.onerror=null;this.src='nostockimg.png';"></div><span class="link-name">${sub.name}</span></a>`;
+                    return `<a href="${sub.url}" class="link-item" target="_blank" rel="noopener noreferrer" title="${sub.name}"><div class="link-icon"><img src="${faviconUrl}" alt="${sub.name} icon" onerror="this.onerror=null;this.src='${fallbackSrc}';"></div><span class="link-name">${sub.name}</span></a>`;
                 }).join('');
                 linkItemWrapper.innerHTML = `<div class="link-icon">${iconHTML}</div><span class="link-name">${link.name}</span><div class="popup-menu">${subLinksHTML}</div>`;
                 quickLinksContainer.appendChild(linkItemWrapper);
-            } else {
+            } 
+            // This part handles direct links that are not parents
+            else {
                 const anchor = document.createElement('a');
                 anchor.className = 'link-item';
                 anchor.href = link.url;
@@ -580,10 +587,10 @@ function addQuickLinkRow(link = {}) {
     row.className = 'quick-link-edit-row';
     row.dataset.id = link.id || `new-${Date.now()}`;
     
+    // **REMOVED icon_url input**
     row.innerHTML = `
         <input type="text" class="ql-input" data-field="name" placeholder="Name" value="${link.name || ''}">
-        <input type="text" class="ql-input" data-field="url" placeholder="URL" value="${link.url || ''}">
-        <input type="text" class="ql-input" data-field="icon_url" placeholder="Icon URL (optional)" value="${link.icon_url || ''}">
+        <input type="text" class="ql-input" data-field="url" placeholder="URL (optional for parent)" value="${link.url || ''}">
         <input type="number" class="ql-input ql-input-small" data-field="sort_order" placeholder="Order" value="${link.sort_order || '0'}">
         <button class="delete-link-btn"><i class="fas fa-trash"></i></button>
     `;
@@ -624,11 +631,10 @@ async function saveQuickLinks() {
         const id = row.dataset.id;
         const linkData = {
             name: row.querySelector('[data-field="name"]').value,
-            url: row.querySelector('[data-field="url"]').value,
-            icon_url: row.querySelector('[data-field="icon_url"]').value,
+            url: row.querySelector('[data-field="url"]').value || null, // Send null if empty
             sort_order: parseInt(row.querySelector('[data-field="sort_order"]').value) || 0,
         };
-        // **FIX: Only include the ID for existing items.**
+        
         if (!id.startsWith('new-')) {
             linkData.id = parseInt(id);
         }
