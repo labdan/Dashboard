@@ -44,6 +44,7 @@ const userAvatarElement = document.getElementById('user-avatar');
 const userNameElement = document.getElementById('user-name');
 
 // Settings Menu and Modals
+const settingsIcon = document.querySelector('.settings-icon');
 const editQuicklinksBtn = document.getElementById('edit-quicklinks-btn');
 const themeSelectBtn = document.getElementById('theme-select-btn');
 const settingsModal = document.getElementById('settings-modal');
@@ -656,7 +657,6 @@ async function loadQuickLinks() {
 }
 
 // --- QUICK LINKS EDITOR ---
-
 async function handleAddLinkModalOpen() {
     const { data, error } = await supabaseClient.from('quick_links').select('id, name').is('url', null).order('sort_order');
     
@@ -860,7 +860,7 @@ async function saveQuickLinks() {
             } else if (!url && !isNew) {
                 lastParentId = id; 
             } else {
-                lastParentId = null;
+                lastParentId = null; 
             }
             
             if (row.classList.contains('is-child')) {
@@ -1116,4 +1116,3 @@ function handleAuthCallback() {
 // --- START THE APP ---
 handleAuthCallback();
 init();
-}
