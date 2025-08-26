@@ -637,6 +637,11 @@ header {
   overflow: hidden;
 }
 
+/* FIX: This will make widgets in the same column stretch to fill available height */
+.left-column-widgets > .widget, .right-column-widgets > .widget {
+    flex-grow: 1;
+}
+
 .widget h3 {
     font-size: 1rem;
     margin-bottom: 10px;

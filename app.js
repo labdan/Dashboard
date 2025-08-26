@@ -349,6 +349,8 @@ function updateWeatherUI(data) {
 
 // --- GOOGLE CALENDAR ---
 async function loadUpcomingEvents() {
+    // This function now only fetches data and caches it.
+    // The rendering is handled by other functions to avoid re-fetching on month change.
     eventsContainer.innerHTML = '<p>Loading events...</p>';
     try {
         const accessToken = localStorage.getItem('google_access_token');
@@ -499,9 +501,15 @@ async function loadQuickLinks() {
 
     links.forEach(link => {
         try {
-            const iconHTML = link.icon_url && (link.icon_url.startsWith('fas') || link.icon_url.startsWith('fab'))
-                ? `<i class="${link.icon_url}"></i>`
-                : `<img src="${link.icon_url || 'https://www.google.com/favicon.ico'}" alt="${link.name} icon" onerror="this.src='https://www.google.com/favicon.ico'">`;
+            let iconHTML = '';
+            // Explicitly handle Font Awesome vs. Image URL
+            if (link.icon_url && (link.icon_url.startsWith('fas ') || link.icon_url.startsWith('fab '))) {
+                iconHTML = `<i class="${link.icon_url}"></i>`;
+            } else {
+                // Fallback for image URLs or null/empty values
+                const imgSrc = link.icon_url || 'https://www.google.com/s2/favicons?domain=google.com&sz=32';
+                iconHTML = `<img src="${imgSrc}" alt="${link.name} icon" onerror="this.src='https://www.google.com/s2/favicons?domain=google.com&sz=32'">`;
+            }
 
             const childLinks = subLinks.filter(sub => sub.parent_id === link.id);
 
@@ -509,7 +517,7 @@ async function loadQuickLinks() {
                 const linkItemWrapper = document.createElement('div');
                 linkItemWrapper.className = 'link-item';
                 const subLinksHTML = childLinks.map(sub => {
-                    let faviconUrl = 'https://www.google.com/favicon.ico';
+                    let faviconUrl = 'https://www.google.com/s2/favicons?domain=google.com&sz=32';
                     try {
                         // This can throw an error if sub.url is not a valid URL
                         faviconUrl = `https://www.google.com/s2/favicons?domain=${new URL(sub.url).hostname}&sz=32`;
