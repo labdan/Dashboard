@@ -179,7 +179,7 @@ function applyTheme(config, isInitialLoad = false) {
         document.body.classList.add('dynamic-theme');
         const today = new Date().toDateString();
         const lastFetchDate = localStorage.getItem('bgFetchDate');
-
+        
         if (!isInitialLoad || lastFetchDate !== today) {
             fetchAndSetBackgroundImage(newConfig.mode);
         } else {
@@ -193,6 +193,7 @@ function applyTheme(config, isInitialLoad = false) {
     } else { // Normal theme
         document.body.classList.remove('dynamic-theme');
         document.body.style.backgroundImage = 'none';
+        document.body.style.backgroundColor = ''; // Reset background color
     }
     
     if(themeModal) themeModal.classList.add('hidden');
@@ -205,16 +206,25 @@ function toggleTheme() {
 }
 
 async function fetchAndSetBackgroundImage(mode) {
-    const query = mode === 'dark' ? 'dark,nature' : 'light,nature';
-    const imageUrl = `https://source.unsplash.com/random/1920x1080/?${query}`;
-    
-    localStorage.setItem('dynamicBg', imageUrl);
-    localStorage.setItem('bgFetchDate', new Date().toDateString());
+    try {
+        const query = mode === 'dark' ? 'dark,nature' : 'light,nature';
+        const response = await fetch(`/.netlify/functions/get-background-image?query=${query}`);
+        if (!response.ok) throw new Error('Failed to fetch background image from server function.');
 
-    document.body.style.backgroundImage = `url(${imageUrl})`;
+        const data = await response.json();
+        const imageUrl = data.imageUrl;
+
+        if (imageUrl) {
+            localStorage.setItem('dynamicBg', imageUrl);
+            localStorage.setItem('bgFetchDate', new Date().toDateString());
+            document.body.style.backgroundImage = `url(${imageUrl})`;
+        }
+    } catch (error) {
+        console.error("Could not set dynamic background:", error);
+    }
 }
+setInterval(() => checkNewDay(), 5 * 60 * 1000);
 
-// Check if a new day has started to fetch a new background
 function checkNewDay() {
     const lastFetchDate = localStorage.getItem('bgFetchDate');
     const today = new Date().toDateString();

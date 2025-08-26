@@ -1434,7 +1434,9 @@ body.dynamic-theme {
 }
 
 /* --- Styles for Dynamic "Liquid Glass" Theme --- */
+
 body.dynamic-theme {
+    background-color: transparent; /* Add this line */
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
