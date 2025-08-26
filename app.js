@@ -299,9 +299,10 @@ async function handleTodoSubmit(e) {
     e.preventDefault();
     const taskText = todoInput.value.trim();
     if (taskText) {
-        const { error } = await supabaseClient.from('todos').insert({ task: taskText, user_id: USER_ID });
+        // **THE FIX**: Removed user_id from the insert object
+        const { error } = await supabaseClient.from('todos').insert({ task: taskText });
         if (error) {
-            console.error('Error adding todo:', error);
+            console.error('Error adding todo:', error); // Improved logging
             alert('Could not add task. See console for details.');
         } else {
             todoInput.value = '';
@@ -608,10 +609,9 @@ async function openQuickLinksEditor() {
         handle: '.drag-handle',
         ghostClass: 'sortable-ghost',
         onEnd: function (evt) {
-            const itemEl = evt.item; // The dragged item
+            const itemEl = evt.item;
             const previousEl = itemEl.previousElementSibling;
             
-            // Check if the item was dropped under a parent
             if (previousEl && previousEl.querySelector('[data-field="url"]').value === '') {
                 itemEl.classList.add('is-child');
             } else {
@@ -657,16 +657,15 @@ async function saveQuickLinks() {
         }
 
         const rows = Array.from(quickLinksEditor.querySelectorAll('.quick-link-edit-row'));
-        const newParents = {}; // To store the new IDs of newly created parents
+        const newParents = {};
 
-        // FIRST PASS: Insert new parent items to get their IDs
         const newParentInserts = rows
             .filter(row => row.dataset.id.startsWith('new-') && !row.querySelector('[data-field="url"]').value)
-            .map((row, index) => ({
+            .map(row => ({
                 temp_id: row.dataset.id,
                 name: row.querySelector('[data-field="name"]').value,
                 url: null,
-                sort_order: rows.indexOf(row) // Use the overall index for now
+                sort_order: rows.indexOf(row)
             }));
 
         if (newParentInserts.length > 0) {
@@ -682,7 +681,6 @@ async function saveQuickLinks() {
             });
         }
 
-        // SECOND PASS: Prepare all other upserts
         const upsertData = [];
         let lastParentId = null;
 
@@ -691,7 +689,6 @@ async function saveQuickLinks() {
             const url = row.querySelector('[data-field="url"]').value || null;
             const isNew = id.startsWith('new-');
             
-            // Skip new parents as they've already been inserted
             if (isNew && !url) return;
 
             const linkData = {
@@ -702,30 +699,25 @@ async function saveQuickLinks() {
                 parent_id: null
             };
 
-            // Determine parentage
-            if (!url) { // This row is an existing parent
-                lastParentId = id;
-            } else if (row.classList.contains('is-child')) {
-                const potentialParentRow = row.previousElementSibling;
-                if(potentialParentRow) {
-                    const parentUrl = potentialParentRow.querySelector('[data-field="url"]').value;
-                    if(!parentUrl) { // It's a parent
-                        let parentId = potentialParentRow.dataset.id;
-                        if(parentId.startsWith('new-')) {
-                            lastParentId = newParents[parentId];
-                        } else {
-                            lastParentId = parentId;
-                        }
+            const previousEl = row.previousElementSibling;
+            if (row.classList.contains('is-child') && previousEl) {
+                const prevUrl = previousEl.querySelector('[data-field="url"]').value;
+                if (!prevUrl) { // Previous item is a parent
+                    let parentId = previousEl.dataset.id;
+                    if (parentId.startsWith('new-')) {
+                        lastParentId = newParents[parentId];
+                    } else {
+                        lastParentId = parentId;
                     }
                 }
-                linkData.parent_id = lastParentId;
-            } else { // This is a top-level link
-                lastParentId = null;
+                 linkData.parent_id = lastParentId;
+            } else {
+                lastParentId = isNew ? null : id;
             }
-
+            
             upsertData.push(linkData);
         });
-
+        
         if (upsertData.length > 0) {
             const { error: upsertError } = await supabaseClient.from('quick_links').upsert(upsertData);
             if (upsertError) throw upsertError;
@@ -745,6 +737,7 @@ async function saveQuickLinks() {
     settingsModal.classList.add('hidden');
     await loadQuickLinks();
 }
+
 
 // --- EDITOR ---
 async function initializeEditor() {
