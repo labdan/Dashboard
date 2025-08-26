@@ -151,13 +151,14 @@ async function checkLoginStatus() {
             loadLoggedInContent();
         } else if (response.status === 401) {
             await refreshAccessToken();
+            // After refreshing, check status again
             await checkLoginStatus(); 
         } else {
             throw new Error('Failed to fetch user info');
         }
     } catch (error) {
         console.error("Login check failed:", error);
-        handleLogout();
+        handleLogout(); // Gracefully log out on any failure
     }
 }
 
@@ -522,18 +523,16 @@ async function loadQuickLinks() {
             let iconSrc;
             const fallbackSrc = 'nostockimg.png';
 
-            // If it's a parent link (no URL), use the local icon convention.
             if (!link.url) {
                 const iconName = link.name.toLowerCase().replace(/\s+/g, '');
                 iconSrc = `${iconName}.ico`;
             } 
-            // Otherwise, it's a child link, so fetch its favicon.
             else {
                 try {
                     const hostname = new URL(link.url).hostname;
                     iconSrc = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
                 } catch (e) {
-                    iconSrc = fallbackSrc; // Use fallback if URL is invalid
+                    iconSrc = fallbackSrc;
                 }
             }
 
@@ -629,7 +628,6 @@ async function saveQuickLinks() {
         }
     }
 
-    // Next, separate items to be updated from items to be inserted
     const rows = quickLinksEditor.querySelectorAll('.quick-link-edit-row');
     const updateData = [];
     const insertData = [];
@@ -650,19 +648,18 @@ async function saveQuickLinks() {
         }
     });
 
-    // Perform the database operations
     try {
         if (updateData.length > 0) {
-            const { error } = await supabaseClient.from('quick_links').update(updateData).in('id', updateData.map(d => d.id));
+            const { error } = await supabaseClient.from('quick_links').upsert(updateData);
             if (error) throw error;
         }
         if (insertData.length > 0) {
             const { error } = await supabaseClient.from('quick_links').insert(insertData);
             if (error) throw error;
         }
-    } catch (upsertError) {
+    } catch (error) {
         alert('Error saving links. See console for details.');
-        console.error(upsertError);
+        console.error(error); // This will log the actual error to the console
         saveQuickLinksBtn.textContent = 'Save Changes';
         saveQuickLinksBtn.disabled = false;
         return;
