@@ -42,7 +42,6 @@ const logoutBtn = document.getElementById('logout-btn');
 const userProfileElement = document.getElementById('user-profile');
 const userAvatarElement = document.getElementById('user-avatar');
 const userNameElement = document.getElementById('user-name');
-const settingsIcon = document.querySelector('.settings-icon');
 
 // Settings Menu and Modals
 const editQuicklinksBtn = document.getElementById('edit-quicklinks-btn');
@@ -214,7 +213,6 @@ async function fetchAndSetBackgroundImage(mode) {
     document.body.style.backgroundImage = `url(${imageUrl})`;
 }
 
-
 // Check if a new day has started to fetch a new background
 function checkNewDay() {
     const lastFetchDate = localStorage.getItem('bgFetchDate');
@@ -226,9 +224,8 @@ function checkNewDay() {
         }
     }
 }
-
-// Check for a new day every 5 minutes
 setInterval(checkNewDay, 5 * 60 * 1000);
+
 // --- AUTHENTICATION ---
 async function checkLoginStatus() {
     const accessToken = localStorage.getItem('google_access_token');
@@ -248,14 +245,13 @@ async function checkLoginStatus() {
             loadLoggedInContent();
         } else if (response.status === 401) {
             await refreshAccessToken();
-            // After refreshing, check status again
             await checkLoginStatus(); 
         } else {
             throw new Error('Failed to fetch user info');
         }
     } catch (error) {
         console.error("Login check failed:", error);
-        handleLogout(); // Gracefully log out on any failure
+        handleLogout();
     }
 }
 
@@ -309,25 +305,10 @@ function loadLoggedInContent() {
     loadBenzingaFeed();
     loadTodos();
     subscribeToTodoChanges();
-    loadUpcomingEvents(); // Fetches events and renders calendar
-    initializeEditor(); // Initialize the new editor
+    loadUpcomingEvents();
+    initializeEditor(); 
 }
 
-
-// --- THEME ---
-function applySavedTheme() {
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    document.body.setAttribute('data-theme', savedTheme);
-    themeToggleBtn.innerHTML = savedTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
-}
-
-function toggleTheme() {
-    const currentTheme = document.body.getAttribute('data-theme');
-    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-    document.body.setAttribute('data-theme', newTheme);
-    localStorage.setItem('theme', newTheme);
-    themeToggleBtn.innerHTML = newTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
-}
 
 // --- NEWS FEEDS ---
 async function loadSideNews() {
@@ -486,7 +467,7 @@ async function loadUpcomingEvents() {
             throw new Error(`Failed to fetch events: ${response.statusText}`);
         }
         const { events, holidays } = await response.json();
-        allUserEvents = [...events, ...holidays]; // Cache the events
+        allUserEvents = [...events, ...holidays]; 
         renderUpcomingEvents(allUserEvents);
         renderMiniCalendar(allUserEvents, calendarDisplayDate);
     } catch (error) {
@@ -536,7 +517,7 @@ function updateClock() {
 
 function updateDateDisplay() {
     dateElement.textContent = calendarDisplayDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-    renderMiniCalendar(allUserEvents, calendarDisplayDate); // Re-render calendar with new date using cached events
+    renderMiniCalendar(allUserEvents, calendarDisplayDate); 
 }
 
 function renderMiniCalendar(events = [], displayDate) {
@@ -589,10 +570,9 @@ function handleSearch() {
         };
         window.open(searchUrls[currentSearchEngine], '_blank');
 
-        // **NEW**: Automatically rotate to the next search engine
         const engines = Array.from(searchEngineIcons).map(icon => icon.dataset.engine);
         const currentIndex = engines.indexOf(currentSearchEngine);
-        const nextIndex = (currentIndex + 1) % engines.length; // Wrap around
+        const nextIndex = (currentIndex + 1) % engines.length; 
         setSearchEngine(engines[nextIndex]);
     }
 }
@@ -677,7 +657,6 @@ async function loadQuickLinks() {
 
 // --- QUICK LINKS EDITOR ---
 
-// **NEW**: Handles opening the "Add Link" modal
 async function handleAddLinkModalOpen() {
     const { data, error } = await supabaseClient.from('quick_links').select('id, name').is('url', null).order('sort_order');
     
@@ -700,7 +679,6 @@ async function handleAddLinkModalOpen() {
     addLinkModal.classList.remove('hidden');
 }
 
-// **NEW**: Handles saving from the "Add Link" modal
 async function handleAddNewLink() {
     const name = document.getElementById('new-link-name').value;
     const url = document.getElementById('new-link-url').value || null;
@@ -718,7 +696,7 @@ async function handleAddNewLink() {
         .limit(1)
         .single();
     
-    if (maxOrderError && maxOrderError.code !== 'PGRST116') { // Ignore "no rows" error
+    if (maxOrderError && maxOrderError.code !== 'PGRST116') { 
         alert('Could not determine sort order.');
         console.error(maxOrderError);
         return;
@@ -829,48 +807,71 @@ async function saveQuickLinks() {
         }
 
         const rows = Array.from(quickLinksEditor.querySelectorAll('.quick-link-edit-row'));
+        const newParentRows = rows.filter(row => row.dataset.id.startsWith('new-') && !row.querySelector('[data-field="url"]').value);
+        const newParentData = newParentRows.map(row => ({
+            temp_id: row.dataset.id,
+            name: row.querySelector('[data-field="name"]').value,
+            url: null
+        }));
+        
+        const newParentIdMap = new Map();
+        if (newParentData.length > 0) {
+            const { data: insertedParents, error: parentInsertError } = await supabaseClient
+                .from('quick_links')
+                .insert(newParentData.map(p => ({ name: p.name, url: p.url })))
+                .select();
+            
+            if (parentInsertError) throw parentInsertError;
+
+            insertedParents.forEach((p, i) => {
+                newParentIdMap.set(newParentData[i].temp_id, p.id);
+            });
+        }
+
         const upsertData = [];
         let lastParentId = null;
 
         rows.forEach((row, index) => {
             const id = row.dataset.id;
             const url = row.querySelector('[data-field="url"]').value || null;
-            
+            const isNew = id.startsWith('new-');
+
+            if (isNew && !url) return;
+
             const linkData = {
-                id: id.startsWith('new-') ? undefined : id,
+                id: isNew ? undefined : id,
                 name: row.querySelector('[data-field="name"]').value,
                 url: url,
                 sort_order: index,
                 parent_id: null
             };
 
-            if (!url) { // This item is a parent
-                lastParentId = id.startsWith('new-') ? null : id;
-            } else if (row.classList.contains('is-child')) {
-                linkData.parent_id = lastParentId;
+            const previousEl = row.previousElementSibling;
+            if (row.classList.contains('is-child') && previousEl) {
+                const prevUrl = previousEl.querySelector('[data-field="url"]').value;
+                if (!prevUrl) { 
+                    const prevId = previousEl.dataset.id;
+                    if (prevId.startsWith('new-')) {
+                        lastParentId = newParentIdMap.get(prevId); 
+                    } else {
+                        lastParentId = prevId;
+                    }
+                }
+            } else if (!url && !isNew) {
+                lastParentId = id; 
             } else {
                 lastParentId = null;
             }
             
+            if (row.classList.contains('is-child')) {
+                linkData.parent_id = lastParentId;
+            }
+
             upsertData.push(linkData);
         });
         
-        const newParents = upsertData.filter(d => !d.url && !d.id);
-        const otherItems = upsertData.filter(d => d.url || d.id);
-
-        if (newParents.length > 0) {
-            const { data: insertedParents, error: parentError } = await supabaseClient
-                .from('quick_links')
-                .insert(newParents.map(p => ({ name: p.name, sort_order: p.sort_order, url: null })))
-                .select();
-            if (parentError) throw parentError;
-
-            // This part is complex and a full solution would require re-linking children.
-            // For now, this will save new parents but new children of new parents won't link correctly in one go.
-        }
-
-        if (otherItems.length > 0) {
-            const { error: upsertError } = await supabaseClient.from('quick_links').upsert(otherItems);
+        if (upsertData.length > 0) {
+            const { error: upsertError } = await supabaseClient.from('quick_links').upsert(upsertData);
             if (upsertError) throw upsertError;
         }
 
@@ -1115,3 +1116,4 @@ function handleAuthCallback() {
 // --- START THE APP ---
 handleAuthCallback();
 init();
+}
