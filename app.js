@@ -77,6 +77,7 @@ const USER_ID = '12345678-12321-1234-1234567890ab';
 let linkIdsToDelete = []; // For settings editor
 let quillEditor; // To hold the editor instance
 let saveTimeout; // To manage auto-saving
+let sortableInstance; // To manage the drag-and-drop list
 
 // --- INITIALIZATION ---
 async function init() {
@@ -151,14 +152,13 @@ async function checkLoginStatus() {
             loadLoggedInContent();
         } else if (response.status === 401) {
             await refreshAccessToken();
-            // After refreshing, check status again
             await checkLoginStatus(); 
         } else {
             throw new Error('Failed to fetch user info');
         }
     } catch (error) {
         console.error("Login check failed:", error);
-        handleLogout(); // Gracefully log out on any failure
+        handleLogout();
     }
 }
 
@@ -573,6 +573,9 @@ async function loadQuickLinks() {
 
 // --- QUICK LINKS EDITOR ---
 async function openQuickLinksEditor() {
+    if (sortableInstance) {
+        sortableInstance.destroy();
+    }
     const { data, error } = await supabaseClient.from('quick_links').select('*').order('sort_order');
     if (error) {
         alert('Could not load links for editing. See console for details.');
@@ -583,6 +586,13 @@ async function openQuickLinksEditor() {
     linkIdsToDelete = [];
     quickLinksEditor.innerHTML = '';
     data.forEach(link => addQuickLinkRow(link));
+
+    sortableInstance = new Sortable(quickLinksEditor, {
+        animation: 150,
+        handle: '.drag-handle',
+        ghostClass: 'sortable-ghost',
+    });
+
     settingsModal.classList.remove('hidden');
 }
 
@@ -592,9 +602,9 @@ function addQuickLinkRow(link = {}) {
     row.dataset.id = link.id || `new-${Date.now()}`;
     
     row.innerHTML = `
+        <i class="fas fa-grip-vertical drag-handle"></i>
         <input type="text" class="ql-input" data-field="name" placeholder="Name" value="${link.name || ''}">
         <input type="text" class="ql-input" data-field="url" placeholder="URL (optional for parent)" value="${link.url || ''}">
-        <input type="number" class="ql-input ql-input-small" data-field="sort_order" placeholder="Order" value="${link.sort_order || '0'}">
         <button class="delete-link-btn"><i class="fas fa-trash"></i></button>
     `;
 
@@ -619,34 +629,27 @@ async function saveQuickLinks() {
         }
 
         const rows = quickLinksEditor.querySelectorAll('.quick-link-edit-row');
-        const updateData = [];
-        const insertData = [];
-
-        rows.forEach(row => {
+        const upsertData = [];
+        
+        rows.forEach((row, index) => {
             const id = row.dataset.id;
             const linkData = {
                 name: row.querySelector('[data-field="name"]').value,
                 url: row.querySelector('[data-field="url"]').value || null,
-                sort_order: parseInt(row.querySelector('[data-field="sort_order"]').value) || 0,
+                sort_order: index // The new sort order is its position in the list
             };
 
-            if (id.startsWith('new-')) {
-                insertData.push(linkData);
-            } else {
-                linkData.id = id; // Keep the UUID as a string
-                updateData.push(linkData);
+            if (!id.startsWith('new-')) {
+                linkData.id = id;
             }
+            upsertData.push(linkData);
         });
 
-        if (updateData.length > 0) {
-            const { error: updateError } = await supabaseClient.from('quick_links').upsert(updateData);
-            if (updateError) throw updateError;
+        if (upsertData.length > 0) {
+            const { error: upsertError } = await supabaseClient.from('quick_links').upsert(upsertData);
+            if (upsertError) throw upsertError;
         }
 
-        if (insertData.length > 0) {
-            const { error: insertError } = await supabaseClient.from('quick_links').insert(insertData);
-            if (insertError) throw insertError;
-        }
     } catch (error) {
         alert('Error saving links. See console for details.');
         console.error("An error occurred while saving quick links:", error);

@@ -1210,3 +1210,24 @@ header {
 [data-theme="dark"] .ql-snow .ql-stroke.ql-fill {
     fill: var(--secondary-color);
 }
+/* --- Styles for Draggable Quick Links --- */
+.quick-link-edit-row {
+    align-items: center; /* Vertically align items in the row */
+}
+
+.drag-handle {
+    cursor: grab;
+    color: var(--secondary-color);
+    margin-right: 15px;
+    font-size: 1.2rem;
+}
+
+.drag-handle:active {
+    cursor: grabbing;
+}
+
+/* This class is added by Sortable.js while an item is being dragged */
+.sortable-ghost {
+    opacity: 0.4;
+    background-color: var(--primary-color) !important;
+}
