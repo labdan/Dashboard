@@ -31,6 +31,15 @@ const themeToggleBtn = document.getElementById('theme-toggle');
 const sideNewsContainer = document.getElementById('side-news-container');
 const benzingaFeedContainer = document.getElementById('benzinga-feed-container');
 const eventsContainer = document.getElementById('events-container');
+const settingsIcon = document.querySelector('.settings-icon');
+const editQuicklinksBtn = document.getElementById('edit-quicklinks-btn');
+const themeSelectBtn = document.getElementById('theme-select-btn');
+
+// Theme Modal DOM Elements
+const themeModal = document.getElementById('theme-modal');
+const closeThemeBtn = document.getElementById('close-theme-btn');
+const setNormalThemeBtn = document.getElementById('set-normal-theme-btn');
+const setDynamicThemeBtn = document.getElementById('set-dynamic-theme-btn');
 
 // Main Layout Elements
 const mainDashboard = document.getElementById('main-dashboard');
@@ -88,7 +97,7 @@ let sortableInstance;
 
 // --- INITIALIZATION ---
 async function init() {
-    applySavedTheme();
+    applySavedTheme(); // This is now the first thing to run
     updateClock();
     setInterval(updateClock, 1000);
     updateDateDisplay(); // Renders calendar for the current month
@@ -134,6 +143,15 @@ function setupEventListeners() {
     if (closeSettingsBtn) closeSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
     if (settingsModal) settingsModal.addEventListener('click', (e) => { if (e.target === settingsModal) settingsModal.classList.add('hidden'); });
     if (saveQuickLinksBtn) saveQuickLinksBtn.addEventListener('click', saveQuickLinks);
+
+    if (editQuicklinksBtn) editQuicklinksBtn.addEventListener('click', openQuickLinksEditor);
+    if (themeSelectBtn) themeSelectBtn.addEventListener('click', () => themeModal.classList.remove('hidden'));
+    if (closeThemeBtn) closeThemeBtn.addEventListener('click', () => themeModal.classList.add('hidden'));
+    if (themeModal) themeModal.addEventListener('click', (e) => { if (e.target === themeModal) themeModal.classList.add('hidden'); });
+    if (setNormalThemeBtn) setNormalThemeBtn.addEventListener('click', () => applyTheme({ type: 'normal' }));
+    if (setDynamicThemeBtn) setDynamicThemeBtn.addEventListener('click', () => applyTheme({ type: 'dynamic' }));
+
+
     
     // Add Link Modal Listeners
     if (openAddLinkModalBtn) openAddLinkModalBtn.addEventListener('click', handleAddLinkModalOpen);
@@ -149,6 +167,73 @@ function setupEventListeners() {
     if(saveNoteBtn) saveNoteBtn.addEventListener('click', saveNote);
 }
 
+// --- THEME ---
+function applySavedTheme() {
+    const savedTheme = JSON.parse(localStorage.getItem('themeConfig')) || { type: 'normal', mode: 'light' };
+    applyTheme(savedTheme, true); // Apply theme without fetching a new image on initial load
+}
+
+function applyTheme(config, isInitialLoad = false) {
+    const currentMode = document.body.getAttribute('data-theme');
+    const newConfig = { ...config, mode: config.mode || currentMode || 'light' };
+
+    localStorage.setItem('themeConfig', JSON.stringify(newConfig));
+
+    document.body.setAttribute('data-theme', newConfig.mode);
+    themeToggleBtn.innerHTML = newConfig.mode === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+
+    if (newConfig.type === 'dynamic') {
+        document.body.classList.add('dynamic-theme');
+        if (!isInitialLoad) { // Only fetch a new image when the theme is actively changed
+            fetchAndSetBackgroundImage(newConfig.mode);
+        } else { // On initial load, use the cached image
+            const cachedImage = localStorage.getItem('dynamicBg');
+            if (cachedImage) {
+                document.body.style.backgroundImage = `url(${cachedImage})`;
+            } else {
+                fetchAndSetBackgroundImage(newConfig.mode); // Fetch if no cache
+            }
+        }
+    } else { // Normal theme
+        document.body.classList.remove('dynamic-theme');
+        document.body.style.backgroundImage = 'none';
+    }
+    
+    themeModal.classList.add('hidden');
+}
+
+
+function toggleTheme() {
+    const currentConfig = JSON.parse(localStorage.getItem('themeConfig')) || { type: 'normal', mode: 'light' };
+    currentConfig.mode = currentConfig.mode === 'dark' ? 'light' : 'dark';
+    applyTheme(currentConfig);
+}
+
+async function fetchAndSetBackgroundImage(mode) {
+    const query = mode === 'dark' ? 'dark,nature' : 'light,nature';
+    const imageUrl = `https://source.unsplash.com/random/1920x1080/?${query}`;
+    
+    // Cache the image URL and the date it was fetched
+    localStorage.setItem('dynamicBg', imageUrl);
+    localStorage.setItem('bgFetchDate', new Date().toDateString());
+
+    document.body.style.backgroundImage = `url(${imageUrl})`;
+}
+
+// Check if a new day has started to fetch a new background
+function checkNewDay() {
+    const lastFetchDate = localStorage.getItem('bgFetchDate');
+    const today = new Date().toDateString();
+    if (lastFetchDate !== today) {
+        const currentConfig = JSON.parse(localStorage.getItem('themeConfig'));
+        if (currentConfig && currentConfig.type === 'dynamic') {
+            fetchAndSetBackgroundImage(currentConfig.mode);
+        }
+    }
+}
+
+// Check for a new day every 5 minutes
+setInterval(checkNewDay, 5 * 60 * 1000);
 // --- AUTHENTICATION ---
 async function checkLoginStatus() {
     const accessToken = localStorage.getItem('google_access_token');
