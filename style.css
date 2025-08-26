@@ -1434,7 +1434,6 @@ body.dynamic-theme {
 }
 
 /* --- Styles for Dynamic "Liquid Glass" Theme --- */
-
 body.dynamic-theme {
     background-color: transparent; /* Add this line */
     background-size: cover;
@@ -1445,7 +1444,8 @@ body.dynamic-theme {
 
 .dynamic-theme .widget,
 .dynamic-theme .header-widget {
-    background-color: rgba(255, 255, 255, 0.15);
+    /* Increased white opacity for better readability in light mode */
+    background-color: rgba(255, 255, 255, 0.45); 
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -1453,10 +1453,12 @@ body.dynamic-theme {
 
 .dynamic-theme[data-theme="dark"] .widget,
 .dynamic-theme[data-theme="dark"] .header-widget {
-   background-color: rgba(0, 0, 0, 0.25);
+   /* Increased black opacity for better readability in dark mode */
+   background-color: rgba(0, 0, 0, 0.5);
    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* Text color adjustments for dynamic theme */
 .dynamic-theme[data-theme="dark"] {
     --text-color: #e9e9e9;
 }
