@@ -497,7 +497,7 @@ async function loadQuickLinks() {
     const { data, error } = await supabaseClient.from('quick_links').select('*').order('sort_order');
     
     if (error) {
-        console.error('Error fetching quick links:', error);
+        console.error('Error fetching quick links:', error.message);
         quickLinksContainer.innerHTML = `<p style="font-size: 0.8rem; opacity: 0.7;">Error: ${error.message}</p>`;
         return;
     }
@@ -513,25 +513,26 @@ async function loadQuickLinks() {
     links.forEach(link => {
         try {
             let iconHTML = '';
-            // Handle Font Awesome icons
+            // 1. Check for a Font Awesome icon in the database first.
             if (link.icon_url && (link.icon_url.startsWith('fas ') || link.icon_url.startsWith('fab '))) {
                 iconHTML = `<i class="${link.icon_url}"></i>`;
             } else {
-                // Handle image icons with corrected logic
+                // 2. If not Font Awesome, handle it as an image URL.
                 let imgSrc = link.icon_url; 
-                // If no icon_url from DB, try to generate one from the link's main URL
+                
+                // 3. If the database field is empty, THEN try to generate a favicon from the link's main URL.
                 if (!imgSrc && link.url) {
                     try {
                         const hostname = new URL(link.url).hostname;
-                        // **FIXED URL**
                         imgSrc = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
                     } catch (e) {
-                        // Fails silently if link.url is invalid, fallback will be used below
+                        // Fails silently if link.url is invalid, allowing the final fallback to be used.
                     }
                 }
                 
+                // 4. Set the final source, defaulting to the local `nostockimg.png` if all else fails.
                 const finalSrc = imgSrc || 'nostockimg.png';
-                const fallbackSrc = 'nostockimg.png';
+                const fallbackSrc = 'nostockimg.png'; // The reliable local fallback
                 iconHTML = `<img src="${finalSrc}" alt="${link.name} icon" onerror="this.onerror=null; this.src='${fallbackSrc}'">`;
             }
 
@@ -544,7 +545,6 @@ async function loadQuickLinks() {
                     let faviconUrl = 'nostockimg.png'; // Default to local fallback
                     try {
                         const hostname = new URL(sub.url).hostname;
-                        // **FIXED URL**
                         faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
                     } catch (e) { console.error(`Invalid URL for sub-link '${sub.name}': ${sub.url}`); }
                     
@@ -591,7 +591,7 @@ function addQuickLinkRow(link = {}) {
     row.innerHTML = `
         <input type="text" class="ql-input" data-field="name" placeholder="Name" value="${link.name || ''}">
         <input type="text" class="ql-input" data-field="url" placeholder="URL" value="${link.url || ''}">
-        <input type="text" class="ql-input" data-field="icon_url" placeholder="Icon URL (optional)" value="${link.icon_url || ''}">
+        <input type="text" class="ql-input" data-field="icon_url" placeholder="Icon URL or Font Awesome" value="${link.icon_url || ''}">
         <input type="number" class="ql-input ql-input-small" data-field="sort_order" placeholder="Order" value="${link.sort_order || '0'}">
         <button class="delete-link-btn"><i class="fas fa-trash"></i></button>
     `;
