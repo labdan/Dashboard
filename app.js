@@ -26,7 +26,6 @@ const quickLinksContainer = document.getElementById('quick-links');
 const todoForm = document.getElementById('todo-form');
 const todoInput = document.getElementById('todo-input');
 const todoList = document.getElementById('todo-list');
-const newsContainer = document.getElementById('news-container');
 const watchlistContainer = document.getElementById('watchlist-container');
 const themeToggleBtn = document.getElementById('theme-toggle');
 const sideNewsContainer = document.getElementById('side-news-container');
@@ -52,6 +51,10 @@ const saveQuickLinksBtn = document.getElementById('save-quick-links-btn');
 const quickLinksEditor = document.getElementById('quick-links-editor');
 const addQuickLinkBtn = document.getElementById('add-quick-link-btn');
 
+// Editor DOM Elements
+const saveNoteBtn = document.getElementById('save-note-btn');
+const saveStatus = document.getElementById('save-status');
+
 
 // Weather DOM Elements
 const weatherIconImg = document.getElementById('weather-icon-img');
@@ -72,6 +75,8 @@ let calendarDisplayDate = new Date();
 let allUserEvents = []; // Cache for calendar events to prevent re-fetching
 const USER_ID = '12345678-12321-1234-1234567890ab'; 
 let linkIdsToDelete = []; // For settings editor
+let quillEditor; // To hold the editor instance
+let saveTimeout; // To manage auto-saving
 
 // --- INITIALIZATION ---
 async function init() {
@@ -122,6 +127,9 @@ function setupEventListeners() {
     if (settingsModal) settingsModal.addEventListener('click', (e) => { if (e.target === settingsModal) settingsModal.classList.add('hidden'); });
     if (saveQuickLinksBtn) saveQuickLinksBtn.addEventListener('click', saveQuickLinks);
     if (addQuickLinkBtn) addQuickLinkBtn.addEventListener('click', () => addQuickLinkRow());
+
+    // Editor Listener
+    if(saveNoteBtn) saveNoteBtn.addEventListener('click', saveNote);
 }
 
 // --- AUTHENTICATION ---
@@ -199,13 +207,13 @@ function handleLogout() {
 function loadLoggedInContent() {
     loadQuickLinks();
     getWeather();
-    loadStockNews();
     loadStockWatchlist();
     loadSideNews();
     loadBenzingaFeed();
     loadTodos();
     subscribeToTodoChanges();
     loadUpcomingEvents(); // Fetches events and renders calendar
+    initializeEditor(); // Initialize the new editor
 }
 
 
@@ -492,7 +500,7 @@ function setSearchEngine(engine) {
     });
 }
 
-// --- QUICK LINKS (REWRITTEN FOR ROBUSTNESS) ---
+// --- QUICK LINKS ---
 async function loadQuickLinks() {
     const { data, error } = await supabaseClient.from('quick_links').select('*').order('sort_order');
     
@@ -534,7 +542,6 @@ async function loadQuickLinks() {
             
             const childLinks = subLinks.filter(sub => sub.parent_id === link.id);
 
-            // This part handles the dropdown menu for parent links
             if (childLinks.length > 0) {
                 const linkItemWrapper = document.createElement('div');
                 linkItemWrapper.className = 'link-item';
@@ -550,7 +557,6 @@ async function loadQuickLinks() {
                 linkItemWrapper.innerHTML = `<div class="link-icon">${iconHTML}</div><span class="link-name">${link.name}</span><div class="popup-menu">${subLinksHTML}</div>`;
                 quickLinksContainer.appendChild(linkItemWrapper);
             } 
-            // This part handles direct links that are not parents
             else {
                 const anchor = document.createElement('a');
                 anchor.className = 'link-item';
@@ -587,7 +593,6 @@ function addQuickLinkRow(link = {}) {
     row.className = 'quick-link-edit-row';
     row.dataset.id = link.id || `new-${Date.now()}`;
     
-    // **REMOVED icon_url input**
     row.innerHTML = `
         <input type="text" class="ql-input" data-field="name" placeholder="Name" value="${link.name || ''}">
         <input type="text" class="ql-input" data-field="url" placeholder="URL (optional for parent)" value="${link.url || ''}">
@@ -631,7 +636,7 @@ async function saveQuickLinks() {
         const id = row.dataset.id;
         const linkData = {
             name: row.querySelector('[data-field="name"]').value,
-            url: row.querySelector('[data-field="url"]').value || null, // Send null if empty
+            url: row.querySelector('[data-field="url"]').value || null,
             sort_order: parseInt(row.querySelector('[data-field="sort_order"]').value) || 0,
         };
         
@@ -661,20 +666,70 @@ async function saveQuickLinks() {
     await loadQuickLinks();
 }
 
-
-function loadStockNews() {
-    const newsData = [
-        { title: "Markets Rally on Lower Than Expected Inflation Data", date: "2h ago" },
-        { title: "Tech Giants Report Strong Quarterly Earnings", date: "4h ago" },
-        { title: "Fed Holds Interest Rates Steady, Signals Cuts", date: "6h ago" }
+// --- EDITOR ---
+async function initializeEditor() {
+    const toolbarOptions = [
+        [{ 'header': [1, 2, 3, false] }],
+        ['bold', 'italic', 'underline', 'strike'],
+        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+        [{ 'color': [] }, { 'background': [] }],
+        ['link', 'clean']
     ];
-    newsContainer.innerHTML = newsData.map(news => `
-        <div class="news-item">
-            <a href="#" class="news-title">${news.title}</a>
-            <div class="news-date">${news.date}</div>
-        </div>
-    `).join('');
+
+    quillEditor = new Quill('#editor-container', {
+        modules: {
+            toolbar: toolbarOptions
+        },
+        theme: 'snow'
+    });
+
+    // Load existing note from database
+    const { data, error } = await supabaseClient
+        .from('notes')
+        .select('content')
+        .eq('user_id', USER_ID)
+        .single();
+
+    if (error && error.code !== 'PGRST116') { // Ignore "no rows found" error
+        console.error('Error loading note:', error);
+    }
+    if (data) {
+        quillEditor.root.innerHTML = data.content;
+    }
+
+    // Auto-save on text change
+    quillEditor.on('text-change', () => {
+        if (saveTimeout) clearTimeout(saveTimeout);
+        saveStatus.textContent = 'Typing...';
+        saveTimeout = setTimeout(() => {
+            saveNote();
+        }, 2000); // Auto-save after 2 seconds of inactivity
+    });
 }
+
+async function saveNote() {
+    if (!quillEditor) return;
+
+    const content = quillEditor.root.innerHTML;
+    saveStatus.textContent = 'Saving...';
+
+    const { error } = await supabaseClient
+        .from('notes')
+        .upsert({
+            id: 1, // Using a fixed ID for simplicity, assuming one note per user
+            user_id: USER_ID,
+            content: content,
+            updated_at: new Date().toISOString()
+        });
+
+    if (error) {
+        console.error('Error saving note:', error);
+        saveStatus.textContent = 'Error!';
+    } else {
+        saveStatus.textContent = `Saved at ${new Date().toLocaleTimeString()}`;
+    }
+}
+
 
 // --- STOCK WATCHLIST ---
 async function getInstrumentDictionary() {

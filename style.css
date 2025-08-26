@@ -1153,3 +1153,60 @@ header {
     background-color: var(--secondary-color);
     color: white;
 }
+/* --- Styles for the new Editor Widget --- */
+#editor-widget {
+    padding: 0; /* Remove default widget padding */
+    display: flex;
+    flex-direction: column;
+}
+
+#editor-container {
+    flex-grow: 1; /* Allow the editor to fill the available space */
+    height: 100%; /* Important for Quill's scrolling */
+    border: none;
+    font-size: 1rem;
+}
+
+/* Style Quill's toolbar and content area */
+#editor-widget .ql-toolbar {
+    border: none;
+    border-bottom: 1px solid var(--border-color);
+    padding: 12px 15px;
+}
+
+#editor-widget .ql-container {
+    border: none;
+}
+
+#editor-widget .ql-editor {
+    padding: 15px;
+}
+
+/* Style the save button footer */
+#editor-footer {
+    border-top: 1px solid var(--border-color);
+    padding: 8px 15px;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 15px;
+    flex-shrink: 0;
+}
+
+#save-status {
+    font-size: 0.8rem;
+    color: var(--secondary-color);
+    font-style: italic;
+}
+
+/* --- Dark Theme adjustments for the editor --- */
+[data-theme="dark"] .ql-snow .ql-stroke {
+    stroke: var(--secondary-color);
+}
+[data-theme="dark"] .ql-snow .ql-picker-label {
+    color: var(--secondary-color);
+}
+[data-theme="dark"] .ql-snow .ql-fill, 
+[data-theme="dark"] .ql-snow .ql-stroke.ql-fill {
+    fill: var(--secondary-color);
+}
