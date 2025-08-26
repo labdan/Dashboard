@@ -150,17 +150,14 @@ async function checkLoginStatus() {
             showUserProfile(user);
             loadLoggedInContent();
         } else if (response.status === 401) {
-            // Token is expired or invalid, try to refresh it
             await refreshAccessToken();
-            // After refreshing, check status again
             await checkLoginStatus(); 
         } else {
-            // Another error occurred
             throw new Error('Failed to fetch user info');
         }
     } catch (error) {
         console.error("Login check failed:", error);
-        handleLogout(); // Gracefully log out on any failure
+        handleLogout();
     }
 }
 
@@ -168,7 +165,6 @@ async function checkLoginStatus() {
 async function refreshAccessToken() {
     const refreshToken = localStorage.getItem('google_refresh_token');
     if (!refreshToken) {
-        // If there's no refresh token, we can't do anything. Throw error to be caught by checkLoginStatus.
         throw new Error("No refresh token available.");
     }
     try {
@@ -178,7 +174,6 @@ async function refreshAccessToken() {
         localStorage.setItem('google_access_token', data.access_token);
     } catch (error) {
         console.error("Could not refresh token:", error);
-        // Throw error so the calling function knows to log the user out.
         throw error;
     }
 }
@@ -618,6 +613,7 @@ async function saveQuickLinks() {
     saveQuickLinksBtn.textContent = 'Saving...';
     saveQuickLinksBtn.disabled = true;
 
+    // First, handle deletions
     if (linkIdsToDelete.length > 0) {
         const { error: deleteError } = await supabaseClient
             .from('quick_links')
@@ -633,8 +629,10 @@ async function saveQuickLinks() {
         }
     }
 
+    // Next, separate items to be updated from items to be inserted
     const rows = quickLinksEditor.querySelectorAll('.quick-link-edit-row');
-    const upsertData = [];
+    const updateData = [];
+    const insertData = [];
 
     rows.forEach(row => {
         const id = row.dataset.id;
@@ -644,24 +642,30 @@ async function saveQuickLinks() {
             sort_order: parseInt(row.querySelector('[data-field="sort_order"]').value) || 0,
         };
         
-        if (!id.startsWith('new-')) {
+        if (id.startsWith('new-')) {
+            insertData.push(linkData);
+        } else {
             linkData.id = parseInt(id);
+            updateData.push(linkData);
         }
-        upsertData.push(linkData);
     });
 
-    if (upsertData.length > 0) {
-        const { error: upsertError } = await supabaseClient
-            .from('quick_links')
-            .upsert(upsertData);
-            
-        if (upsertError) {
-            alert('Error saving links. See console for details.');
-            console.error(upsertError);
-            saveQuickLinksBtn.textContent = 'Save Changes';
-            saveQuickLinksBtn.disabled = false;
-            return;
+    // Perform the database operations
+    try {
+        if (updateData.length > 0) {
+            const { error } = await supabaseClient.from('quick_links').update(updateData).in('id', updateData.map(d => d.id));
+            if (error) throw error;
         }
+        if (insertData.length > 0) {
+            const { error } = await supabaseClient.from('quick_links').insert(insertData);
+            if (error) throw error;
+        }
+    } catch (upsertError) {
+        alert('Error saving links. See console for details.');
+        console.error(upsertError);
+        saveQuickLinksBtn.textContent = 'Save Changes';
+        saveQuickLinksBtn.disabled = false;
+        return;
     }
 
     saveQuickLinksBtn.textContent = 'Save Changes';
@@ -669,6 +673,7 @@ async function saveQuickLinks() {
     settingsModal.classList.add('hidden');
     await loadQuickLinks();
 }
+
 
 // --- EDITOR ---
 async function initializeEditor() {
