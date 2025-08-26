@@ -179,7 +179,7 @@ function applyTheme(config, isInitialLoad = false) {
         document.body.classList.add('dynamic-theme');
         const today = new Date().toDateString();
         const lastFetchDate = localStorage.getItem('bgFetchDate');
-        
+
         if (!isInitialLoad || lastFetchDate !== today) {
             fetchAndSetBackgroundImage(newConfig.mode);
         } else {
@@ -193,7 +193,6 @@ function applyTheme(config, isInitialLoad = false) {
     } else { // Normal theme
         document.body.classList.remove('dynamic-theme');
         document.body.style.backgroundImage = 'none';
-        document.body.style.backgroundColor = ''; // Reset background color
     }
     
     if(themeModal) themeModal.classList.add('hidden');
@@ -206,24 +205,22 @@ function toggleTheme() {
 }
 
 async function fetchAndSetBackgroundImage(mode) {
+    // **UPDATED**: Changed the queries to be more specific
+    const query = mode === 'dark' ? 'dark,green,nature' : 'light,beach';
     try {
-        const query = mode === 'dark' ? 'dark,green,nature' : 'light,beach';
         const response = await fetch(`/.netlify/functions/get-background-image?query=${query}`);
-        if (!response.ok) throw new Error('Failed to fetch background image from server function.');
-
+        if (!response.ok) throw new Error('Failed to fetch background image.');
+        
         const data = await response.json();
-        const imageUrl = data.imageUrl;
-
-        if (imageUrl) {
-            localStorage.setItem('dynamicBg', imageUrl);
+        if (data.imageUrl) {
+            localStorage.setItem('dynamicBg', data.imageUrl);
             localStorage.setItem('bgFetchDate', new Date().toDateString());
-            document.body.style.backgroundImage = `url(${imageUrl})`;
+            document.body.style.backgroundImage = `url(${data.imageUrl})`;
         }
     } catch (error) {
         console.error("Could not set dynamic background:", error);
     }
 }
-setInterval(() => checkNewDay(), 5 * 60 * 1000);
 
 function checkNewDay() {
     const lastFetchDate = localStorage.getItem('bgFetchDate');
@@ -235,6 +232,8 @@ function checkNewDay() {
         }
     }
 }
+setInterval(checkNewDay, 5 * 60 * 1000);
+
 
 // --- AUTHENTICATION ---
 async function checkLoginStatus() {
