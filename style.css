@@ -443,11 +443,14 @@ header {
     transform: scale(1.1);
 }
 
+/* --- THIS IS THE FIX --- */
 .link-icon img {
-  width: 24px;
-  height: 24px;
+  max-width: 24px;
+  max-height: 24px;
   object-fit: contain;
 }
+/* ----------------------- */
+
 
 .link-name {
   font-size: 0.8rem;
