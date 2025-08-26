@@ -43,6 +43,15 @@ const logoutBtn = document.getElementById('logout-btn');
 const userProfileElement = document.getElementById('user-profile');
 const userAvatarElement = document.getElementById('user-avatar');
 const userNameElement = document.getElementById('user-name');
+const settingsIcon = document.querySelector('.settings-icon');
+
+// Settings Modal DOM Elements
+const settingsModal = document.getElementById('settings-modal');
+const closeSettingsBtn = document.getElementById('close-settings-btn');
+const saveQuickLinksBtn = document.getElementById('save-quick-links-btn');
+const quickLinksEditor = document.getElementById('quick-links-editor');
+const addQuickLinkBtn = document.getElementById('add-quick-link-btn');
+
 
 // Weather DOM Elements
 const weatherIconImg = document.getElementById('weather-icon-img');
@@ -62,6 +71,7 @@ let currentSearchEngine = 'google';
 let calendarDisplayDate = new Date();
 let allUserEvents = []; // Cache for calendar events to prevent re-fetching
 const USER_ID = '12345678-12321-1234-1234567890ab'; 
+let linkIdsToDelete = []; // For settings editor
 
 // --- INITIALIZATION ---
 async function init() {
@@ -106,6 +116,12 @@ function setupEventListeners() {
         calendarDisplayDate.setMonth(calendarDisplayDate.getMonth() + 1);
         updateDateDisplay();
     });
+    // Settings Modal Listeners
+    if (settingsIcon) settingsIcon.addEventListener('click', openQuickLinksEditor);
+    if (closeSettingsBtn) closeSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
+    if (settingsModal) settingsModal.addEventListener('click', (e) => { if (e.target === settingsModal) settingsModal.classList.add('hidden'); });
+    if (saveQuickLinksBtn) saveQuickLinksBtn.addEventListener('click', saveQuickLinks);
+    if (addQuickLinkBtn) addQuickLinkBtn.addEventListener('click', () => addQuickLinkRow());
 }
 
 // --- AUTHENTICATION ---
@@ -480,9 +496,6 @@ function setSearchEngine(engine) {
 async function loadQuickLinks() {
     const { data, error } = await supabaseClient.from('quick_links').select('*').order('sort_order');
     
-    // Diagnostic log to help debug
-    console.log("Fetched Quick Links Data:", data);
-
     if (error) {
         console.error('Error fetching quick links:', error);
         quickLinksContainer.innerHTML = `<p style="font-size: 0.8rem; opacity: 0.7;">Error: ${error.message}</p>`;
@@ -500,13 +513,25 @@ async function loadQuickLinks() {
     links.forEach(link => {
         try {
             let iconHTML = '';
-            // Explicitly handle Font Awesome vs. Image URL
+            // Handle Font Awesome icons
             if (link.icon_url && (link.icon_url.startsWith('fas ') || link.icon_url.startsWith('fab '))) {
                 iconHTML = `<i class="${link.icon_url}"></i>`;
             } else {
-                // Fallback for image URLs or null/empty values
-                const imgSrc = link.icon_url || 'https://www.google.com/s2/favicons?domain=google.com&sz=32';
-                iconHTML = `<img src="${imgSrc}" alt="${link.name} icon" onerror="this.src='https://www.google.com/s2/favicons?domain=google.com&sz=32'">`;
+                // Handle image icons
+                let imgSrc = link.icon_url; 
+                // If no icon_url, try to generate one from the link's main URL
+                if (!imgSrc && link.url) {
+                    try {
+                        const hostname = new URL(link.url).hostname;
+                        imgSrc = `https://s2.google.com/s2/favicons?domain=${hostname}&sz=32`;
+                    } catch (e) {
+                        // Fails silently if URL is invalid, fallback will be used
+                    }
+                }
+                // Set the final source and a reliable local fallback for the onerror event
+                const finalSrc = imgSrc || 'nostockimg.png';
+                const fallbackSrc = 'nostockimg.png';
+                iconHTML = `<img src="${finalSrc}" alt="${link.name} icon" onerror="this.onerror=null; this.src='${fallbackSrc}'">`;
             }
 
             const childLinks = subLinks.filter(sub => sub.parent_id === link.id);
@@ -515,12 +540,11 @@ async function loadQuickLinks() {
                 const linkItemWrapper = document.createElement('div');
                 linkItemWrapper.className = 'link-item';
                 const subLinksHTML = childLinks.map(sub => {
-                    let faviconUrl = 'https://www.google.com/s2/favicons?domain=google.com&sz=32';
+                    let faviconUrl = `https://s2.google.com/s2/favicons?domain=google.com&sz=32`;
                     try {
-                        // This can throw an error if sub.url is not a valid URL
-                        faviconUrl = `https://www.google.com/s2/favicons?domain=${new URL(sub.url).hostname}&sz=32`;
+                        faviconUrl = `https://s2.google.com/s2/favicons?domain=${new URL(sub.url).hostname}&sz=32`;
                     } catch (e) { console.error(`Invalid URL for sub-link '${sub.name}': ${sub.url}`); }
-                    return `<a href="${sub.url}" class="link-item" target="_blank" rel="noopener noreferrer" title="${sub.name}"><div class="link-icon"><img src="${faviconUrl}" alt="${sub.name} icon"></div><span class="link-name">${sub.name}</span></a>`;
+                    return `<a href="${sub.url}" class="link-item" target="_blank" rel="noopener noreferrer" title="${sub.name}"><div class="link-icon"><img src="${faviconUrl}" alt="${sub.name} icon" onerror="this.onerror=null;this.src='nostockimg.png';"></div><span class="link-name">${sub.name}</span></a>`;
                 }).join('');
                 linkItemWrapper.innerHTML = `<div class="link-icon">${iconHTML}</div><span class="link-name">${link.name}</span><div class="popup-menu">${subLinksHTML}</div>`;
                 quickLinksContainer.appendChild(linkItemWrapper);
@@ -538,6 +562,104 @@ async function loadQuickLinks() {
             console.error(`Failed to render quick link '${link.name}'. Please check its data in the database.`, e);
         }
     });
+}
+
+// --- QUICK LINKS EDITOR ---
+async function openQuickLinksEditor() {
+    const { data, error } = await supabaseClient.from('quick_links').select('*').order('sort_order');
+    if (error) {
+        alert('Could not load links for editing. See console for details.');
+        console.error(error);
+        return;
+    }
+
+    linkIdsToDelete = []; // Reset list of items to delete
+    quickLinksEditor.innerHTML = ''; // Clear previous editor content
+    data.forEach(link => addQuickLinkRow(link));
+    settingsModal.classList.remove('hidden');
+}
+
+function addQuickLinkRow(link = {}) {
+    const row = document.createElement('div');
+    row.className = 'quick-link-edit-row';
+    row.dataset.id = link.id || `new-${Date.now()}`;
+    
+    row.innerHTML = `
+        <input type="text" class="ql-input" data-field="name" placeholder="Name" value="${link.name || ''}">
+        <input type="text" class="ql-input" data-field="url" placeholder="URL" value="${link.url || ''}">
+        <input type="text" class="ql-input" data-field="icon_url" placeholder="Icon URL (optional)" value="${link.icon_url || ''}">
+        <input type="number" class="ql-input ql-input-small" data-field="sort_order" placeholder="Order" value="${link.sort_order || '0'}">
+        <button class="delete-link-btn"><i class="fas fa-trash"></i></button>
+    `;
+
+    row.querySelector('.delete-link-btn').addEventListener('click', () => {
+        if (link.id) { // Only add existing IDs to the delete list
+            linkIdsToDelete.push(link.id);
+        }
+        row.remove();
+    });
+
+    quickLinksEditor.appendChild(row);
+}
+
+async function saveQuickLinks() {
+    saveQuickLinksBtn.textContent = 'Saving...';
+    saveQuickLinksBtn.disabled = true;
+
+    // First, handle deletions
+    if (linkIdsToDelete.length > 0) {
+        const { error: deleteError } = await supabaseClient
+            .from('quick_links')
+            .delete()
+            .in('id', linkIdsToDelete);
+        
+        if (deleteError) {
+            alert('Error deleting links. See console for details.');
+            console.error(deleteError);
+            saveQuickLinksBtn.textContent = 'Save Changes';
+            saveQuickLinksBtn.disabled = false;
+            return;
+        }
+    }
+
+    // Next, handle upserts (updates and inserts)
+    const rows = quickLinksEditor.querySelectorAll('.quick-link-edit-row');
+    const upsertData = [];
+
+    rows.forEach(row => {
+        const id = row.dataset.id;
+        const linkData = {
+            name: row.querySelector('[data-field="name"]').value,
+            url: row.querySelector('[data-field="url"]').value,
+            icon_url: row.querySelector('[data-field="icon_url"]').value,
+            sort_order: parseInt(row.querySelector('[data-field="sort_order"]').value) || 0,
+        };
+        // Only include ID for existing items, not new ones
+        if (!id.startsWith('new-')) {
+            linkData.id = parseInt(id);
+        }
+        upsertData.push(linkData);
+    });
+
+    if (upsertData.length > 0) {
+        const { error: upsertError } = await supabaseClient
+            .from('quick_links')
+            .upsert(upsertData);
+            
+        if (upsertError) {
+            alert('Error saving links. See console for details.');
+            console.error(upsertError);
+            saveQuickLinksBtn.textContent = 'Save Changes';
+            saveQuickLinksBtn.disabled = false;
+            return;
+        }
+    }
+
+    // Finish up
+    saveQuickLinksBtn.textContent = 'Save Changes';
+    saveQuickLinksBtn.disabled = false;
+    settingsModal.classList.add('hidden');
+    await loadQuickLinks(); // Refresh the display
 }
 
 
