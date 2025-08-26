@@ -349,8 +349,6 @@ function updateWeatherUI(data) {
 
 // --- GOOGLE CALENDAR ---
 async function loadUpcomingEvents() {
-    // This function now only fetches data and caches it.
-    // The rendering is handled by other functions to avoid re-fetching on month change.
     eventsContainer.innerHTML = '<p>Loading events...</p>';
     try {
         const accessToken = localStorage.getItem('google_access_token');

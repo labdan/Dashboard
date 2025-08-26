@@ -86,7 +86,7 @@ body {
   max-width: 98%;
   margin: 0 auto;
   padding: 20px 10px;
-  display: flex; /* Changed to flex for mobile-first */
+  display: flex; 
   flex-direction: column;
   gap: 20px;
   height: 100%;
@@ -98,7 +98,7 @@ body {
 
 @media (min-width: 1600px) {
     .container {
-        display: grid; /* Grid for desktop */
+        display: grid; 
         grid-template-columns: 1fr 1.2fr 2fr 1.2fr 1fr;
     }
     .main-content {
@@ -612,7 +612,7 @@ header {
   grid-template-columns: 1fr 2fr 1fr;
   gap: 20px;
   flex-grow: 1;
-  overflow: hidden; /* Important for no-scroll layout */
+  overflow: hidden; 
 }
 
 .left-column-widgets, .right-column-widgets {
@@ -637,9 +637,8 @@ header {
   overflow: hidden;
 }
 
-/* FIX: This will make widgets in the same column stretch to fill available height */
 .left-column-widgets > .widget, .right-column-widgets > .widget {
-    flex-grow: 1;
+    flex: 1 1 0; /* This makes widgets in the same column share space equally */
 }
 
 .widget h3 {
