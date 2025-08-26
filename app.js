@@ -79,7 +79,6 @@ const aqiIndexElement = document.getElementById('aqi-index');
 const refreshWeatherBtn = document.getElementById('refresh-weather');
 
 // --- STATE ---
-let isDemoMode = window.location.pathname.includes('/demo');
 let currentSearchEngine = 'google';
 let calendarDisplayDate = new Date();
 let allUserEvents = []; 
@@ -99,124 +98,9 @@ async function init() {
     setInterval(updateQuote, 10000);
     
     setupEventListeners();
-    
-    if (isDemoMode) {
-        runDemoMode();
-    } else {
-        await checkLoginStatus();
-    }
+    await checkLoginStatus();
 }
 
-function runDemoMode() {
-    showUserProfile({ name: 'Demo User', picture: 'nostockimg.png' });
-    document.querySelectorAll('.demo-hide').forEach(el => el.style.display = 'none');
-    
-    // Load real data
-    loadSideNews();
-    loadBenzingaFeed();
-    getWeather();
-    
-    // Load dummy data
-    loadDemoTodos();
-    loadDemoEvents();
-    loadDemoPortfolio();
-    loadDemoQuickLinks();
-    initializeEditor(true); // true for demo mode
-}
-
-function loadDemoTodos() {
-    const demoTodos = [
-        { id: 1, task: 'Finish Q3 financial report', is_complete: false },
-        { id: 2, task: 'Call with the design team', is_complete: true },
-        { id: 3, task: 'Review marketing campaign', is_complete: false }
-    ];
-    todoList.innerHTML = '';
-    demoTodos.forEach(todo => {
-        const todoItem = document.createElement('li');
-        todoItem.className = 'todo-item';
-        todoItem.dataset.id = todo.id;
-        todoItem.innerHTML = `<input type="checkbox" class="todo-checkbox" ${todo.is_complete ? 'checked' : ''}><span class="todo-text ${todo.is_complete ? 'todo-completed' : ''}">${todo.task}</span><button class="delete-btn"><i class="fas fa-times"></i></button>`;
-        todoList.appendChild(todoItem);
-    });
-}
-
-function loadDemoEvents() {
-    const today = new Date();
-    const demoEvents = [
-        { summary: 'Team Standup', start: { dateTime: new Date(today.setHours(9, 0, 0, 0)).toISOString() } },
-        { summary: 'Project Phoenix Deadline', start: { date: new Date(new Date().setDate(today.getDate() + 2)).toISOString().split('T')[0] } },
-        { summary: 'Quarterly Review', start: { dateTime: new Date(new Date().setDate(today.getDate() + 5)).toISOString() } }
-    ];
-    renderUpcomingEvents(demoEvents);
-    renderMiniCalendar(demoEvents, calendarDisplayDate);
-}
-
-function loadDemoPortfolio() {
-    const magnificent7 = [
-        { ticker: 'AAPL', companyName: 'Apple Inc.', logoUrl: 'https://logo.clearbit.com/apple.com', currentPrice: 170.00, ppl: 150.25, quantity: 10 },
-        { ticker: 'MSFT', companyName: 'Microsoft Corp.', logoUrl: 'https://logo.clearbit.com/microsoft.com', currentPrice: 300.00, ppl: 250.50, quantity: 10 },
-        { ticker: 'GOOGL', companyName: 'Alphabet Inc.', logoUrl: 'https://logo.clearbit.com/google.com', currentPrice: 135.00, ppl: 120.75, quantity: 10 },
-        { ticker: 'AMZN', companyName: 'Amazon.com, Inc.', logoUrl: 'https://logo.clearbit.com/amazon.com', currentPrice: 130.00, ppl: -50.00, quantity: 10 },
-        { ticker: 'NVDA', companyName: 'NVIDIA Corp.', logoUrl: 'https://logo.clearbit.com/nvidia.com', currentPrice: 450.00, ppl: 800.00, quantity: 10 },
-        { ticker: 'META', companyName: 'Meta Platforms, Inc.', logoUrl: 'https://logo.clearbit.com/meta.com', currentPrice: 300.00, ppl: 180.00, quantity: 10 },
-        { ticker: 'TSLA', companyName: 'Tesla, Inc.', logoUrl: 'https://logo.clearbit.com/tesla.com', currentPrice: 250.00, ppl: -200.00, quantity: 10 }
-    ];
-
-    const totalInvestmentValue = magnificent7.reduce((sum, stock) => sum + (stock.currentPrice * stock.quantity), 0);
-    const demoCash = { free: 25000, invested: totalInvestmentValue, total: 25000 + totalInvestmentValue };
-
-    renderPortfolio({ portfolio: magnificent7, cash: demoCash });
-}
-
-function loadDemoQuickLinks() {
-    const demoLinks = [
-        { name: 'Media', url: null, parent_id: null, id: 'parent1' },
-        { name: 'YouTube', url: 'https://youtube.com', parent_id: 'parent1', id: 'child1' },
-        { name: 'Gmail', url: 'https://gmail.com', parent_id: null, id: 'parent2' }
-    ];
-    
-    const links = demoLinks.filter(link => !link.parent_id);
-    const subLinks = demoLinks.filter(link => link.parent_id);
-    quickLinksContainer.innerHTML = '';
-
-    links.forEach(link => {
-        let iconSrc;
-        const fallbackSrc = 'nostockimg.png';
-
-        if (!link.url) {
-            const iconName = link.name.toLowerCase().replace(/\s+/g, '');
-            iconSrc = `${iconName}.ico`;
-        } else {
-            iconSrc = `https://www.google.com/s2/favicons?domain=${new URL(link.url).hostname}&sz=32`;
-        }
-
-        const iconHTML = `<img src="${iconSrc}" alt="${link.name} icon" onerror="this.onerror=null; this.src='${fallbackSrc}'">`;
-        const childLinks = subLinks.filter(sub => sub.parent_id === link.id);
-
-        if (childLinks.length > 0) {
-            const linkItemWrapper = document.createElement('div');
-            linkItemWrapper.className = 'link-item';
-            const subLinksHTML = childLinks.map(sub => {
-                const faviconUrl = `https://www.google.com/s2/favicons?domain=${new URL(sub.url).hostname}&sz=32`;
-                return `<a href="${sub.url}" class="link-item" target="_blank" rel="noopener noreferrer" title="${sub.name}"><div class="link-icon"><img src="${faviconUrl}" alt="${sub.name} icon" onerror="this.onerror=null;this.src='${fallbackSrc}';"></div><span class="link-name">${sub.name}</span></a>`;
-            }).join('');
-            linkItemWrapper.innerHTML = `<div class="link-icon">${iconHTML}</div><span class="link-name">${link.name}</span><div class="popup-menu">${subLinksHTML}</div>`;
-            quickLinksContainer.appendChild(linkItemWrapper);
-        } else {
-            const anchor = document.createElement('a');
-            anchor.className = 'link-item';
-            anchor.href = link.url;
-            anchor.target = "_blank";
-            anchor.rel = "noopener noreferrer";
-            anchor.title = link.name;
-            anchor.innerHTML = `<div class="link-icon">${iconHTML}</div><span class="link-name">${link.name}</span>`;
-            quickLinksContainer.appendChild(anchor);
-        }
-    });
-}
-
-
-// --- EVENT LISTENERS ---
 function setupEventListeners() {
     loginBtn.addEventListener('click', () => window.location.href = '/.netlify/functions/auth-google');
     logoutBtn.addEventListener('click', handleLogout);
@@ -248,25 +132,34 @@ function setupEventListeners() {
         updateDateDisplay();
     });
 
-    if (!isDemoMode) {
-        if (editQuicklinksBtn) editQuicklinksBtn.addEventListener('click', openQuickLinksEditor);
-        if (themeSelectBtn) themeSelectBtn.addEventListener('click', () => themeModal.classList.remove('hidden'));
-        if (closeSettingsBtn) closeSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
-        if (settingsModal) settingsModal.addEventListener('click', (e) => { if (e.target === settingsModal) settingsModal.classList.add('hidden'); });
-        if (saveQuickLinksBtn) saveQuickLinksBtn.addEventListener('click', saveQuickLinks);
-        if (openAddLinkModalBtn) openAddLinkModalBtn.addEventListener('click', handleAddLinkModalOpen);
-        if (closeAddLinkBtn) closeAddLinkBtn.addEventListener('click', () => addLinkModal.classList.add('hidden'));
-        if (addLinkModal) addLinkModal.addEventListener('click', (e) => { if (e.target === addLinkModal) addLinkModal.classList.add('hidden'); });
-        if (addLinkForm) addLinkForm.addEventListener('submit', (e) => { e.preventDefault(); handleAddNewLink(); });
-        if (addNewLinkBtn) addNewLinkBtn.addEventListener('click', handleAddNewLink);
-        if(saveNoteBtn) saveNoteBtn.addEventListener('click', saveNote);
-    }
+    // Settings Menu and Modal Listeners
+    if (editQuicklinksBtn) editQuicklinksBtn.addEventListener('click', openQuickLinksEditor);
+    if (themeSelectBtn) themeSelectBtn.addEventListener('click', () => themeModal.classList.remove('hidden'));
+    
+    if (closeSettingsBtn) closeSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
+    if (settingsModal) settingsModal.addEventListener('click', (e) => { if (e.target === settingsModal) settingsModal.classList.add('hidden'); });
+    if (saveQuickLinksBtn) saveQuickLinksBtn.addEventListener('click', saveQuickLinks);
+    
+    // Add Link Modal Listeners
+    if (openAddLinkModalBtn) openAddLinkModalBtn.addEventListener('click', handleAddLinkModalOpen);
+    if (closeAddLinkBtn) closeAddLinkBtn.addEventListener('click', () => addLinkModal.classList.add('hidden'));
+    if (addLinkModal) addLinkModal.addEventListener('click', (e) => { if (e.target === addLinkModal) addLinkModal.classList.add('hidden'); });
+    if (addLinkForm) addLinkForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        handleAddNewLink();
+    });
+    if (addNewLinkBtn) addNewLinkBtn.addEventListener('click', handleAddNewLink);
 
+    // Theme Modal Listeners
     if (closeThemeBtn) closeThemeBtn.addEventListener('click', () => themeModal.classList.add('hidden'));
     if (themeModal) themeModal.addEventListener('click', (e) => { if (e.target === themeModal) themeModal.classList.add('hidden'); });
     if (setNormalThemeBtn) setNormalThemeBtn.addEventListener('click', () => applyTheme({ type: 'normal' }));
     if (setDynamicThemeBtn) setDynamicThemeBtn.addEventListener('click', () => applyTheme({ type: 'dynamic' }));
+
+    // Editor Listener
+    if(saveNoteBtn) saveNoteBtn.addEventListener('click', saveNote);
 }
+
 // --- THEME ---
 function applySavedTheme() {
     const savedTheme = JSON.parse(localStorage.getItem('themeConfig')) || { type: 'normal', mode: 'light' };
@@ -491,10 +384,6 @@ async function loadTodos() {
 
 async function handleTodoSubmit(e) {
     e.preventDefault();
-    if (isDemoMode) {
-        alert("Adding new items is disabled in demo mode.");
-        return;
-    }
     const taskText = todoInput.value.trim();
     if (taskText) {
         const { error } = await supabaseClient.from('todos').insert({ task: taskText });
@@ -503,7 +392,6 @@ async function handleTodoSubmit(e) {
             alert('Could not add task. See console for details.');
         } else {
             todoInput.value = '';
-            await loadTodos(); // **THE FIX**: Refresh the list after adding
         }
     }
 }
