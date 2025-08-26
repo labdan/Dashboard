@@ -517,18 +517,19 @@ async function loadQuickLinks() {
             if (link.icon_url && (link.icon_url.startsWith('fas ') || link.icon_url.startsWith('fab '))) {
                 iconHTML = `<i class="${link.icon_url}"></i>`;
             } else {
-                // Handle image icons
+                // Handle image icons with corrected logic
                 let imgSrc = link.icon_url; 
-                // If no icon_url, try to generate one from the link's main URL
+                // If no icon_url from DB, try to generate one from the link's main URL
                 if (!imgSrc && link.url) {
                     try {
                         const hostname = new URL(link.url).hostname;
-                        imgSrc = `https://s2.google.com/s2/favicons?domain=${hostname}&sz=32`;
+                        // **FIXED URL**
+                        imgSrc = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
                     } catch (e) {
-                        // Fails silently if URL is invalid, fallback will be used
+                        // Fails silently if link.url is invalid, fallback will be used below
                     }
                 }
-                // Set the final source and a reliable local fallback for the onerror event
+                
                 const finalSrc = imgSrc || 'nostockimg.png';
                 const fallbackSrc = 'nostockimg.png';
                 iconHTML = `<img src="${finalSrc}" alt="${link.name} icon" onerror="this.onerror=null; this.src='${fallbackSrc}'">`;
@@ -540,10 +541,13 @@ async function loadQuickLinks() {
                 const linkItemWrapper = document.createElement('div');
                 linkItemWrapper.className = 'link-item';
                 const subLinksHTML = childLinks.map(sub => {
-                    let faviconUrl = `https://s2.google.com/s2/favicons?domain=google.com&sz=32`;
+                    let faviconUrl = 'nostockimg.png'; // Default to local fallback
                     try {
-                        faviconUrl = `https://s2.google.com/s2/favicons?domain=${new URL(sub.url).hostname}&sz=32`;
+                        const hostname = new URL(sub.url).hostname;
+                        // **FIXED URL**
+                        faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
                     } catch (e) { console.error(`Invalid URL for sub-link '${sub.name}': ${sub.url}`); }
+                    
                     return `<a href="${sub.url}" class="link-item" target="_blank" rel="noopener noreferrer" title="${sub.name}"><div class="link-icon"><img src="${faviconUrl}" alt="${sub.name} icon" onerror="this.onerror=null;this.src='nostockimg.png';"></div><span class="link-name">${sub.name}</span></a>`;
                 }).join('');
                 linkItemWrapper.innerHTML = `<div class="link-icon">${iconHTML}</div><span class="link-name">${link.name}</span><div class="popup-menu">${subLinksHTML}</div>`;
