@@ -135,37 +135,40 @@ function setupEventListeners() {
 // --- AUTHENTICATION ---
 async function checkLoginStatus() {
     const accessToken = localStorage.getItem('google_access_token');
-    if (accessToken) {
-        try {
-            const response = await fetch('https://www.googleapis.com/oauth2/v1/userinfo', {
-                headers: { 'Authorization': `Bearer ${accessToken}` }
-            });
-            if (!response.ok) {
-                if (response.status === 401) {
-                    await refreshAccessToken();
-                    await checkLoginStatus(); 
-                    return;
-                } else {
-                    throw new Error('Failed to fetch user info');
-                }
-            } else {
-                const user = await response.json();
-                showUserProfile(user);
-                loadLoggedInContent();
-            }
-        } catch (error) {
-            console.error("Login check failed:", error);
-            showLoginPage();
-        }
-    } else {
+    if (!accessToken) {
         showLoginPage();
+        return;
+    }
+
+    try {
+        const response = await fetch('https://www.googleapis.com/oauth2/v1/userinfo', {
+            headers: { 'Authorization': `Bearer ${accessToken}` }
+        });
+
+        if (response.ok) {
+            const user = await response.json();
+            showUserProfile(user);
+            loadLoggedInContent();
+        } else if (response.status === 401) {
+            // Token is expired or invalid, try to refresh it
+            await refreshAccessToken();
+            // After refreshing, check status again
+            await checkLoginStatus(); 
+        } else {
+            // Another error occurred
+            throw new Error('Failed to fetch user info');
+        }
+    } catch (error) {
+        console.error("Login check failed:", error);
+        handleLogout(); // Gracefully log out on any failure
     }
 }
+
 
 async function refreshAccessToken() {
     const refreshToken = localStorage.getItem('google_refresh_token');
     if (!refreshToken) {
-        handleLogout();
+        // If there's no refresh token, we can't do anything. Throw error to be caught by checkLoginStatus.
         throw new Error("No refresh token available.");
     }
     try {
@@ -175,10 +178,11 @@ async function refreshAccessToken() {
         localStorage.setItem('google_access_token', data.access_token);
     } catch (error) {
         console.error("Could not refresh token:", error);
-        handleLogout();
+        // Throw error so the calling function knows to log the user out.
         throw error;
     }
 }
+
 
 function showUserProfile(user) {
     userNameElement.textContent = user.name;
