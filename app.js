@@ -612,54 +612,45 @@ async function saveQuickLinks() {
     saveQuickLinksBtn.textContent = 'Saving...';
     saveQuickLinksBtn.disabled = true;
 
-    // First, handle deletions
-    if (linkIdsToDelete.length > 0) {
-        const { error: deleteError } = await supabaseClient
-            .from('quick_links')
-            .delete()
-            .in('id', linkIdsToDelete);
-        
-        if (deleteError) {
-            alert('Error deleting links. See console for details.');
-            console.error(deleteError);
-            saveQuickLinksBtn.textContent = 'Save Changes';
-            saveQuickLinksBtn.disabled = false;
-            return;
-        }
-    }
-
-    const rows = quickLinksEditor.querySelectorAll('.quick-link-edit-row');
-    const updateData = [];
-    const insertData = [];
-
-    rows.forEach(row => {
-        const id = row.dataset.id;
-        const linkData = {
-            name: row.querySelector('[data-field="name"]').value,
-            url: row.querySelector('[data-field="url"]').value || null,
-            sort_order: parseInt(row.querySelector('[data-field="sort_order"]').value) || 0,
-        };
-        
-        if (id.startsWith('new-')) {
-            insertData.push(linkData);
-        } else {
-            linkData.id = parseInt(id);
-            updateData.push(linkData);
-        }
-    });
-
     try {
-        if (updateData.length > 0) {
-            const { error } = await supabaseClient.from('quick_links').upsert(updateData);
-            if (error) throw error;
+        if (linkIdsToDelete.length > 0) {
+            const { error: deleteError } = await supabaseClient.from('quick_links').delete().in('id', linkIdsToDelete);
+            if (deleteError) throw deleteError;
         }
+
+        const rows = quickLinksEditor.querySelectorAll('.quick-link-edit-row');
+        const updateData = [];
+        const insertData = [];
+
+        rows.forEach(row => {
+            const id = row.dataset.id;
+            const linkData = {
+                name: row.querySelector('[data-field="name"]').value,
+                url: row.querySelector('[data-field="url"]').value || null,
+                sort_order: parseInt(row.querySelector('[data-field="sort_order"]').value) || 0,
+            };
+
+            if (id.startsWith('new-')) {
+                insertData.push(linkData);
+            } else {
+                linkData.id = id; // Keep the UUID as a string
+                updateData.push(linkData);
+            }
+        });
+
+        if (updateData.length > 0) {
+            const { error: updateError } = await supabaseClient.from('quick_links').upsert(updateData);
+            if (updateError) throw updateError;
+        }
+
         if (insertData.length > 0) {
-            const { error } = await supabaseClient.from('quick_links').insert(insertData);
-            if (error) throw error;
+            const { error: insertError } = await supabaseClient.from('quick_links').insert(insertData);
+            if (insertError) throw insertError;
         }
     } catch (error) {
         alert('Error saving links. See console for details.');
-        console.error(error); // This will log the actual error to the console
+        console.error("An error occurred while saving quick links:", error);
+        
         saveQuickLinksBtn.textContent = 'Save Changes';
         saveQuickLinksBtn.disabled = false;
         return;
