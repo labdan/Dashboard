@@ -83,45 +83,34 @@ body {
 }
 
 .container {
-  max-width: 98%;
+  max-width: 100%;
   margin: 0 auto;
-  padding: 20px 10px;
-  display: flex; 
-  flex-direction: column;
+  padding: 20px;
+  display: grid; 
+  grid-template-columns: 1fr 1.2fr 2fr 1.2fr 1fr;
   gap: 20px;
-  height: 100%;
-}
-
-.left-sidebar, .right-sidebar {
-    display: none;
-}
-
-@media (min-width: 1600px) {
-    .container {
-        display: grid; 
-        grid-template-columns: 1fr 1.2fr 2fr 1.2fr 1fr;
-    }
-    .main-content {
-        grid-column: 2 / 5;
-    }
-    .left-sidebar, .right-sidebar {
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-        overflow: hidden;
-    }
-    .left-sidebar {
-        grid-column: 1 / 2;
-    }
-    .right-sidebar {
-        grid-column: 5 / 6;
-    }
+  height: 100vh;
 }
 
 .main-content {
+    grid-column: 2 / 5;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+}
+
+.left-sidebar, .right-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    overflow: hidden;
+}
+
+.left-sidebar {
+    grid-column: 1 / 2;
+}
+.right-sidebar {
+    grid-column: 5 / 6;
 }
 
 .main-content > header {
@@ -136,21 +125,21 @@ body {
     overflow: hidden;
 }
 
-.news-container {
-    flex-grow: 1;
-    overflow-y: auto;
+/* User Session Bar - MOVED to left sidebar */
+.left-sidebar .widget:first-child {
+    padding: 0;
 }
-
-/* User Session Bar Styles */
 #user-session-bar {
     display: flex;
     justify-content: space-between;
     align-items: center;
     width: 100%;
-    padding-bottom: 10px;
-    margin-bottom: 10px;
+    padding: 15px 20px;
     border-bottom: 1px solid var(--border-color);
     font-size: 0.9rem;
+}
+#side-news-container {
+    padding: 15px 20px;
 }
 
 #user-profile {
@@ -612,7 +601,8 @@ header {
   grid-template-columns: 1fr 2fr 1fr;
   gap: 20px;
   flex-grow: 1;
-  overflow: hidden; 
+  overflow: hidden;
+  min-height: 0;
 }
 
 .left-column-widgets, .right-column-widgets {
@@ -637,22 +627,25 @@ header {
   overflow: hidden;
 }
 
-.left-column-widgets > .widget, .right-column-widgets > .widget {
-    flex: 1 1 0; /* This makes widgets in the same column share space equally */
-}
-
 .widget h3 {
-    font-size: 1rem;
-    margin-bottom: 10px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--border-color);
-    color: var(--primary-color);
-    flex-shrink: 0;
+    display: none;
 }
 
 .widget:hover {
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
 }
+
+/* Restructure left column widgets */
+#events-widget {
+    flex: 0 0 35%;
+    min-height: 0;
+}
+
+#todo-widget {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
 
 .todo-form {
   display: flex;
@@ -694,13 +687,6 @@ header {
   transform: translateY(-2px);
 }
 
-.todo-list {
-  list-style-type: none;
-  overflow-y: auto;
-  flex-grow: 1;
-  padding-right: 5px;
-}
-
 .todo-item {
   display: flex;
   align-items: center;
@@ -737,15 +723,12 @@ header {
   transform: scale(1.1);
 }
 
-.events-container {
+.events-container, .todo-list, .news-container, .watchlist-container {
   overflow-y: auto;
-  padding-right: 5px;
   flex-grow: 1;
 }
 .watchlist-container {
   padding: 0 !important;
-  overflow-y: auto;
-  flex-grow: 1;
 }
 
 .news-item {
@@ -980,10 +963,15 @@ header {
   background-color: rgba(0, 0, 0, 0.3);
 }
 
-/* Responsive Layout Changes */
-@media (max-width: 1599px) { 
+/* Responsive Layout Changes for smaller screens */
+@media (max-width: 1200px) { 
   html, body {
       overflow: auto; /* Allow scrolling on smaller screens */
+  }
+  .container {
+    display: flex;
+    flex-direction: column;
+    height: auto;
   }
   .main-content, .container {
       height: auto;
@@ -991,13 +979,19 @@ header {
   .main-content > header, .main-content > .dashboard-grid {
     grid-template-columns: 1fr;
   }
+  .left-sidebar, .right-sidebar {
+    display: none;
+  }
 }
 
 @media (max-width: 768px) {
   .container {
     padding: 10px;
   }
-
+  .dashboard-grid {
+    display: flex;
+    flex-direction: column;
+  }
   .main-content > header, .main-content > .dashboard-grid {
     gap: 15px;
   }

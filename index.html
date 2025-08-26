@@ -19,14 +19,6 @@
     <div class="container">
       <div class="left-sidebar">
           <div class="widget">
-              <h3>Seeking Alpha</h3>
-              <div class="news-container" id="side-news-container"></div>
-          </div>
-      </div>
-
-      <div class="main-content">
-          <header>
-            <div class="time-date header-widget">
               <div id="user-session-bar">
                   <div id="user-profile">
                       <img id="user-avatar" src="" alt="User Avatar">
@@ -37,7 +29,14 @@
                       <i class="fas fa-cog"></i>
                   </div>
               </div>
+              <h3>Seeking Alpha</h3>
+              <div class="news-container" id="side-news-container"></div>
+          </div>
+      </div>
 
+      <div class="main-content">
+          <header>
+            <div class="time-date header-widget">
               <button class="theme-toggle" id="theme-toggle" title="Toggle Theme">
                 <i class="fas fa-moon"></i>
               </button>
@@ -92,10 +91,10 @@
 
           <div class="dashboard-grid">
             <div class="left-column-widgets">
-               <div class="widget">
+               <div class="widget" id="events-widget">
                   <div class="events-container" id="events-container"></div>
                </div>
-               <div class="widget">
+               <div class="widget" id="todo-widget">
                   <form class="todo-form" id="todo-form"><input type="text" class="todo-input" id="todo-input" placeholder="Add a new task..." required /><button type="submit" class="add-btn">Add</button></form>
                   <ul class="todo-list" id="todo-list"></ul>
                </div>
