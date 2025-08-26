@@ -1231,3 +1231,33 @@ header {
     opacity: 0.4;
     background-color: var(--primary-color) !important;
 }
+/* --- Styles for Indented Quick Links in Editor --- */
+.quick-link-edit-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: 0; /* Default, no indent */
+    transition: margin-left 0.2s ease-in-out;
+}
+
+.quick-link-edit-row.is-child {
+    margin-left: 40px; /* This creates the visual indentation */
+}
+
+.indent-controls {
+    display: flex;
+    gap: 5px;
+    color: var(--secondary-color);
+}
+
+.indent-btn {
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.indent-btn:hover {
+    background-color: var(--border-color);
+    color: var(--primary-color);
+}

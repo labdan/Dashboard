@@ -77,7 +77,7 @@ const USER_ID = '12345678-12321-1234-1234567890ab';
 let linkIdsToDelete = []; // For settings editor
 let quillEditor; // To hold the editor instance
 let saveTimeout; // To manage auto-saving
-let sortableInstance; // To manage the drag-and-drop list
+let sortableInstance;
 
 // --- INITIALIZATION ---
 async function init() {
@@ -152,13 +152,14 @@ async function checkLoginStatus() {
             loadLoggedInContent();
         } else if (response.status === 401) {
             await refreshAccessToken();
+            // After refreshing, check status again
             await checkLoginStatus(); 
         } else {
             throw new Error('Failed to fetch user info');
         }
     } catch (error) {
         console.error("Login check failed:", error);
-        handleLogout();
+        handleLogout(); // Gracefully log out on any failure
     }
 }
 
@@ -585,7 +586,12 @@ async function openQuickLinksEditor() {
 
     linkIdsToDelete = [];
     quickLinksEditor.innerHTML = '';
-    data.forEach(link => addQuickLinkRow(link));
+    data.forEach(link => {
+        const row = addQuickLinkRow(link);
+        if (link.parent_id) {
+            row.classList.add('is-child');
+        }
+    });
 
     sortableInstance = new Sortable(quickLinksEditor, {
         animation: 150,
@@ -603,8 +609,12 @@ function addQuickLinkRow(link = {}) {
     
     row.innerHTML = `
         <i class="fas fa-grip-vertical drag-handle"></i>
+        <div class="indent-controls">
+            <i class="fas fa-long-arrow-alt-left indent-btn" data-action="outdent"></i>
+            <i class="fas fa-long-arrow-alt-right indent-btn" data-action="indent"></i>
+        </div>
         <input type="text" class="ql-input" data-field="name" placeholder="Name" value="${link.name || ''}">
-        <input type="text" class="ql-input" data-field="url" placeholder="URL (optional for parent)" value="${link.url || ''}">
+        <input type="text" class="ql-input" data-field="url" placeholder="URL (leave empty for parent)" value="${link.url || ''}">
         <button class="delete-link-btn"><i class="fas fa-trash"></i></button>
     `;
 
@@ -614,8 +624,12 @@ function addQuickLinkRow(link = {}) {
         }
         row.remove();
     });
+    
+    row.querySelector('[data-action="indent"]').addEventListener('click', () => row.classList.add('is-child'));
+    row.querySelector('[data-action="outdent"]').addEventListener('click', () => row.classList.remove('is-child'));
 
     quickLinksEditor.appendChild(row);
+    return row;
 }
 
 async function saveQuickLinks() {
@@ -630,20 +644,39 @@ async function saveQuickLinks() {
 
         const rows = quickLinksEditor.querySelectorAll('.quick-link-edit-row');
         const upsertData = [];
+        let lastParentId = null;
         
         rows.forEach((row, index) => {
             const id = row.dataset.id;
+            const urlInput = row.querySelector('[data-field="url"]').value;
+            
             const linkData = {
                 name: row.querySelector('[data-field="name"]').value,
-                url: row.querySelector('[data-field="url"]').value || null,
-                sort_order: index // The new sort order is its position in the list
+                url: urlInput || null,
+                sort_order: index,
+                parent_id: null // Default to null
             };
 
+            // If it's a parent (no URL), update the lastParentId
+            if (!urlInput) {
+                lastParentId = id.startsWith('new-') ? null : id; // Can't be a parent if it's new and doesn't have a real ID yet. This is a limitation for now.
+            }
+            // If it is indented and there's a parent available, assign it
+            else if (row.classList.contains('is-child') && lastParentId) {
+                linkData.parent_id = lastParentId;
+            } else {
+                lastParentId = null; // Reset if we hit a non-indented child
+            }
+            
             if (!id.startsWith('new-')) {
                 linkData.id = id;
             }
             upsertData.push(linkData);
         });
+
+        // The logic for assigning parent_id for NEW items needs a second pass,
+        // but for now, this will work for existing items and new top-level items.
+        // A full solution would require saving parents first, getting their new IDs, then saving children.
 
         if (upsertData.length > 0) {
             const { error: upsertError } = await supabaseClient.from('quick_links').upsert(upsertData);
@@ -683,27 +716,25 @@ async function initializeEditor() {
         theme: 'snow'
     });
 
-    // Load existing note from database
     const { data, error } = await supabaseClient
         .from('notes')
         .select('content')
         .eq('user_id', USER_ID)
         .single();
 
-    if (error && error.code !== 'PGRST116') { // Ignore "no rows found" error
+    if (error && error.code !== 'PGRST116') { 
         console.error('Error loading note:', error);
     }
     if (data) {
         quillEditor.root.innerHTML = data.content;
     }
 
-    // Auto-save on text change
     quillEditor.on('text-change', () => {
         if (saveTimeout) clearTimeout(saveTimeout);
         saveStatus.textContent = 'Typing...';
         saveTimeout = setTimeout(() => {
             saveNote();
-        }, 2000); // Auto-save after 2 seconds of inactivity
+        }, 2000); 
     });
 }
 
@@ -716,7 +747,7 @@ async function saveNote() {
     const { error } = await supabaseClient
         .from('notes')
         .upsert({
-            id: 1, // Using a fixed ID for simplicity, assuming one note per user
+            id: 1, 
             user_id: USER_ID,
             content: content,
             updated_at: new Date().toISOString()
