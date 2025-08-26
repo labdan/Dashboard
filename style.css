@@ -62,20 +62,18 @@ body {
 }
 
 .login-page-btn {
-    /* Set a width to control the image size */
     width: 250px; 
-    /* Make it clear it's clickable */
     cursor: pointer;
-    /* Keep the hover effect */
     transition: all 0.3s ease;
-    /* The browser's default box shadow for images can look odd, so we remove it */
-    box-shadow: none;
-    /* Remove any border the browser might add to the image */
-    border: none;
+    /* Use a drop-shadow for a clean initial look that follows the image shape */
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.2));
 }
+
 .login-page-btn:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    /* Make the button slightly larger on hover */
+    transform: scale(1.05);
+    /* Add a more pronounced and slightly glowing shadow */
+    filter: drop-shadow(0 8px 15px rgba(0, 0, 0, 0.3)) brightness(1.05);
 }
 
 .container {
