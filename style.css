@@ -1453,8 +1453,34 @@ body.dynamic-theme {
     padding: 15px 20px;
 }
 
+/* --- STOCK DETAILS PANEL --- */
 #stock-details-panel {
-    padding: 10px;
+    padding: 15px;
+    overflow-y: auto;
+}
+
+.stock-details-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr; /* Top row: 2/3 width for info, 1/3 for technicals */
+    grid-template-rows: auto 1fr;  /* Top row auto height, bottom row fills space */
+    gap: 15px;
+    height: 100%;
+}
+
+#tv-widget-symbol-info {
+    grid-column: 1 / 2;
+    grid-row: 1 / 2;
+}
+
+#tv-widget-technical-analysis {
+    grid-column: 2 / 3;
+    grid-row: 1 / 2;
+}
+
+#tv-widget-advanced-chart {
+    grid-column: 1 / 3; /* Spans both columns */
+    grid-row: 2 / 3;
+    min-height: 400px; /* Ensure it has a minimum height */
 }
 
 /* Custom Watchlist Styles */

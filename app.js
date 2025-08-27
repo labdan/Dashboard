@@ -1061,20 +1061,60 @@ function initializeTradingViewWidgets() {
 
 function showStockDetails(symbol, isInitialLoad = false) {
     const theme = document.body.getAttribute('data-theme') || 'light';
-    const symbolInfoContainer = document.getElementById('tv-symbol-info-widget-container');
-    symbolInfoContainer.innerHTML = ''; // Clear previous widget
 
-    new TradingView.widget({
-        "container_id": "tv-symbol-info-widget-container",
-        "width": "100%",
-        "height": "100%",
-        "locale": "en",
-        "colorTheme": theme,
-        "isTransparent": true,
-        "symbol": symbol,
-        "autosize": true,
-    });
+    // --- 1. Symbol Info Widget (Top Left) ---
+    const symbolInfoContainer = document.getElementById('tv-widget-symbol-info');
+    if (symbolInfoContainer) {
+        symbolInfoContainer.innerHTML = ''; // Clear previous
+        new TradingView.widget({
+          "container_id": "tv-widget-symbol-info",
+          "symbol": symbol,
+          "colorTheme": theme,
+          "isTransparent": true,
+          "locale": "en",
+          "width": "100%"
+        });
+    }
+
+    // --- 2. Technical Analysis Widget (Top Right) ---
+    const techAnalysisContainer = document.getElementById('tv-widget-technical-analysis');
+    if (techAnalysisContainer) {
+        techAnalysisContainer.innerHTML = ''; // Clear previous
+        new TradingView.widget({
+          "container_id": "tv-widget-technical-analysis",
+          "symbol": symbol,
+          "colorTheme": theme,
+          "displayMode": "single",
+          "isTransparent": true,
+          "locale": "en",
+          "width": "100%",
+          "height": "100%"
+        });
+    }
+
+    // --- 3. Advanced Chart Widget (Bottom) ---
+    const advancedChartContainer = document.getElementById('tv-widget-advanced-chart');
+    if (advancedChartContainer) {
+        advancedChartContainer.innerHTML = ''; // Clear previous
+        new TradingView.widget({
+          "container_id": "tv-widget-advanced-chart",
+          "symbol": symbol,
+          "theme": theme,
+          "allow_symbol_change": true,
+          "calendar": false,
+          "details": false,
+          "hide_side_toolbar": true,
+          "hide_top_toolbar": false,
+          "hide_legend": false,
+          "save_image": true,
+          "isTransparent": true,
+          "locale": "en",
+          "width": "100%",
+          "height": "100%"
+        });
+    }
     
+    // Switch to the panel if this isn't the initial page load
     if (!isInitialLoad) {
         switchCenterPanel('stock-details');
     }
