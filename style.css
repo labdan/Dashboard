@@ -1464,7 +1464,7 @@ body.dynamic-theme {
     /* ADJUSTED: Changed column ratio to make left side narrower and right side wider */
     grid-template-columns: 1.9fr 1.1fr; 
     /* ADJUSTED: Set a minimum height for the top row to make widgets taller */
-    grid-template-rows: minmax(380px, auto) 1fr;
+    grid-template-rows: minmax(300px, auto) 1fr;
     gap: 15px;
     height: 100%;
 }
