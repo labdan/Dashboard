@@ -32,6 +32,7 @@ const MARKETS = [
     { name: "Euronext Lisbon", value: "EURONEXT" }
 ];
 
+
 // --- DOM ELEMENTS ---
 const timeElement = document.getElementById('time');
 const dateElement = document.getElementById('date');
@@ -823,20 +824,16 @@ async function openWatchlistEditor() {
     const marketSelect = document.getElementById('new-stock-market');
     editorBody.innerHTML = '<p>Loading current watchlist...</p>';
     watchlistItemsToDelete = [];
-    
-    // Populate market dropdown with NASDAQ as default
     marketSelect.innerHTML = '<option value="" disabled>Select Market...</option>';
     MARKETS.forEach(market => {
         const option = document.createElement('option');
         option.value = market.value;
         option.textContent = market.name;
-        if (market.value === "NASDAQ") option.selected = true;
+        if (market.name === "NASDAQ") option.selected = true;
         marketSelect.appendChild(option);
     });
-
     const { data, error } = await supabaseClient.from('watchlist').select('*').order('sort_order');
     if (error) { editorBody.innerHTML = '<p class="error-message">Could not load watchlist.</p>'; return; }
-    
     editorBody.innerHTML = '';
     for (const stock of data) {
         await renderWatchlistEditRow(stock);
@@ -858,16 +855,19 @@ async function renderWatchlistEditRow(stock) {
     row.dataset.ticker = stock.ticker;
     row.dataset.market = stock.market;
 
+    let logoUrl = stock.logo_url;
     const fallbackSrc = 'nostockimg.png';
-    const t212Ticker = instrumentDictionary.has(`${stock.ticker}_${stock.market}`) ? `${stock.ticker}_${stock.market}` : Array.from(instrumentDictionary.keys()).find(k => k.startsWith(stock.ticker));
     
-    let logoUrl = fallbackSrc;
-    if (t212Ticker) {
+    // If logo is missing, fetch and update it
+    if (!logoUrl) {
         try {
-            const response = await fetch(`/.netlify/functions/enrich-company-details?ticker=${encodeURIComponent(t212Ticker)}&instrumentName=${encodeURIComponent(stock.ticker)}`);
-            const details = await response.json();
-            logoUrl = details.logo_url || fallbackSrc;
-        } catch(e) { console.error("Could not fetch logo for", stock.ticker); }
+            const response = await fetch(`/.netlify/functions/enrich-watchlist-item?id=${stock.id}&ticker=${encodeURIComponent(stock.ticker)}&market=${encodeURIComponent(stock.market)}`);
+            const data = await response.json();
+            logoUrl = data.logo_url || fallbackSrc;
+        } catch(e) { 
+            console.error("Could not fetch logo for", stock.ticker);
+            logoUrl = fallbackSrc;
+        }
     }
 
     row.innerHTML = `
@@ -887,7 +887,7 @@ async function handleAddStock(e) {
     e.preventDefault();
     const tickerInput = document.getElementById('new-stock-ticker');
     const marketSelect = document.getElementById('new-stock-market');
-    const newStock = { id: `new-${Date.now()}`, ticker: tickerInput.value.toUpperCase().trim(), market: marketSelect.value };
+    const newStock = { id: `new-${Date.now()}`, ticker: tickerInput.value.toUpperCase().trim(), market: marketSelect.value, logo_url: '' };
     if (newStock.ticker && newStock.market) {
         await renderWatchlistEditRow(newStock);
         addStockForm.reset();
@@ -903,7 +903,6 @@ async function saveWatchlistChanges() {
             const { error } = await supabaseClient.from('watchlist').delete().in('id', watchlistItemsToDelete);
             if (error) throw error;
         }
-
         const rows = Array.from(document.querySelectorAll('#watchlist-editor-body .watchlist-edit-row'));
         const upsertData = rows.map((row, index) => {
             const isNew = row.dataset.id.startsWith('new-');
