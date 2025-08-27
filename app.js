@@ -1080,23 +1080,25 @@ function showStockDetails(symbol, isInitialLoad = false) {
     }
 }
 
+
 async function loadCustomWatchlist() {
     const container = document.getElementById('custom-watchlist-container');
     container.innerHTML = '<p style="padding: 10px 0;">Loading watchlist...</p>';
     try {
-        // NOTE: This assumes a Netlify function exists at '/.netlify/functions/get-watchlist'
-        // that connects to your Supabase instance and fetches from the 'watchlist' table.
-        // It should return a JSON array like: [{ "ticker": "AAPL", "market": "NASDAQ" }]
+        // Fetch data from your Supabase table via the Netlify function
         const response = await fetch('/.netlify/functions/get-watchlist');
         if (!response.ok) {
             throw new Error(`Failed to fetch custom watchlist: ${response.statusText}`);
         }
         const watchlistData = await response.json();
         
-        container.innerHTML = ''; // Clear loading message
+        container.innerHTML = ''; // Clear the "Loading..." message
         
+        // Loop through each stock in your watchlist
         watchlistData.forEach(stock => {
             const tvSymbol = `${stock.market}:${stock.ticker}`;
+            
+            // 1. Create the main wrapper with the data-ticker attribute
             const widgetWrapper = document.createElement('div');
             widgetWrapper.className = 'single-ticker-widget-wrapper';
             widgetWrapper.setAttribute('data-ticker', tvSymbol);
@@ -1104,6 +1106,7 @@ async function loadCustomWatchlist() {
             const tvWidgetContainer = document.createElement('div');
             tvWidgetContainer.className = 'tradingview-widget-container';
             
+            // 2. Create the TradingView script to embed the widget
             const script = document.createElement('script');
             script.type = 'text/javascript';
             script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js';
@@ -1116,15 +1119,18 @@ async function loadCustomWatchlist() {
                 "width": "100%"
             });
 
+            // Assemble and append the widget to the page
             tvWidgetContainer.appendChild(script);
             widgetWrapper.appendChild(tvWidgetContainer);
             container.appendChild(widgetWrapper);
         });
         
-        // Add a single event listener to the container for the overlay-like functionality
+        // 3. Add a SINGLE click listener to the parent container
         container.addEventListener('click', (e) => {
             const widget = e.target.closest('.single-ticker-widget-wrapper');
+            // When a click occurs, check if it was on one of our wrappers
             if (widget && widget.dataset.ticker) {
+                // If yes, call the existing function to show the details
                 showStockDetails(widget.dataset.ticker);
             }
         });
@@ -1134,7 +1140,6 @@ async function loadCustomWatchlist() {
         container.innerHTML = '<div class="error-message" style="padding: 10px 0;">Could not load watchlist. Please ensure the `get-watchlist` serverless function is deployed.</div>';
     }
 }
-
 
 
 async function getInstrumentDictionary() {
