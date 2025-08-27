@@ -1016,10 +1016,8 @@ async function saveNote() {
 // --- STOCK WATCHLIST & TRADINGVIEW WIDGETS ---
 function initializeTradingViewWidgets() {
     const theme = document.body.getAttribute('data-theme') || 'light';
-
-    // Clear previous widgets if they exist
-    const watchlistContainer = document.getElementById('tv-market-overview-widget-container');
-    watchlistContainer.innerHTML = '';
+    const container = document.getElementById('tv-market-overview-widget-container');
+    container.innerHTML = '';
     
     // Create the script tag for the Hotlists widget
     const script = document.createElement('script');
@@ -1030,7 +1028,7 @@ function initializeTradingViewWidgets() {
         "exchange": "US",
         "colorTheme": theme,
         "dateRange": "12M",
-        "showChart": true,
+        "showChart": false,
         "locale": "en",
         "largeChartUrl": "",
         "isTransparent": true,
@@ -1050,10 +1048,13 @@ function initializeTradingViewWidgets() {
     });
 
     // Append the script to the container
-    watchlistContainer.appendChild(script);
+    container.appendChild(script);
+
+    // Initial load for the Symbol Info widget with a default symbol
+    showStockDetails("NASDAQ:AAPL", true);
 }
 
-function showStockDetails(symbol) {
+function showStockDetails(symbol, isInitialLoad = false) {
     const theme = document.body.getAttribute('data-theme') || 'light';
     const symbolInfoContainer = document.getElementById('tv-symbol-info-widget-container');
     symbolInfoContainer.innerHTML = ''; // Clear previous widget
@@ -1069,7 +1070,9 @@ function showStockDetails(symbol) {
         "autosize": true,
     });
     
-    switchCenterPanel('stock-details');
+    if (!isInitialLoad) {
+        switchCenterPanel('stock-details');
+    }
 }
 
 

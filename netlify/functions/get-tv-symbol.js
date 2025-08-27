@@ -33,21 +33,22 @@ exports.handler = async function(event, context) {
     return { statusCode: 400, body: JSON.stringify({ error: 'Ticker is required.' }) };
   }
   
-  const url = `https://api.twelvedata.com/symbol_search?symbol=${ticker}&outputsize=1`;
+  const url = `https://api.twelvedata.com/symbol_search?symbol=${ticker}`;
 
   try {
     const searchResult = await fetchJson(url);
     if (searchResult.data && searchResult.data.length > 0) {
+      // Find the best match (often the first result is good, prioritizing major exchanges if possible)
       const result = searchResult.data[0];
       const tvSymbol = `${result.exchange}:${result.symbol}`;
       return { statusCode: 200, body: JSON.stringify({ tvSymbol: tvSymbol }) };
     } else {
-      // If no result, try a common exchange as a fallback (NASDAQ)
-      return { statusCode: 200, body: JSON.stringify({ tvSymbol: `NASDAQ:${ticker}` }) };
+      // If no result, just return the ticker itself. TradingView might resolve it.
+      return { statusCode: 200, body: JSON.stringify({ tvSymbol: ticker }) };
     }
   } catch (error) {
     console.error(`Symbol search failed for ${ticker}:`, error);
     // Fallback if the API call fails
-    return { statusCode: 200, body: JSON.stringify({ tvSymbol: `NASDAQ:${ticker}` }) };
+    return { statusCode: 200, body: JSON.stringify({ tvSymbol: ticker }) };
   }
 };
