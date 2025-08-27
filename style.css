@@ -1431,7 +1431,6 @@ body.dynamic-theme {
 
 
 /* New rule for the top Hotlists widget */
-/* New rule for the top Hotlists widget */
 #tv-hotlists-widget {
     padding: 0;
     overflow-y: auto; /* Allow vertical scrolling */
