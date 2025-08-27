@@ -1093,6 +1093,7 @@ function showStockDetails(symbol, isInitialLoad = false) {
             "displayMode": "single",
             "isTransparent": true,
             "locale": "en",
+            "interval": "1M", // ADDED: Sets the default interval to 1 Month
             "width": "100%",
             "height": "100%"
         });
