@@ -1431,11 +1431,21 @@ body.dynamic-theme {
 
 
 /* New rule for the top Hotlists widget */
+/* New rule for the top Hotlists widget */
 #tv-hotlists-widget {
     padding: 0;
-    overflow: hidden;
-    height: 310px;  /* ADJUSTED: Reduced from 265px to better match the header widgets */
+    overflow-y: auto; /* Allow vertical scrolling */
     flex-shrink: 0; /* Prevents this widget from shrinking */
+    height: 40%; /* Allocate a percentage of the sidebar height */
+}
+
+/* New rule for the bottom Custom Watchlist widget */
+#tv-custom-watchlist-widget {
+    padding: 0;
+    flex-grow: 1; /* Allows this widget to fill the remaining space */
+    min-height: 0; /* Critical for flex-grow to work properly */
+    display: flex; /* Make it a flex container so its child can grow */
+    overflow-y: auto; /* Allow vertical scrolling */
 }
 
 /* New rule for the bottom Custom Watchlist widget */
