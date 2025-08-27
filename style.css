@@ -1428,27 +1428,29 @@ body.dynamic-theme {
     width: 100%;
 }
 
-/* 1. Make the main widget a flex column */
-#tv-watchlist-widget {
+
+/* New rule for the top Hotlists widget */
+#tv-hotlists-widget {
     padding: 0;
     overflow: hidden;
-    display: flex;
-    flex-direction: column;
+    height: 265px; /* Fixed height to match weather/time widgets */
+    flex-shrink: 0; /* Prevents this widget from shrinking */
 }
 
-/* 2. Set a fixed height for the top "Hotlists" widget */
-#tv-market-overview-widget-container {
-    height: 265px;  /* This height is similar to the weather/time widgets */
-    flex-shrink: 0; /* Prevents this section from shrinking */
+/* New rule for the bottom Custom Watchlist widget */
+#tv-custom-watchlist-widget {
+    padding: 0;
+    flex-grow: 1; /* Allows this widget to fill the remaining space */
+    min-height: 0; /* Critical for flex-grow to work properly */
+    display: flex; /* Make it a flex container so its child can grow */
 }
 
-/* 3. Make the custom watchlist fill all remaining space */
+/* Rule for the actual container inside the bottom widget */
 #custom-watchlist-container {
-    flex-grow: 1; /* This makes the container expand to fill available space */
-    min-height: 0; /* A necessary property to ensure flex-grow works correctly */
-    overflow-y: auto; /* Adds a scrollbar if the list is too long */
+    height: 100%;
+    width: 100%;
+    overflow-y: auto; /* Enables scrolling for a long list */
     padding: 15px 20px;
-    border-top: 1px solid var(--border-color);
 }
 
 #stock-details-panel {
