@@ -1,3 +1,4 @@
+/* style.css */
 :root {
   --primary-color: #4a6fa5;
   --secondary-color: #6c757d;
@@ -1294,30 +1295,6 @@ header {
     transform: rotate(45deg);
 }
 
-/* --- Styles for Theme Selection Modal --- */
-#theme-modal .modal-body {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-.theme-option {
-    padding-bottom: 20px;
-    border-bottom: 1px solid var(--border-color);
-}
-.theme-option:last-child {
-    border-bottom: none;
-    padding-bottom: 0;
-}
-.theme-option h4 {
-    margin-bottom: 5px;
-    color: var(--primary-color);
-}
-.theme-option p {
-    font-size: 0.9rem;
-    color: var(--secondary-color);
-    margin-bottom: 15px;
-}
-
 /* --- Styles for Dynamic "Liquid Glass" Theme --- */
 body.dynamic-theme {
     background-size: cover;
@@ -1372,15 +1349,10 @@ body.dynamic-theme {
     height: 100%;
 }
 
-.video-controls {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-}
-
 /* --- Settings Page Styles --- */
 #settings-panel {
     padding: 20px;
+    overflow-y: auto;
 }
 .settings-page-container {
     width: 100%;
@@ -1415,6 +1387,11 @@ body.dynamic-theme {
     transition: background-color 0.2s ease;
     border: 1px solid var(--border-color);
     background-color: var(--card-background);
+    margin-bottom: 10px;
+    width: 100%;
+    text-align: left;
+    font-size: 1rem;
+    color: var(--text-color);
 }
 
 .settings-menu-item:hover {
@@ -1422,16 +1399,39 @@ body.dynamic-theme {
     color: var(--primary-color);
 }
 
-.theme-toggle-container {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 15px;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
+#logout-btn {
+    width: 100%;
     margin-top: 10px;
 }
 
 #quick-links-panel {
     padding: 20px;
+}
+
+.collapsible-content {
+    display: none;
+    padding-left: 20px;
+    border-left: 2px solid var(--border-color);
+    margin-left: 10px;
+    margin-top: 10px;
+}
+.collapsible-content.visible {
+    display: block;
+}
+
+.theme-option {
+    padding: 15px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+.theme-option:last-child {
+    border-bottom: none;
+}
+.theme-option h4 {
+    margin-bottom: 5px;
+    color: var(--primary-color);
+}
+.theme-option p {
+    font-size: 0.9rem;
+    color: var(--secondary-color);
+    margin-bottom: 15px;
 }

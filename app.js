@@ -47,8 +47,7 @@ const centerPanelNavLinks = document.querySelectorAll('.center-panel-nav-link');
 const centerPanelItems = document.querySelectorAll('.center-panel-item');
 const editQuicklinksBtn = document.getElementById('edit-quicklinks-btn');
 const themeSelectBtn = document.getElementById('theme-select-btn');
-const settingsModal = document.getElementById('settings-modal');
-const closeSettingsBtn = document.getElementById('close-settings-btn');
+const themeOptionsContainer = document.getElementById('theme-options-container');
 const saveQuickLinksBtn = document.getElementById('save-quick-links-btn');
 const quickLinksEditor = document.getElementById('quick-links-editor');
 const openAddLinkModalBtn = document.getElementById('open-add-link-modal-btn');
@@ -56,8 +55,6 @@ const addLinkModal = document.getElementById('add-link-modal');
 const closeAddLinkBtn = document.getElementById('close-add-link-btn');
 const addNewLinkBtn = document.getElementById('add-new-link-btn');
 const addLinkForm = document.getElementById('add-link-form');
-const themeModal = document.getElementById('theme-modal');
-const closeThemeBtn = document.getElementById('close-theme-btn');
 const setNormalThemeBtn = document.getElementById('set-normal-theme-btn');
 const setDynamicThemeBtn = document.getElementById('set-dynamic-theme-btn');
 const backToSettingsBtn = document.getElementById('back-to-settings-btn');
@@ -147,9 +144,10 @@ function setupEventListeners() {
 
     if(backToSettingsBtn) backToSettingsBtn.addEventListener('click', () => switchCenterPanel('settings'));
 
-    if (themeSelectBtn) themeSelectBtn.addEventListener('click', () => themeModal.classList.remove('hidden'));
+    if (themeSelectBtn) themeSelectBtn.addEventListener('click', () => {
+        themeOptionsContainer.classList.toggle('visible');
+    });
 
-    if (closeSettingsBtn) closeSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
     if (saveQuickLinksBtn) saveQuickLinksBtn.addEventListener('click', saveQuickLinks);
 
     // Add Link Modal Listeners
@@ -163,10 +161,15 @@ function setupEventListeners() {
     if (addNewLinkBtn) addNewLinkBtn.addEventListener('click', handleAddNewLink);
 
     // Theme Modal Listeners
-    if (closeThemeBtn) closeThemeBtn.addEventListener('click', () => themeModal.classList.add('hidden'));
-    if (themeModal) themeModal.addEventListener('click', (e) => { if (e.target === themeModal) themeModal.classList.add('hidden'); });
-    if (setNormalThemeBtn) setNormalThemeBtn.addEventListener('click', () => applyTheme({ type: 'normal' }));
-    if (setDynamicThemeBtn) setDynamicThemeBtn.addEventListener('click', () => applyTheme({ type: 'dynamic' }));
+    if (setNormalThemeBtn) setNormalThemeBtn.addEventListener('click', () => {
+        applyTheme({ type: 'normal' });
+        themeOptionsContainer.classList.remove('visible');
+    });
+    if (setDynamicThemeBtn) setDynamicThemeBtn.addEventListener('click', () => {
+        applyTheme({ type: 'dynamic' });
+        themeOptionsContainer.classList.remove('visible');
+    });
+
 
     // Editor Listener
     if(saveNoteBtn) saveNoteBtn.addEventListener('click', saveNote);
@@ -195,8 +198,7 @@ function applyTheme(config, isInitialLoad = false) {
     localStorage.setItem('themeConfig', JSON.stringify(newConfig));
 
     document.body.setAttribute('data-theme', newConfig.mode);
-    themeToggleBtn.innerHTML = newConfig.mode === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
-
+    
     if (newConfig.type === 'dynamic') {
         document.body.classList.add('dynamic-theme');
         const today = new Date().toDateString();
@@ -217,7 +219,6 @@ function applyTheme(config, isInitialLoad = false) {
         document.body.style.backgroundImage = 'none';
     }
 
-    if(themeModal) themeModal.classList.add('hidden');
 }
 
 function toggleTheme() {
