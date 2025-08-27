@@ -1061,10 +1061,10 @@ function initializeTradingViewWidgets() {
 function showStockDetails(symbol, isInitialLoad = false) {
     const theme = document.body.getAttribute('data-theme') || 'light';
     
-    // --- 1. Symbol Info Widget (Top Left) ---
+    // --- 1. Symbol Info Widget (Row 1) ---
     const symbolInfoContainer = document.getElementById('tv-widget-symbol-info');
     if (symbolInfoContainer) {
-        symbolInfoContainer.innerHTML = ''; // Clear previous content
+        symbolInfoContainer.innerHTML = ''; 
         const script = document.createElement('script');
         script.type = 'text/javascript';
         script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-symbol-info.js';
@@ -1079,10 +1079,10 @@ function showStockDetails(symbol, isInitialLoad = false) {
         symbolInfoContainer.appendChild(script);
     }
 
-    // --- 2. Technical Analysis Widget (Top Right) ---
+    // --- 2. Technical Analysis Widget (Row 2, Left) ---
     const techAnalysisContainer = document.getElementById('tv-widget-technical-analysis');
     if (techAnalysisContainer) {
-        techAnalysisContainer.innerHTML = ''; // Clear previous content
+        techAnalysisContainer.innerHTML = '';
         const script = document.createElement('script');
         script.type = 'text/javascript';
         script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-technical-analysis.js';
@@ -1090,20 +1090,38 @@ function showStockDetails(symbol, isInitialLoad = false) {
         script.innerHTML = JSON.stringify({
             "symbol": symbol,
             "colorTheme": theme,
-            "displayMode": "single",
             "isTransparent": true,
             "locale": "en",
-            "interval": "1M", // ADDED: Sets the default interval to 1 Month
             "width": "100%",
             "height": "100%"
         });
         techAnalysisContainer.appendChild(script);
     }
 
-    // --- 3. Advanced Chart Widget (Bottom) ---
+    // --- 3. Financials Widget (Row 2, Right) ---
+    const financialsContainer = document.getElementById('tv-widget-financials');
+    if (financialsContainer) {
+        financialsContainer.innerHTML = '';
+        const script = document.createElement('script');
+        script.type = 'text/javascript';
+        script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-financials.js';
+        script.async = true;
+        script.innerHTML = JSON.stringify({
+            "symbol": symbol,
+            "colorTheme": theme,
+            "displayMode": "adaptive",
+            "isTransparent": true,
+            "locale": "en",
+            "width": "100%",
+            "height": "100%"
+        });
+        financialsContainer.appendChild(script);
+    }
+
+    // --- 4. Advanced Chart Widget (Row 3) ---
     const advancedChartContainer = document.getElementById('tv-widget-advanced-chart');
     if (advancedChartContainer) {
-        advancedChartContainer.innerHTML = ''; // Clear previous content
+        advancedChartContainer.innerHTML = '';
         const script = document.createElement('script');
         script.type = 'text/javascript';
         script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';

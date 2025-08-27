@@ -1455,34 +1455,45 @@ body.dynamic-theme {
 
 /* --- STOCK DETAILS PANEL --- */
 #stock-details-panel {
+    /* The panel itself should not scroll; its content will */
+    overflow: visible; 
     padding: 15px;
-    overflow-y: auto;
 }
-
+/* New Grid Layout for Stock Details */
 .stock-details-grid {
     display: grid;
-    /* ADJUSTED: Changed column ratio to make left side narrower and right side wider */
-    grid-template-columns: 1.89fr 1.11fr; 
-    /* ADJUSTED: Set a minimum height for the top row to make widgets taller */
-    grid-template-rows: minmax(350px, auto) 1fr;
+    /* Two equal columns */
+    grid-template-columns: 1fr 1fr;
+    /* Define heights for the three rows */
+    grid-template-rows: auto auto 350px; 
     gap: 15px;
-    height: 100%;
 }
 
 #tv-widget-symbol-info {
-    grid-column: 1 / 2;
+    /* Span both columns on the first row */
+    grid-column: 1 / 3;
     grid-row: 1 / 2;
+    min-height: 200px; /* Give it a minimum height */
 }
 
 #tv-widget-technical-analysis {
+    /* Second row, first column */
+    grid-column: 1 / 2;
+    grid-row: 2 / 3;
+    min-height: 450px; /* Give it a minimum height */
+}
+
+#tv-widget-financials {
+    /* Second row, second column */
     grid-column: 2 / 3;
-    grid-row: 1 / 2;
+    grid-row: 2 / 3;
+    min-height: 450px; /* Give it a minimum height */
 }
 
 #tv-widget-advanced-chart {
-    grid-column: 1 / 3; /* Spans both columns */
-    grid-row: 2 / 3;
-    min-height: 400px; /* Ensure it has a minimum height */
+    /* Span both columns on the third row */
+    grid-column: 1 / 3;
+    grid-row: 3 / 4;
 }
 
 
