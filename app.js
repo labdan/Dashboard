@@ -178,11 +178,20 @@ function setupEventListeners() {
 // --- CENTER PANEL ---
 function switchCenterPanel(panelId) {
     centerPanelItems.forEach(item => {
-        item.classList.toggle('active', item.id === `${panelId}-panel`);
+        item.classList.remove('active');
     });
+    const panel = document.getElementById(`${panelId}-panel`);
+    if(panel) {
+        panel.classList.add('active');
+    }
+
     centerPanelNavLinks.forEach(link => {
-        link.classList.toggle('active', link.dataset.panel === panelId);
+        link.classList.remove('active');
     });
+    const navLink = document.querySelector(`.center-panel-nav-link[data-panel="${panelId}"]`);
+    if(navLink) {
+        navLink.classList.add('active');
+    }
 }
 
 // --- THEME ---
