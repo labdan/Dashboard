@@ -124,6 +124,10 @@ function setupEventListeners() {
             localStorage.removeItem('instrumentCache');
             loadStockWatchlist();
         }
+        const stockItem = e.target.closest('.stock-item-new');
+        if (stockItem && stockItem.dataset.ticker) {
+            showStockDetails(stockItem.dataset.ticker);
+        }
     });
     todoList.addEventListener('click', handleTodoClick);
     themeToggleBtn.addEventListener('click', toggleTheme);
@@ -386,33 +390,18 @@ async function loadCombinedNews() {
             return;
         }
 
-        const instrumentDictionary = await getInstrumentDictionary();
-        sideNewsContainer.innerHTML = allArticles.map(article => {
-            const highlightedTitle = highlightTickers(article.title, instrumentDictionary);
-            return `
-                <div class="news-item">
-                    <a href="${article.link}" class="news-title" target="_blank" rel="noopener noreferrer">${highlightedTitle}</a>
-                    <div class="news-date">${new Date(article.pubDate).toLocaleString()}</div>
-                </div>
-            `
-        }).join('');
+        sideNewsContainer.innerHTML = allArticles.map(article => `
+            <div class="news-item">
+                <a href="${article.link}" class="news-title" target="_blank" rel="noopener noreferrer">${article.title}</a>
+                <div class="news-date">${new Date(article.pubDate).toLocaleString()}</div>
+            </div>
+        `).join('');
     } catch (error) {
         console.error('Error fetching combined news:', error.message);
         sideNewsContainer.innerHTML = `<div class="error-message" style="padding: 20px;">Could not load news.</div>`;
     }
 }
 
-function highlightTickers(title, dictionary) {
-    if (!dictionary || dictionary.size === 0) {
-        return title;
-    }
-    let highlightedTitle = title;
-    dictionary.forEach((value, key) => {
-        const tickerRegex = new RegExp(`\\b${key.split('_')[0]}\\b`, 'gi');
-        highlightedTitle = highlightedTitle.replace(tickerRegex, `<span class="ticker">${key.split('_')[0]}</span>`);
-    });
-    return highlightedTitle;
-}
 
 // --- TO-DO LIST (with Supabase) ---
 async function loadTodos() {
@@ -441,6 +430,7 @@ async function handleTodoSubmit(e) {
             alert('Could not add task. See console for details.');
         } else {
             todoInput.value = '';
+            loadTodos(); // Refresh the list after adding
         }
     }
 }
@@ -1015,25 +1005,25 @@ async function saveNote() {
 // --- STOCK WATCHLIST & TRADINGVIEW WIDGETS ---
 function initializeTradingViewWidgets() {
     const theme = document.body.getAttribute('data-theme') || 'light';
-    const container = document.getElementById('tv-market-overview-widget-container');
-    container.innerHTML = '';
-    
-    const script = document.createElement('script');
-    script.type = 'text/javascript';
-    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-hotlists.js';
-    script.async = true;
-    script.innerHTML = JSON.stringify({
-        "exchange": "US",
-        "colorTheme": theme,
-        "dateRange": "12M",
-        "showChart": false,
-        "locale": "en",
-        "largeChartUrl": "",
-        "isTransparent": true,
-        "showSymbolLogo": true,
-        "showFloatingTooltip": true,
+
+    // Clear previous widgets if they exist
+    const watchlistContainer = document.getElementById('tv-market-overview-widget-container');
+    const symbolInfoContainer = document.getElementById('tv-symbol-info-widget-container');
+    watchlistContainer.innerHTML = '';
+    symbolInfoContainer.innerHTML = '';
+
+    // Watchlist Widget (Right Sidebar)
+    const watchlistWidget = new TradingView.widget({
+        "container_id": "tv-market-overview-widget-container",
         "width": "100%",
         "height": "100%",
+        "isTransparent": true,
+        "colorTheme": theme,
+        "showChart": true,
+        "locale": "en",
+        "largeChartUrl": "",
+        "showSymbolLogo": true,
+        "showFloatingTooltip": true,
         "plotLineColorGrowing": "rgba(41, 98, 255, 1)",
         "plotLineColorFalling": "rgba(41, 98, 255, 1)",
         "gridLineColor": "rgba(240, 243, 250, 0)",
@@ -1042,23 +1032,48 @@ function initializeTradingViewWidgets() {
         "belowLineFillColorFalling": "rgba(41, 98, 255, 0.12)",
         "belowLineFillColorGrowingBottom": "rgba(41, 98, 255, 0)",
         "belowLineFillColorFallingBottom": "rgba(41, 98, 255, 0)",
-        "symbolActiveColor": "rgba(41, 98, 255, 0.12)"
+        "symbolActiveColor": "rgba(41, 98, 255, 0.12)",
+        "tabs": [
+            {
+                "title": "Assets",
+                "symbols": [
+                    { "s": "NASDAQ:AAPL" },
+                    { "s": "NASDAQ:TSLA" },
+                    { "s": "NASDAQ:NVDA" },
+                    { "s": "NASDAQ:AMZN" },
+                    { "s": "NASDAQ:GOOGL" },
+                    { "s": "INDEX:SPX" }
+                ],
+                "originalTitle": "Indices"
+            }
+        ]
     });
-    container.appendChild(script);
 
     // Symbol Info Widget (Center Panel)
-    new TradingView.widget({
-        "container_id": "tv-symbol-info-widget-container",
-        "width": "100%",
-        "height": "100%",
-        "locale": "en",
-        "colorTheme": theme,
-        "isTransparent": true,
-        "symbol": "NASDAQ:AAPL", // Default symbol
-        "autosize": true,
-    });
-}
+    let symbolInfoWidgetInstance = null;
+    function createSymbolInfoWidget(symbol) {
+        symbolInfoContainer.innerHTML = '';
+        symbolInfoWidgetInstance = new TradingView.widget({
+            "container_id": "tv-symbol-info-widget-container",
+            "width": "100%",
+            "height": "100%",
+            "locale": "en",
+            "colorTheme": theme,
+            "isTransparent": true,
+            "symbol": symbol,
+            "autosize": true,
+        });
+    }
 
+    // Initial load for the Symbol Info widget
+    createSymbolInfoWidget('NASDAQ:AAPL');
+
+    // Make the function globally accessible so the watchlist can call it
+    window.showStockDetails = (symbol) => {
+        createSymbolInfoWidget(symbol);
+        switchCenterPanel('stock-details');
+    };
+}
 
 
 async function getInstrumentDictionary() {
@@ -1184,7 +1199,7 @@ function renderPortfolio(data, error = null) {
             const changePercent = initialValue === 0 ? 0 : (changeAmount / initialValue) * 100;
             const isPositive = changeAmount >= 0;
             watchlistHTML += `
-                <div class="stock-item-new">
+                <div class="stock-item-new" data-ticker="${stock.ticker}">
                     <div class="stock-icon-new">
                         <img src="${iconUrl}" alt="${companyName}" onerror="this.src='https://placehold.co/40x40/EFEFEF/AAAAAA?text=${baseTicker}'; this.onerror=null;">
                     </div>
