@@ -12,7 +12,7 @@ const INSTRUMENT_CACHE_DURATION = 24 * 60 * 60 * 1000;
 // --- SUPABASE CLIENT ---
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// --- DOM ELEMENTS (Consolidated and Corrected) ---
+// --- DOM ELEMENTS ---
 const timeElement = document.getElementById('time');
 const dateElement = document.getElementById('date');
 const miniCalendarContainer = document.getElementById('mini-calendar');
@@ -29,7 +29,6 @@ const todoList = document.getElementById('todo-list');
 const watchlistContainer = document.getElementById('watchlist-container');
 const themeToggleBtn = document.getElementById('theme-toggle');
 const sideNewsContainer = document.getElementById('side-news-container');
-const benzingaFeedContainer = document.getElementById('benzinga-feed-container');
 const eventsContainer = document.getElementById('events-container');
 
 // Main Layout Elements
@@ -43,8 +42,9 @@ const userProfileElement = document.getElementById('user-profile');
 const userAvatarElement = document.getElementById('user-avatar');
 const userNameElement = document.getElementById('user-name');
 
-// Settings Menu and Modals
-const settingsIcon = document.querySelector('.settings-icon');
+// Settings & Center Panel
+const centerPanelNavLinks = document.querySelectorAll('.center-panel-nav-link');
+const centerPanelItems = document.querySelectorAll('.center-panel-item');
 const editQuicklinksBtn = document.getElementById('edit-quicklinks-btn');
 const themeSelectBtn = document.getElementById('theme-select-btn');
 const settingsModal = document.getElementById('settings-modal');
@@ -60,6 +60,8 @@ const themeModal = document.getElementById('theme-modal');
 const closeThemeBtn = document.getElementById('close-theme-btn');
 const setNormalThemeBtn = document.getElementById('set-normal-theme-btn');
 const setDynamicThemeBtn = document.getElementById('set-dynamic-theme-btn');
+const backToSettingsBtn = document.getElementById('back-to-settings-btn');
+
 
 // Editor DOM Elements
 const saveNoteBtn = document.getElementById('save-note-btn');
@@ -81,22 +83,23 @@ const refreshWeatherBtn = document.getElementById('refresh-weather');
 // --- STATE ---
 let currentSearchEngine = 'google';
 let calendarDisplayDate = new Date();
-let allUserEvents = []; 
-const USER_ID = '12345678-12321-1234-1234567890ab'; 
-let linkIdsToDelete = []; 
+let allUserEvents = [];
+const USER_ID = '12345678-12321-1234-1234567890ab';
+let linkIdsToDelete = [];
 let quillEditor;
 let saveTimeout;
 let sortableInstance;
+let instrumentDictionary = new Map();
 
 // --- INITIALIZATION ---
 async function init() {
-    applySavedTheme(); 
+    applySavedTheme();
     updateClock();
     setInterval(updateClock, 1000);
-    updateDateDisplay(); 
+    updateDateDisplay();
     updateQuote();
     setInterval(updateQuote, 10000);
-    
+
     setupEventListeners();
     await checkLoginStatus();
 }
@@ -117,7 +120,7 @@ function setupEventListeners() {
     watchlistContainer.addEventListener('click', (e) => {
         if (e.target.closest('#refresh-portfolio')) {
             localStorage.removeItem('portfolioCache');
-            localStorage.removeItem('instrumentCache'); 
+            localStorage.removeItem('instrumentCache');
             loadStockWatchlist();
         }
     });
@@ -132,14 +135,23 @@ function setupEventListeners() {
         updateDateDisplay();
     });
 
-    // Settings Menu and Modal Listeners
-    if (editQuicklinksBtn) editQuicklinksBtn.addEventListener('click', openQuickLinksEditor);
+    // Center Panel Navigation
+    centerPanelNavLinks.forEach(link => {
+        link.addEventListener('click', () => switchCenterPanel(link.dataset.panel));
+    });
+
+    if (editQuicklinksBtn) editQuicklinksBtn.addEventListener('click', () => {
+        openQuickLinksEditor();
+        switchCenterPanel('quick-links');
+    });
+
+    if(backToSettingsBtn) backToSettingsBtn.addEventListener('click', () => switchCenterPanel('settings'));
+
     if (themeSelectBtn) themeSelectBtn.addEventListener('click', () => themeModal.classList.remove('hidden'));
-    
+
     if (closeSettingsBtn) closeSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
-    if (settingsModal) settingsModal.addEventListener('click', (e) => { if (e.target === settingsModal) settingsModal.classList.add('hidden'); });
     if (saveQuickLinksBtn) saveQuickLinksBtn.addEventListener('click', saveQuickLinks);
-    
+
     // Add Link Modal Listeners
     if (openAddLinkModalBtn) openAddLinkModalBtn.addEventListener('click', handleAddLinkModalOpen);
     if (closeAddLinkBtn) closeAddLinkBtn.addEventListener('click', () => addLinkModal.classList.add('hidden'));
@@ -158,6 +170,16 @@ function setupEventListeners() {
 
     // Editor Listener
     if(saveNoteBtn) saveNoteBtn.addEventListener('click', saveNote);
+}
+
+// --- CENTER PANEL ---
+function switchCenterPanel(panelId) {
+    centerPanelItems.forEach(item => {
+        item.classList.toggle('active', item.id === `${panelId}-panel`);
+    });
+    centerPanelNavLinks.forEach(link => {
+        link.classList.toggle('active', link.dataset.panel === panelId);
+    });
 }
 
 // --- THEME ---
@@ -194,7 +216,7 @@ function applyTheme(config, isInitialLoad = false) {
         document.body.classList.remove('dynamic-theme');
         document.body.style.backgroundImage = 'none';
     }
-    
+
     if(themeModal) themeModal.classList.add('hidden');
 }
 
@@ -205,12 +227,11 @@ function toggleTheme() {
 }
 
 async function fetchAndSetBackgroundImage(mode) {
-    // **UPDATED**: Changed the queries to be more specific
     const query = mode === 'dark' ? 'dark,green,nature' : 'light,beach';
     try {
         const response = await fetch(`/.netlify/functions/get-background-image?query=${query}`);
         if (!response.ok) throw new Error('Failed to fetch background image.');
-        
+
         const data = await response.json();
         if (data.imageUrl) {
             localStorage.setItem('dynamicBg', data.imageUrl);
@@ -254,7 +275,7 @@ async function checkLoginStatus() {
             loadLoggedInContent();
         } else if (response.status === 401) {
             await refreshAccessToken();
-            await checkLoginStatus(); 
+            await checkLoginStatus();
         } else {
             throw new Error('Failed to fetch user info');
         }
@@ -295,7 +316,6 @@ function showLoginPage() {
     if(eventsContainer) eventsContainer.innerHTML = '';
     if(watchlistContainer) watchlistContainer.innerHTML = '';
     if(sideNewsContainer) sideNewsContainer.innerHTML = '';
-    if(benzingaFeedContainer) benzingaFeedContainer.innerHTML = '';
     if(todoList) todoList.innerHTML = '';
 }
 
@@ -306,62 +326,66 @@ function handleLogout() {
 }
 
 // --- CONTENT LOADING (for logged-in users) ---
-function loadLoggedInContent() {
+async function loadLoggedInContent() {
+    instrumentDictionary = await getInstrumentDictionary();
     loadQuickLinks();
     getWeather();
     loadStockWatchlist();
-    loadSideNews();
-    loadBenzingaFeed();
+    loadCombinedNews();
     loadTodos();
     subscribeToTodoChanges();
     loadUpcomingEvents();
-    initializeEditor(); 
+    initializeEditor();
 }
 
 
 // --- NEWS FEEDS ---
-async function loadSideNews() {
+async function loadCombinedNews() {
     if (!sideNewsContainer) return;
+    sideNewsContainer.innerHTML = '<p style="padding: 20px;">Loading news...</p>';
     try {
-        const response = await fetch('/.netlify/functions/get-stock-news');
-        if (!response.ok) throw new Error(`News function failed: ${response.statusText}`);
-        const data = await response.json();
-        if(!data.articles || data.articles.length === 0) {
+        const [seekingAlphaRes, benzingaRes] = await Promise.all([
+            fetch('/.netlify/functions/get-stock-news'),
+            fetch('/.netlify/functions/get-benzinga-news')
+        ]);
+
+        const seekingAlphaData = seekingAlphaRes.ok ? await seekingAlphaRes.json() : { articles: [] };
+        const benzingaData = benzingaRes.ok ? await benzingaRes.json() : { articles: [] };
+
+        const allArticles = [...seekingAlphaData.articles, ...benzingaData.articles];
+        
+        allArticles.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+
+        if (allArticles.length === 0) {
             sideNewsContainer.innerHTML = `<p style="padding: 20px;">No news available.</p>`;
             return;
         }
-        sideNewsContainer.innerHTML = data.articles.map(article => `
-            <div class="news-item">
-                <a href="${article.link}" class="news-title" target="_blank" rel="noopener noreferrer">${article.title}</a>
-                <div class="news-date">${new Date(article.pubDate).toLocaleString()}</div>
-            </div>
-        `).join('');
+
+        sideNewsContainer.innerHTML = allArticles.map(article => {
+            const highlightedTitle = highlightTickers(article.title);
+            return `
+                <div class="news-item">
+                    <a href="${article.link}" class="news-title" target="_blank" rel="noopener noreferrer">${highlightedTitle}</a>
+                    <div class="news-date">${new Date(article.pubDate).toLocaleString()}</div>
+                </div>
+            `
+        }).join('');
     } catch (error) {
-        console.error('Error fetching side news:', error.message);
+        console.error('Error fetching combined news:', error.message);
         sideNewsContainer.innerHTML = `<div class="error-message" style="padding: 20px;">Could not load news.</div>`;
     }
 }
 
-async function loadBenzingaFeed() {
-    if (!benzingaFeedContainer) return;
-    try {
-        const response = await fetch('/.netlify/functions/get-benzinga-news');
-        if (!response.ok) throw new Error(`Benzinga function failed: ${response.statusText}`);
-        const data = await response.json();
-        if(!data.articles || data.articles.length === 0) {
-            benzingaFeedContainer.innerHTML = `<p style="padding: 20px;">No news available.</p>`;
-            return;
-        }
-        benzingaFeedContainer.innerHTML = data.articles.map(article => `
-            <div class="news-item">
-                <a href="${article.link}" class="news-title" target="_blank" rel="noopener noreferrer">${article.title}</a>
-                <div class="news-date">${new Date(article.pubDate).toLocaleString()}</div>
-            </div>
-        `).join('');
-    } catch (error) {
-        console.error('Error fetching Benzinga news:', error.message);
-        benzingaFeedContainer.innerHTML = `<div class="error-message" style="padding: 20px;">Could not load news.</div>`;
+function highlightTickers(title) {
+    if (!instrumentDictionary || instrumentDictionary.size === 0) {
+        return title;
     }
+    let highlightedTitle = title;
+    instrumentDictionary.forEach((value, key) => {
+        const tickerRegex = new RegExp(`\\b${key.split('_')[0]}\\b`, 'gi');
+        highlightedTitle = highlightedTitle.replace(tickerRegex, `<span class="ticker">${key.split('_')[0]}</span>`);
+    });
+    return highlightedTitle;
 }
 
 // --- TO-DO LIST (with Supabase) ---
@@ -476,7 +500,7 @@ async function loadUpcomingEvents() {
             throw new Error(`Failed to fetch events: ${response.statusText}`);
         }
         const { events, holidays } = await response.json();
-        allUserEvents = [...events, ...holidays]; 
+        allUserEvents = [...events, ...holidays];
         renderUpcomingEvents(allUserEvents);
         renderMiniCalendar(allUserEvents, calendarDisplayDate);
     } catch (error) {
@@ -500,13 +524,13 @@ function renderUpcomingEvents(events) {
         })
         .filter(event => event.startDate >= today)
         .sort((a, b) => a.startDate - b.startDate);
-    
+
     if (futureEvents.length === 0) {
         eventsContainer.innerHTML = '<p>No upcoming events found.</p>';
     } else {
         eventsContainer.innerHTML = futureEvents.map(event => {
-            const timeString = event.start.dateTime 
-                ? event.startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
+            const timeString = event.start.dateTime
+                ? event.startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                 : 'All-day';
             return `
                 <div class="event-item">
@@ -526,7 +550,7 @@ function updateClock() {
 
 function updateDateDisplay() {
     dateElement.textContent = calendarDisplayDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-    renderMiniCalendar(allUserEvents, calendarDisplayDate); 
+    renderMiniCalendar(allUserEvents, calendarDisplayDate);
 }
 
 function renderMiniCalendar(events = [], displayDate) {
@@ -581,7 +605,7 @@ function handleSearch() {
 
         const engines = Array.from(searchEngineIcons).map(icon => icon.dataset.engine);
         const currentIndex = engines.indexOf(currentSearchEngine);
-        const nextIndex = (currentIndex + 1) % engines.length; 
+        const nextIndex = (currentIndex + 1) % engines.length;
         setSearchEngine(engines[nextIndex]);
     }
 }
@@ -596,7 +620,7 @@ function setSearchEngine(engine) {
 // --- QUICK LINKS ---
 async function loadQuickLinks() {
     const { data, error } = await supabaseClient.from('quick_links').select('*').order('sort_order');
-    
+
     if (error) {
         console.error('Error fetching quick links:', error.message);
         quickLinksContainer.innerHTML = `<p style="font-size: 0.8rem; opacity: 0.7;">Error: ${error.message}</p>`;
@@ -606,7 +630,7 @@ async function loadQuickLinks() {
         quickLinksContainer.innerHTML = '<p style="font-size: 0.8rem; opacity: 0.7;">No quick links configured.</p>';
         return;
     }
-    
+
     const links = data.filter(link => !link.parent_id);
     const subLinks = data.filter(link => link.parent_id);
     quickLinksContainer.innerHTML = '';
@@ -619,7 +643,7 @@ async function loadQuickLinks() {
             if (!link.url) {
                 const iconName = link.name.toLowerCase().replace(/\s+/g, '');
                 iconSrc = `${iconName}.ico`;
-            } 
+            }
             else {
                 try {
                     const hostname = new URL(link.url).hostname;
@@ -630,7 +654,7 @@ async function loadQuickLinks() {
             }
 
             const iconHTML = `<img src="${iconSrc}" alt="${link.name} icon" onerror="this.onerror=null; this.src='${fallbackSrc}'">`;
-            
+
             const childLinks = subLinks.filter(sub => sub.parent_id === link.id);
 
             if (childLinks.length > 0) {
@@ -642,12 +666,12 @@ async function loadQuickLinks() {
                         const hostname = new URL(sub.url).hostname;
                         faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
                     } catch (e) { console.error(`Invalid URL for sub-link '${sub.name}': ${sub.url}`); }
-                    
+
                     return `<a href="${sub.url}" class="link-item" target="_blank" rel="noopener noreferrer" title="${sub.name}"><div class="link-icon"><img src="${faviconUrl}" alt="${sub.name} icon" onerror="this.onerror=null;this.src='${fallbackSrc}';"></div><span class="link-name">${sub.name}</span></a>`;
                 }).join('');
                 linkItemWrapper.innerHTML = `<div class="link-icon">${iconHTML}</div><span class="link-name">${link.name}</span><div class="popup-menu">${subLinksHTML}</div>`;
                 quickLinksContainer.appendChild(linkItemWrapper);
-            } 
+            }
             else {
                 const anchor = document.createElement('a');
                 anchor.className = 'link-item';
@@ -667,7 +691,7 @@ async function loadQuickLinks() {
 // --- QUICK LINKS EDITOR ---
 async function handleAddLinkModalOpen() {
     const { data, error } = await supabaseClient.from('quick_links').select('id, name').is('url', null).order('sort_order');
-    
+
     if (error) {
         alert('Could not load parent links. See console for details.');
         console.error(error);
@@ -703,8 +727,8 @@ async function handleAddNewLink() {
         .order('sort_order', { ascending: false })
         .limit(1)
         .single();
-    
-    if (maxOrderError && maxOrderError.code !== 'PGRST116') { 
+
+    if (maxOrderError && maxOrderError.code !== 'PGRST116') {
         alert('Could not determine sort order.');
         console.error(maxOrderError);
         return;
@@ -728,7 +752,7 @@ async function handleAddNewLink() {
     }
 
     addLinkModal.classList.add('hidden');
-    await openQuickLinksEditor(); 
+    await openQuickLinksEditor();
     await loadQuickLinks();
 }
 
@@ -769,7 +793,7 @@ async function openQuickLinksEditor() {
         onEnd: function (evt) {
             const itemEl = evt.item;
             const previousEl = itemEl.previousElementSibling;
-            
+
             if (previousEl && previousEl.querySelector('[data-field="url"]').value === '') {
                 itemEl.classList.add('is-child');
             } else {
@@ -777,15 +801,13 @@ async function openQuickLinksEditor() {
             }
         }
     });
-
-    settingsModal.classList.remove('hidden');
 }
 
 function addQuickLinkRow(link = {}) {
     const row = document.createElement('div');
     row.className = 'quick-link-edit-row';
     row.dataset.id = link.id || `new-${Date.now()}`;
-    
+
     row.innerHTML = `
         <i class="fas fa-grip-vertical drag-handle"></i>
         <input type="text" class="ql-input" data-field="name" placeholder="Name" value="${link.name || ''}">
@@ -821,14 +843,14 @@ async function saveQuickLinks() {
             name: row.querySelector('[data-field="name"]').value,
             url: null
         }));
-        
+
         const newParentIdMap = new Map();
         if (newParentData.length > 0) {
             const { data: insertedParents, error: parentInsertError } = await supabaseClient
                 .from('quick_links')
                 .insert(newParentData.map(p => ({ name: p.name, url: p.url })))
                 .select();
-            
+
             if (parentInsertError) throw parentInsertError;
 
             insertedParents.forEach((p, i) => {
@@ -857,27 +879,27 @@ async function saveQuickLinks() {
             const previousEl = row.previousElementSibling;
             if (row.classList.contains('is-child') && previousEl) {
                 const prevUrl = previousEl.querySelector('[data-field="url"]').value;
-                if (!prevUrl) { 
+                if (!prevUrl) {
                     const prevId = previousEl.dataset.id;
                     if (prevId.startsWith('new-')) {
-                        lastParentId = newParentIdMap.get(prevId); 
+                        lastParentId = newParentIdMap.get(prevId);
                     } else {
                         lastParentId = prevId;
                     }
                 }
             } else if (!url && !isNew) {
-                lastParentId = id; 
+                lastParentId = id;
             } else {
-                lastParentId = null; 
+                lastParentId = null;
             }
-            
+
             if (row.classList.contains('is-child')) {
                 linkData.parent_id = lastParentId;
             }
 
             upsertData.push(linkData);
         });
-        
+
         if (upsertData.length > 0) {
             const { error: upsertError } = await supabaseClient.from('quick_links').upsert(upsertData);
             if (upsertError) throw upsertError;
@@ -886,7 +908,7 @@ async function saveQuickLinks() {
     } catch (error) {
         alert('Error saving links. See console for details.');
         console.error("An error occurred while saving quick links:", error);
-        
+
         saveQuickLinksBtn.textContent = 'Save Changes';
         saveQuickLinksBtn.disabled = false;
         return;
@@ -894,7 +916,7 @@ async function saveQuickLinks() {
 
     saveQuickLinksBtn.textContent = 'Save Changes';
     saveQuickLinksBtn.disabled = false;
-    settingsModal.classList.add('hidden');
+    switchCenterPanel('settings');
     await loadQuickLinks();
 }
 
@@ -924,7 +946,7 @@ async function initializeEditor() {
         .eq('user_id', USER_ID)
         .single();
 
-    if (error && error.code !== 'PGRST116') { 
+    if (error && error.code !== 'PGRST116') {
         console.error('Error loading note:', error);
     }
     if (data) {
@@ -936,7 +958,7 @@ async function initializeEditor() {
         saveStatus.textContent = 'Typing...';
         saveTimeout = setTimeout(() => {
             saveNote();
-        }, 2000); 
+        }, 2000);
     });
 }
 
@@ -949,7 +971,7 @@ async function saveNote() {
     const { error } = await supabaseClient
         .from('notes')
         .upsert({
-            id: 1, 
+            id: 1,
             user_id: USER_ID,
             content: content,
             updated_at: new Date().toISOString()
@@ -990,8 +1012,7 @@ async function getInstrumentDictionary() {
 async function loadStockWatchlist() {
     watchlistContainer.innerHTML = '<div style="padding: 20px;">Loading portfolio...</div>';
     try {
-        const [instrumentDictionary, portfolioRes, cashRes] = await Promise.all([
-            getInstrumentDictionary(),
+        const [portfolioRes, cashRes] = await Promise.all([
             fetch('/.netlify/functions/get-portfolio'),
             fetch('/.netlify/functions/get-cash')
         ]);

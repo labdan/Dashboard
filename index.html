@@ -1,3 +1,4 @@
+// labdan/dashboard/Dashboard-2253e2c0843f797ee6c72e7ec3ce72d9547ccbe1/index.html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -18,27 +19,7 @@
     <div class="container">
       <div class="left-sidebar">
           <div class="widget">
-              <div id="user-session-bar">
-                  <div id="user-profile">
-                      <img id="user-avatar" src="" alt="User Avatar">
-                      <span id="user-name"></span>
-                      <button id="logout-btn" class="auth-btn-small">Logout</button>
-                  </div>
-                  <div class="settings-container">
-                    <div class="settings-icon" title="Settings">
-                        <i class="fas fa-cog"></i>
-                    </div>
-                    <div class="settings-menu">
-                        <div class="settings-menu-item" id="edit-quicklinks-btn">
-                            <i class="fas fa-link"></i> Quick Link Edits
-                        </div>
-                        <div class="settings-menu-item" id="theme-select-btn">
-                            <i class="fas fa-palette"></i> Theme Select
-                        </div>
-                    </div>
-                  </div>
-              </div>
-              <h3>Seeking Alpha</h3>
+              <h3>News</h3>
               <div class="news-container" id="side-news-container"></div>
           </div>
       </div>
@@ -46,9 +27,6 @@
       <div class="main-content">
           <header>
             <div class="time-date header-widget">
-              <button class="theme-toggle" id="theme-toggle" title="Toggle Theme">
-                <i class="fas fa-moon"></i>
-              </button>
               <div class="time-display" id="time">00:00:00</div>
               <div class="date-display-container">
                   <button id="prev-month-btn" class="calendar-nav-btn" title="Previous Month"><i class="fas fa-chevron-left"></i></button>
@@ -108,11 +86,75 @@
                   <ul class="todo-list" id="todo-list"></ul>
                </div>
             </div>
-            <div class="widget" id="editor-widget">
-              <div id="editor-container"></div>
-              <div id="editor-footer">
-                  <span id="save-status"></span>
-                  <button id="save-note-btn" class="auth-btn-small">Save</button>
+            <div class="widget" id="center-panel-widget">
+              <div class="center-panel-nav">
+                <div class="center-panel-nav-links">
+                  <button class="center-panel-nav-link active" data-panel="notes">Notes</button>
+                  <button class="center-panel-nav-link" data-panel="cnbc">CNBC</button>
+                </div>
+                <div class="center-panel-nav-settings">
+                  <button class="center-panel-nav-link" data-panel="settings"><i class="fas fa-cog"></i></button>
+                </div>
+              </div>
+              <div id="center-panel-content">
+                <div id="notes-panel" class="center-panel-item active">
+                    <div id="editor-container"></div>
+                    <div id="editor-footer">
+                        <span id="save-status"></span>
+                        <button id="save-note-btn" class="auth-btn-small">Save</button>
+                    </div>
+                </div>
+                <div id="cnbc-panel" class="center-panel-item">
+                    <div class="video-container">
+                        <iframe id="cnbc-player" src="https://tvpass.org/channel/cnbc-usa" frameborder="0" allowfullscreen></iframe>
+                    </div>
+                    <div class="video-controls">
+                        <button class="btn-secondary" id="cnbc-hd-btn">HD</button>
+                        <button class="btn-secondary" id="cnbc-sd-btn">SD</button>
+                    </div>
+                </div>
+                <div id="settings-panel" class="center-panel-item">
+                  <div class="settings-page-container">
+                      <h2>Settings</h2>
+                      <div class="settings-section">
+                          <h3>Account</h3>
+                           <div id="user-profile">
+                              <img id="user-avatar" src="" alt="User Avatar">
+                              <span id="user-name"></span>
+                          </div>
+                          <button id="logout-btn" class="btn-danger">Logout</button>
+                      </div>
+                       <div class="settings-section">
+                          <h3>Theme</h3>
+                          <button class="settings-menu-item" id="theme-select-btn">
+                              <i class="fas fa-palette"></i> Theme Select
+                          </button>
+                           <div class="theme-toggle-container">
+                                <span>Toggle Dark/Light Mode</span>
+                                <button class="theme-toggle" id="theme-toggle" title="Toggle Theme">
+                                    <i class="fas fa-moon"></i>
+                                </button>
+                           </div>
+                      </div>
+                      <div class="settings-section">
+                          <h3>Customization</h3>
+                          <button class="settings-menu-item" id="edit-quicklinks-btn">
+                              <i class="fas fa-link"></i> Edit Quick Links
+                          </button>
+                      </div>
+                  </div>
+                </div>
+                 <div id="quick-links-panel" class="center-panel-item">
+                    <div class="modal-header">
+                        <h2>Edit Quick Links</h2>
+                        <span id="open-add-link-modal-btn" class="add-link-icon" title="Add New Link"><i class="fas fa-plus"></i></span>
+                    </div>
+                    <div class="modal-body" id="quick-links-editor"></div>
+                    <div class="modal-footer">
+                        <button id="save-quick-links-btn" class="btn-primary">Save Changes</button>
+                        <button id="back-to-settings-btn" class="btn-secondary">Back to Settings</button>
+                    </div>
+                </div>
               </div>
             </div>
             <div class="right-column-widgets">
@@ -122,31 +164,7 @@
             </div>
           </div>
       </div>
-
-      <div class="right-sidebar">
-          <div class="widget">
-              <h3>Benzinga News</h3>
-              <div class="news-container" id="benzinga-feed-container">
-                  <p style="padding: 20px; text-align: center; opacity: 0.7;">Loading Feed...</p>
-              </div>
-          </div>
-      </div>
     </div>
-  </div>
-
-  <div id="settings-modal" class="modal-container hidden">
-      <div class="modal-content">
-          <div class="modal-header">
-              <h2>Edit Quick Links</h2>
-              <span id="open-add-link-modal-btn" class="add-link-icon" title="Add New Link"><i class="fas fa-plus"></i></span>
-              <button id="close-settings-btn" class="close-btn">&times;</button>
-          </div>
-          <div class="modal-body" id="quick-links-editor">
-              </div>
-          <div class="modal-footer">
-              <button id="save-quick-links-btn" class="btn-primary">Save Changes</button>
-          </div>
-      </div>
   </div>
 
   <div id="add-link-modal" class="modal-container hidden">
