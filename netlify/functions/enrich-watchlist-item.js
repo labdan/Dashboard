@@ -1,5 +1,17 @@
 // netlify/functions/enrich-watchlist-item.js
+
 const { createClient } = require('@supabase/supabase-js');
+
+// Helper to check if a URL exists (returns true for status 200)
+const urlExists = (url) => {
+  return new Promise((resolve) => {
+    const options = { method: 'HEAD', headers: { 'User-Agent': 'Productivity-Dashboard/1.0' } };
+    const req = https.request(url, options, (res) => resolve(res.statusCode === 200));
+    req.on('error', () => resolve(false));
+    req.end();
+  });
+};
+
 
 // Helper function to fetch JSON
 const fetchJson = async (url) => {
@@ -25,17 +37,22 @@ exports.handler = async function(event, context) {
     let foundLogoUrl = '';
 
     try {
-        // --- Tier 1: Twelve Data API Logo Endpoint ---
-        const logoData = await fetchJson(`https://api.twelvedata.com/logo?symbol=${ticker}&exchange=${market}&apikey=${TWELVE_DATA_API_KEY}`);
-        if (logoData && logoData.url) {
-            foundLogoUrl = logoData.url;
+        // --- Tier 1: TradingView CDN ---
+        // We need the company name for this, so we'll have to fetch it first.
+        const profileData = await fetchJson(`https://api.twelvedata.com/profile?symbol=${ticker}&exchange=${market}&apikey=${TWELVE_DATA_API_KEY}`);
+        if (profileData && profileData.name) {
+            const slug = profileData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+            const tradingViewUrl = `https://s3-symbol-logo.tradingview.com/${slug}--big.svg`;
+            if (await urlExists(tradingViewUrl)) {
+                foundLogoUrl = tradingViewUrl;
+            }
         }
 
-        // --- Tier 2: Fallback to Profile Endpoint if no logo from logo endpoint ---
+        // --- Tier 2: Fallback to Twelve Data API Logo Endpoint ---
         if (!foundLogoUrl) {
-            const profileData = await fetchJson(`https://api.twelvedata.com/profile?symbol=${ticker}&exchange=${market}&apikey=${TWELVE_DATA_API_KEY}`);
-            if (profileData && profileData.logo) {
-                foundLogoUrl = profileData.logo;
+            const logoData = await fetchJson(`https://api.twelvedata.com/logo?symbol=${ticker}&exchange=${market}&apikey=${TWELVE_DATA_API_KEY}`);
+            if (logoData && logoData.url) {
+                foundLogoUrl = logoData.url;
             }
         }
 
@@ -48,7 +65,6 @@ exports.handler = async function(event, context) {
 
             if (error) {
                 console.error('Supabase update error:', error);
-                // Don't throw, just log it. Still return the found URL.
             }
         }
 
