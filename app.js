@@ -58,6 +58,9 @@ const addLinkForm = document.getElementById('add-link-form');
 const setNormalThemeBtn = document.getElementById('set-normal-theme-btn');
 const setDynamicThemeBtn = document.getElementById('set-dynamic-theme-btn');
 const backToSettingsBtn = document.getElementById('back-to-settings-btn');
+const saveWatchlistBtn = document.getElementById('save-watchlist-btn');
+const backToSettingsFromWatchlistBtn = document.getElementById('back-to-settings-from-watchlist-btn');
+const addStockForm = document.getElementById('add-stock-form');
 
 
 // Editor DOM Elements
@@ -87,6 +90,9 @@ let quillEditor;
 let saveTimeout;
 let sortableInstance;
 let instrumentDictionary = new Map();
+let availableMarkets = [];
+let watchlistItemsToDelete = [];
+
 
 // --- INITIALIZATION ---
 async function init() {
@@ -189,9 +195,13 @@ function setupEventListeners() {
         themeOptionsContainer.classList.remove('visible');
     });
 
-
     // Editor Listener
     if(saveNoteBtn) saveNoteBtn.addEventListener('click', saveNote);
+
+    // Watchlist Editor Listeners
+    if (saveWatchlistBtn) saveWatchlistBtn.addEventListener('click', saveWatchlistChanges);
+    if (backToSettingsFromWatchlistBtn) backToSettingsFromWatchlistBtn.addEventListener('click', () => switchCenterPanel('settings'));
+    if (addStockForm) addStockForm.addEventListener('submit', handleAddStock);
 }
 
 // --- CENTER PANEL ---
@@ -257,7 +267,6 @@ function applyTheme(config, isInitialLoad = false) {
     // Reload TradingView widgets if the theme changes to apply new theme
     if (!isInitialLoad) {
         initializeTradingViewWidgets();
-        // --- FIX: Reload custom watchlist widgets on theme change ---
         loadCustomWatchlist();
     }
 }
@@ -1058,6 +1067,7 @@ function initializeTradingViewWidgets() {
     // Initial load for the Symbol Info widget with a default symbol
     showStockDetails("NASDAQ:AAPL", true);
 }
+
 function showStockDetails(symbol, isInitialLoad = false) {
     const theme = document.body.getAttribute('data-theme') || 'light';
     
@@ -1148,22 +1158,26 @@ function showStockDetails(symbol, isInitialLoad = false) {
 
 async function loadCustomWatchlist() {
     const container = document.getElementById('custom-watchlist-container');
-    container.innerHTML = '<p style="padding: 10px 0;">Loading watchlist...</p>';
+    container.innerHTML = `<div id="custom-watchlist-header">
+        <button class="settings-btn" id="edit-watchlist-btn" title="Edit Watchlist"><i class="fas fa-cog"></i></button>
+    </div>
+    <div id="custom-watchlist-body"><p style="padding: 10px 0;">Loading watchlist...</p></div>`;
+    
+    // Add event listener for the new button
+    document.getElementById('edit-watchlist-btn').addEventListener('click', openWatchlistEditor);
+
+    const bodyContainer = document.getElementById('custom-watchlist-body');
+
     try {
-        // Fetch data from your Supabase table via the Netlify function
         const response = await fetch('/.netlify/functions/get-watchlist');
-        if (!response.ok) {
-            throw new Error(`Failed to fetch custom watchlist: ${response.statusText}`);
-        }
+        if (!response.ok) throw new Error(`Failed to fetch custom watchlist: ${response.statusText}`);
+        
         const watchlistData = await response.json();
         
-        container.innerHTML = ''; // Clear the "Loading..." message
+        bodyContainer.innerHTML = '';
         
-        // Loop through each stock in your watchlist
         watchlistData.forEach(stock => {
             const tvSymbol = `${stock.market}:${stock.ticker}`;
-            
-            // 1. Create the main wrapper with the data-ticker attribute
             const widgetWrapper = document.createElement('div');
             widgetWrapper.className = 'single-ticker-widget-wrapper';
             widgetWrapper.setAttribute('data-ticker', tvSymbol);
@@ -1171,7 +1185,6 @@ async function loadCustomWatchlist() {
             const tvWidgetContainer = document.createElement('div');
             tvWidgetContainer.className = 'tradingview-widget-container';
             
-            // 2. Create the TradingView script to embed the widget
             const script = document.createElement('script');
             script.type = 'text/javascript';
             script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js';
@@ -1184,49 +1197,153 @@ async function loadCustomWatchlist() {
                 "width": "100%"
             });
 
-            // Assemble and append the widget to the page
             tvWidgetContainer.appendChild(script);
             widgetWrapper.appendChild(tvWidgetContainer);
-            container.appendChild(widgetWrapper);
+            bodyContainer.appendChild(widgetWrapper);
         });
         
-        // 3. Add a SINGLE click listener to the parent container
-        container.addEventListener('click', (e) => {
+        bodyContainer.addEventListener('click', (e) => {
             const widget = e.target.closest('.single-ticker-widget-wrapper');
-            // When a click occurs, check if it was on one of our wrappers
             if (widget && widget.dataset.ticker) {
-                // If yes, call the existing function to show the details
                 showStockDetails(widget.dataset.ticker);
             }
         });
 
     } catch (error) {
         console.error("Error loading custom watchlist:", error);
-        container.innerHTML = '<div class="error-message" style="padding: 10px 0;">Could not load watchlist. Please ensure the `get-watchlist` serverless function is deployed.</div>';
+        bodyContainer.innerHTML = '<div class="error-message" style="padding: 10px 0;">Could not load watchlist.</div>';
     }
 }
-
 
 async function getInstrumentDictionary() {
     const cachedInstruments = JSON.parse(localStorage.getItem('instrumentCache'));
     if (cachedInstruments && (Date.now() - cachedInstruments.timestamp < INSTRUMENT_CACHE_DURATION)) {
-        return new Map(cachedInstruments.data);
+        instrumentDictionary = new Map(cachedInstruments.data);
+        availableMarkets = cachedInstruments.markets || [];
+        return instrumentDictionary;
     }
     try {
         const response = await fetch('/.netlify/functions/get-instruments');
         if (!response.ok) throw new Error('Failed to fetch instrument metadata');
         const instrumentList = await response.json();
-        const instrumentMap = new Map(instrumentList.map(item => [item.ticker, item]));
+        
+        const markets = new Set();
+        instrumentList.forEach(item => {
+            if (item.workingSchedule?.exchange) {
+                markets.add(item.workingSchedule.exchange);
+            }
+        });
+        availableMarkets = Array.from(markets).sort();
+
+        instrumentDictionary = new Map(instrumentList.map(item => [item.ticker, item]));
         localStorage.setItem('instrumentCache', JSON.stringify({
             timestamp: Date.now(),
-            data: Array.from(instrumentMap.entries())
+            data: Array.from(instrumentDictionary.entries()),
+            markets: availableMarkets
         }));
-        return instrumentMap;
+        return instrumentDictionary;
     } catch (error) {
         console.error("Could not load instrument dictionary:", error);
         return new Map();
     }
 }
+
+
+async function openWatchlistEditor() {
+    switchCenterPanel('watchlist-editor');
+    const editorBody = document.getElementById('watchlist-editor-body');
+    const marketSelect = document.getElementById('new-stock-market');
+    editorBody.innerHTML = '<p>Loading current watchlist...</p>';
+    watchlistItemsToDelete = [];
+
+    // Populate market dropdown
+    marketSelect.innerHTML = '<option value="" disabled selected>Select Market...</option>';
+    availableMarkets.forEach(market => {
+        const option = document.createElement('option');
+        option.value = market;
+        option.textContent = market;
+        marketSelect.appendChild(option);
+    });
+
+    // Fetch and display current watchlist
+    const { data, error } = await supabaseClient.from('watchlist').select('*').order('id');
+    if (error) {
+        editorBody.innerHTML = '<p class="error-message">Could not load watchlist.</p>';
+        return;
+    }
+
+    editorBody.innerHTML = '';
+    data.forEach(stock => renderWatchlistEditRow(stock));
+}
+
+function renderWatchlistEditRow(stock) {
+    const editorBody = document.getElementById('watchlist-editor-body');
+    const row = document.createElement('div');
+    row.className = 'watchlist-edit-row';
+    row.dataset.id = stock.id;
+    row.innerHTML = `
+        <span>${stock.ticker} (${stock.market})</span>
+        <button class="delete-link-btn"><i class="fas fa-trash"></i></button>
+    `;
+    row.querySelector('.delete-link-btn').addEventListener('click', () => {
+        watchlistItemsToDelete.push(stock.id);
+        row.remove();
+    });
+    editorBody.appendChild(row);
+}
+
+function handleAddStock(e) {
+    e.preventDefault();
+    const tickerInput = document.getElementById('new-stock-ticker');
+    const marketSelect = document.getElementById('new-stock-market');
+    const newStock = {
+        id: `new-${Date.now()}`, // Temporary ID for new items
+        ticker: tickerInput.value.toUpperCase().trim(),
+        market: marketSelect.value
+    };
+
+    if (newStock.ticker && newStock.market) {
+        renderWatchlistEditRow(newStock);
+        addStockForm.reset();
+        marketSelect.selectedIndex = 0;
+    }
+}
+
+async function saveWatchlistChanges() {
+    saveWatchlistBtn.textContent = 'Saving...';
+    saveWatchlistBtn.disabled = true;
+
+    try {
+        // Handle deletions
+        if (watchlistItemsToDelete.length > 0) {
+            const { error } = await supabaseClient.from('watchlist').delete().in('id', watchlistItemsToDelete);
+            if (error) throw error;
+        }
+
+        // Handle additions
+        const newStockRows = Array.from(document.querySelectorAll('.watchlist-edit-row[data-id^="new-"]'));
+        if (newStockRows.length > 0) {
+            const newStocks = newStockRows.map(row => {
+                const text = row.querySelector('span').textContent; // e.g., "AAPL (NASDAQ)"
+                const ticker = text.substring(0, text.indexOf('(')).trim();
+                const market = text.substring(text.indexOf('(') + 1, text.indexOf(')')).trim();
+                return { ticker, market };
+            });
+            const { error } = await supabaseClient.from('watchlist').insert(newStocks);
+            if (error) throw error;
+        }
+
+    } catch (error) {
+        alert('Error saving watchlist changes. See console for details.');
+        console.error('Watchlist save error:', error);
+    } finally {
+        saveWatchlistBtn.textContent = 'Save Changes';
+        saveWatchlistBtn.disabled = false;
+        switchCenterPanel('settings');
+        await loadCustomWatchlist(); // Refresh the watchlist on the sidebar
+    }
+}
+
 
 
 async function loadStockWatchlist() {

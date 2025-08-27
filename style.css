@@ -712,8 +712,9 @@ header {
 
 .portfolio-header .refresh-btn {
     position: absolute;
-    top: 15px;
-    right: 15px;
+    top: 15px;    
+    left: 15px;
+
 }
 
 .portfolio-title-bar {
@@ -1496,6 +1497,64 @@ body.dynamic-theme {
     grid-row: 3 / 4;
 }
 
+#custom-watchlist-header {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0 10px 10px;
+    border-bottom: 1px solid var(--border-color);
+    margin: -15px -20px 10px -20px;
+    padding: 10px 20px;
+}
+
+#custom-watchlist-header .settings-btn {
+    background: none;
+    border: none;
+    color: var(--secondary-color);
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 5px;
+}
+#custom-watchlist-header .settings-btn:hover {
+    color: var(--primary-color);
+}
+
+#watchlist-editor-body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.watchlist-edit-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border-radius: 8px;
+    background-color: var(--card-background);
+}
+
+.watchlist-edit-row span {
+    flex-grow: 1;
+    font-weight: 500;
+}
+
+.watchlist-add-form-container {
+    padding: 20px 0;
+    margin-top: 15px;
+    border-top: 1px solid var(--border-color);
+}
+
+#add-stock-form {
+    display: flex;
+    gap: 10px;
+}
+
+#new-stock-ticker {
+    flex-basis: 30%;
+}
+#new-stock-market {
+    flex-grow: 1;
+}
 
 /* Custom Watchlist Styles */
 .single-ticker-widget-wrapper {

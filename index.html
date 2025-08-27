@@ -51,7 +51,7 @@
             </div>
 
             <div class="weather-widget header-widget" id="weather">
-              <button class="refresh-btn" id="refresh-weather"><i class="fas fa-cog"></i></button>
+              <button class="refresh-btn" id="refresh-weather"><i class="fas fa-rotate"></i></button>
               <div class="weather-main">
                 <div class="weather-icon"><img id="weather-icon-img" src="" alt="Weather icon" /></div>
                 <div class="weather-details">
@@ -170,6 +170,29 @@
                         <button id="back-to-settings-btn" class="btn-secondary">Back to Settings</button>
                     </div>
                 </div>
+                <div id="quick-links-panel" class="center-panel-item">
+    </div>
+
+<div id="watchlist-editor-panel" class="center-panel-item">
+    <div class="modal-header">
+        <h2>Edit Custom Watchlist</h2>
+    </div>
+    <div class="modal-body" id="watchlist-editor-body">
+        </div>
+    <div class="watchlist-add-form-container">
+        <form id="add-stock-form">
+            <input type="text" id="new-stock-ticker" class="ql-input" placeholder="Ticker (e.g., AAPL)" required>
+            <select id="new-stock-market" class="ql-input" required>
+                <option value="" disabled selected>Select Market...</option>
+                </select>
+            <button type="submit" class="btn-primary">Add</button>
+        </form>
+    </div>
+    <div class="modal-footer">
+        <button id="save-watchlist-btn" class="btn-primary">Save Changes</button>
+        <button id="back-to-settings-from-watchlist-btn" class="btn-secondary">Back to Settings</button>
+    </div>
+</div>
               </div>
             </div>
             <div class="right-column-widgets">
