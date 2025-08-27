@@ -8,20 +8,108 @@ body.royal-epic-theme {
   font-family: 'Times New Roman', Times, serif;
 }
 
+/* --- New Widget Styling --- */
+
+/* This is the main container for a widget in the royal theme.
+   It's a relative container for all the decorative border pieces. */
 .royal-epic-theme .widget,
 .royal-epic-theme .header-widget {
   background-color: transparent;
-  border: 40px solid transparent;
-  border-image: url('royal/smallb.png') 40 stretch;
-  color: #f0e6d2;
+  border: none;
+  padding: 0; /* Padding is handled by the inner content wrapper */
+  box-shadow: none;
+  overflow: visible; /* Allows positioned borders to sit outside the box */
+  position: relative;
 }
 
+/* This div holds the actual content of the widget (news, todos, etc.)
+   It has the gradient background and ensures content stays within the borders. */
+.royal-epic-theme .royal-widget-content {
+  background: linear-gradient(180deg, rgba(60, 10, 10, 0.85) 0%, rgba(20, 5, 5, 0.9) 100%);
+  color: #f0e6d2;
+  height: 100%;
+  padding: 25px;
+  box-sizing: border-box;
+  overflow-y: auto; /* Allows content like news feeds to scroll */
+}
+
+/* Common styles for all decorative border pieces */
+.royal-border {
+  position: absolute;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  z-index: 1;
+}
+
+/* --- Corners --- */
+/* NOTE: You will need to add your corner images to the `royal/` folder. */
+.royal-border.top-left {
+  top: -15px; left: -15px;
+  width: 60px; height: 60px;
+  background-image: url('royal/corner_top.png');
+}
+.royal-border.top-right {
+  top: -15px; right: -15px;
+  width: 60px; height: 60px;
+  background-image: url('royal/corner_top.png');
+  transform: scaleX(-1); /* Flip horizontally */
+}
+.royal-border.bottom-left {
+  bottom: -15px; left: -15px;
+  width: 60px; height: 60px;
+  background-image: url('royal/corner_bot.png');
+}
+.royal-border.bottom-right {
+  bottom: -15px; right: -15px;
+  width: 60px; height: 60px;
+  background-image: url('royal/corner_bot.png');
+  transform: scaleX(-1); /* Flip horizontally */
+}
+
+/* --- Edges --- */
+/* NOTE: You will need to add your edge images to the `royal/` folder. */
+.royal-border.top-edge {
+  top: 0px;
+  left: 45px;
+  right: 45px;
+  height: 20px;
+  background-image: url('royal/box_mid_top.png');
+  background-repeat: repeat-x;
+}
+.royal-border.bottom-edge {
+  bottom: 0px;
+  left: 45px;
+  right: 45px;
+  height: 20px;
+  background-image: url('royal/box_mid_bot.png');
+  background-repeat: repeat-x;
+}
+.royal-border.left-edge {
+  top: 45px;
+  bottom: 45px;
+  left: 0px;
+  width: 20px;
+  background-image: url('royal/midsides.png');
+  background-repeat: repeat-y;
+}
+.royal-border.right-edge {
+  top: 45px;
+  bottom: 45px;
+  right: 0px;
+  width: 20px;
+  background-image: url('royal/midsides.png');
+  background-repeat: repeat-y;
+  transform: scaleX(-1); /* Flip horizontally */
+}
+
+
+/* --- Unchanged Styles (Search & Quick Links) --- */
 .royal-epic-theme .search-area {
   background-image: url('royal/searchbar.png');
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
-  padding-top: 50px; /* Adjust as needed */
+  padding-top: 50px;
   height: 150px;
   width: 100%;
 }
@@ -54,6 +142,7 @@ body.royal-epic-theme {
   background-repeat: no-repeat;
   background-position: center;
   position: relative;
+  border: none;
 }
 
 .royal-epic-theme .quick-links .link-icon .favicon {
