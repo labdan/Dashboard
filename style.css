@@ -1336,7 +1336,6 @@ body.dynamic-theme {
     width: 100%;
     height: 100%;
 }
-
 /* --- Settings Page Styles --- */
 #settings-panel {
     padding: 20px;
@@ -1423,7 +1422,6 @@ body.dynamic-theme {
     color: var(--secondary-color);
     margin-bottom: 15px;
 }
-
 /* TradingView Widget Containers */
 .tradingview-widget-container {
     height: 100%;
@@ -1457,7 +1455,9 @@ body.dynamic-theme {
     border-radius: 8px;
     transition: background-color 0.2s ease;
 }
-.single-ticker-widget-overlay {
+
+.single-ticker-widget-wrapper::after {
+    content: '';
     position: absolute;
     top: 0;
     left: 0;
@@ -1465,4 +1465,8 @@ body.dynamic-theme {
     height: 100%;
     cursor: pointer;
     z-index: 2;
+}
+
+.single-ticker-widget-wrapper:hover {
+    background-color: var(--border-color);
 }

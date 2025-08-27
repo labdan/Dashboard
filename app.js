@@ -1082,6 +1082,9 @@ async function loadCustomWatchlist() {
     const container = document.getElementById('custom-watchlist-container');
     container.innerHTML = '<p style="padding: 10px 0;">Loading watchlist...</p>';
     try {
+        // NOTE: This assumes a Netlify function exists at '/.netlify/functions/get-watchlist'
+        // that connects to your Supabase instance and fetches from the 'watchlist' table.
+        // It should return a JSON array like: [{ "ticker": "AAPL", "market": "NASDAQ" }]
         const response = await fetch('/.netlify/functions/get-watchlist');
         if (!response.ok) {
             throw new Error(`Failed to fetch custom watchlist: ${response.statusText}`);
@@ -1116,7 +1119,7 @@ async function loadCustomWatchlist() {
             container.appendChild(widgetWrapper);
         });
         
-        // Add a single event listener to the container
+        // Add a single event listener to the container for the overlay-like functionality
         container.addEventListener('click', (e) => {
             const widget = e.target.closest('.single-ticker-widget-wrapper');
             if (widget && widget.dataset.ticker) {
@@ -1126,7 +1129,7 @@ async function loadCustomWatchlist() {
 
     } catch (error) {
         console.error("Error loading custom watchlist:", error);
-        container.innerHTML = '<div class="error-message" style="padding: 10px 0;">Could not load watchlist. Please ensure you have run the SQL script in your Supabase account.</div>';
+        container.innerHTML = '<div class="error-message" style="padding: 10px 0;">Could not load watchlist. Please ensure the `get-watchlist` serverless function is deployed.</div>';
     }
 }
 
