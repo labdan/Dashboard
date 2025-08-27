@@ -1074,8 +1074,7 @@ function showStockDetails(symbol, isInitialLoad = false) {
             "colorTheme": theme,
             "isTransparent": true,
             "locale": "en",
-            "width": "600px",
-            "height": "350px"
+            "width": "100%"
         });
         symbolInfoContainer.appendChild(script);
     }
