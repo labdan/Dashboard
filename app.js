@@ -239,6 +239,10 @@ function applyTheme(config, isInitialLoad = false) {
         document.body.style.backgroundImage = 'none';
     }
 
+    // Reload TradingView widgets if the theme changes to apply new theme
+    if (!isInitialLoad) {
+        initializeTradingViewWidgets();
+    }
 }
 
 function toggleTheme() {
@@ -347,8 +351,7 @@ function handleLogout() {
 }
 
 // --- CONTENT LOADING (for logged-in users) ---
-async function loadLoggedInContent() {
-    instrumentDictionary = await getInstrumentDictionary();
+function loadLoggedInContent() {
     loadQuickLinks();
     getWeather();
     loadStockWatchlist();
@@ -357,6 +360,7 @@ async function loadLoggedInContent() {
     subscribeToTodoChanges();
     loadUpcomingEvents();
     initializeEditor();
+    initializeTradingViewWidgets();
 }
 
 
@@ -382,8 +386,9 @@ async function loadCombinedNews() {
             return;
         }
 
+        const instrumentDictionary = await getInstrumentDictionary();
         sideNewsContainer.innerHTML = allArticles.map(article => {
-            const highlightedTitle = highlightTickers(article.title);
+            const highlightedTitle = highlightTickers(article.title, instrumentDictionary);
             return `
                 <div class="news-item">
                     <a href="${article.link}" class="news-title" target="_blank" rel="noopener noreferrer">${highlightedTitle}</a>
@@ -397,12 +402,12 @@ async function loadCombinedNews() {
     }
 }
 
-function highlightTickers(title) {
-    if (!instrumentDictionary || instrumentDictionary.size === 0) {
+function highlightTickers(title, dictionary) {
+    if (!dictionary || dictionary.size === 0) {
         return title;
     }
     let highlightedTitle = title;
-    instrumentDictionary.forEach((value, key) => {
+    dictionary.forEach((value, key) => {
         const tickerRegex = new RegExp(`\\b${key.split('_')[0]}\\b`, 'gi');
         highlightedTitle = highlightedTitle.replace(tickerRegex, `<span class="ticker">${key.split('_')[0]}</span>`);
     });
@@ -1007,7 +1012,78 @@ async function saveNote() {
 }
 
 
-// --- STOCK WATCHLIST ---
+// --- STOCK WATCHLIST & TRADINGVIEW WIDGETS ---
+function initializeTradingViewWidgets() {
+    const theme = document.body.dataset.theme === 'dark' ? 'dark' : 'light';
+
+    // Clear previous widgets if they exist
+    document.getElementById('tv-market-overview-widget-container').innerHTML = '';
+    document.getElementById('tv-symbol-info-widget-container').innerHTML = '';
+
+    // Watchlist Widget (Right Sidebar)
+    new TradingView.widget({
+        "container_id": "tv-market-overview-widget-container",
+        "width": "100%",
+        "height": "100%",
+        "symbol": "NASDAQ:AAPL", // This is just a default, it won't be shown
+        "isTransparent": true,
+        "showChart": true,
+        "locale": "en",
+        "colorTheme": theme,
+        "autosize": true,
+        "tabs": [
+            {
+                "title": "Assets",
+                "symbols": [
+                    { "s": "NASDAQ:AAPL" },
+                    { "s": "NASDAQ:TSLA" },
+                    { "s": "NASDAQ:NVDA" },
+                    { "s": "NASDAQ:AMZN" },
+                    { "s": "NASDAQ:GOOGL" },
+                    { "s": "INDEX:SPX" }
+                ],
+                "originalTitle": "Indices"
+            }
+        ],
+        "chartOnly": false,
+        "locale": "en"
+    });
+
+    // Symbol Info Widget (Center Panel)
+    const symbolInfoWidget = new TradingView.widget({
+        "container_id": "tv-symbol-info-widget-container",
+        "width": "100%",
+        "height": "100%",
+        "locale": "en",
+        "colorTheme": theme,
+        "isTransparent": true,
+        "symbol": "NASDAQ:AAPL", // Default symbol
+        "autosize": true,
+    });
+    
+    // This is a bit of a workaround to detect a click in the watchlist
+    let currentSymbol = 'NASDAQ:AAPL';
+    setInterval(() => {
+        const iframe = document.getElementById('tv-symbol-info-widget-container').querySelector('iframe');
+        if (iframe && iframe.contentWindow) {
+            try {
+                // The widget's internal state is not exposed, so we check the iframe's src
+                const iframeSrc = iframe.src;
+                const urlParams = new URLSearchParams(iframeSrc.split('?')[1]);
+                const symbolInIframe = urlParams.get('symbol');
+                
+                if (symbolInIframe && symbolInIframe !== currentSymbol) {
+                    currentSymbol = symbolInIframe;
+                    switchCenterPanel('stock-details');
+                }
+            } catch (e) {
+                // Cross-origin error is expected, we can ignore it.
+                // The logic still works because we are just trying to trigger the check.
+            }
+        }
+    }, 1000);
+}
+
 async function getInstrumentDictionary() {
     const cachedInstruments = JSON.parse(localStorage.getItem('instrumentCache'));
     if (cachedInstruments && (Date.now() - cachedInstruments.timestamp < INSTRUMENT_CACHE_DURATION)) {
@@ -1042,7 +1118,7 @@ async function loadStockWatchlist() {
         const portfolioData = await portfolioRes.json();
         const cashData = await cashRes.json();
         const enrichedPortfolio = await Promise.all(portfolioData.map(async (stock) => {
-            const instrumentDetails = instrumentDictionary.get(stock.ticker);
+            const instrumentDetails = await getInstrumentDictionary().then(dict => dict.get(stock.ticker));
             const instrumentName = instrumentDetails ? instrumentDetails.name : stock.ticker;
             const response = await fetch(`/.netlify/functions/enrich-company-details?ticker=${encodeURIComponent(stock.ticker)}&instrumentName=${encodeURIComponent(instrumentName)}`);
             const details = await response.json();

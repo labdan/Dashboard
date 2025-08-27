@@ -110,7 +110,7 @@ body {
     margin-bottom: 20px;
 }
 
-.left-sidebar .widget {
+.left-sidebar .widget, .right-sidebar .widget {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
@@ -1162,7 +1162,7 @@ header {
 }
 
 #notes-panel {
-    display: flex;
+    display: none; /* Initially hidden, JS will manage visibility */
     flex-direction: column;
 }
 
@@ -1430,4 +1430,24 @@ body.dynamic-theme {
     font-size: 0.9rem;
     color: var(--secondary-color);
     margin-bottom: 15px;
+}
+
+/* TradingView Widget Containers */
+.tradingview-widget-container {
+    height: 100%;
+    width: 100%;
+}
+#tv-watchlist-widget {
+    padding: 0;
+}
+#tv-watchlist-widget h3 {
+    padding: 20px 20px 0 20px;
+    margin-bottom: 15px;
+}
+#tv-market-overview-widget-container {
+    flex-grow: 1;
+}
+
+#stock-details-panel {
+    padding: 10px;
 }
