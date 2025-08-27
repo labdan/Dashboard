@@ -1015,39 +1015,39 @@ async function saveNote() {
 // --- STOCK WATCHLIST & TRADINGVIEW WIDGETS ---
 function initializeTradingViewWidgets() {
     const theme = document.body.getAttribute('data-theme') || 'light';
-
-    // Clear previous widgets if they exist
-    document.getElementById('tv-market-overview-widget-container').innerHTML = '';
-    document.getElementById('tv-symbol-info-widget-container').innerHTML = '';
-
-    // Watchlist Widget (Right Sidebar)
-    new TradingView.widget({
-        "container_id": "tv-market-overview-widget-container",
-        "width": "100%",
-        "height": "100%",
+    const container = document.getElementById('tv-market-overview-widget-container');
+    container.innerHTML = '';
+    
+    const script = document.createElement('script');
+    script.type = 'text/javascript';
+    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-hotlists.js';
+    script.async = true;
+    script.innerHTML = JSON.stringify({
+        "exchange": "US",
+        "colorTheme": theme,
+        "dateRange": "12M",
+        "showChart": true,
+        "locale": "en",
+        "largeChartUrl": "",
         "isTransparent": true,
         "showSymbolLogo": true,
-        "colorTheme": theme,
-        "autosize": true,
-        "tabs": [
-            {
-                "title": "My Watchlist",
-                "symbols": [
-                    { "s": "NASDAQ:AAPL", "d": "Apple Inc." },
-                    { "s": "NASDAQ:TSLA", "d": "Tesla, Inc." },
-                    { "s": "NASDAQ:NVDA", "d": "NVIDIA Corporation" },
-                    { "s": "NASDAQ:AMZN", "d": "Amazon.com, Inc." },
-                    { "s": "NASDAQ:GOOGL", "d": "Alphabet Inc." },
-                    { "s": "INDEX:SPX", "d": "S&P 500" },
-                    { "s": "FX_IDC:EURUSD", "d": "EUR/USD" },
-                    { "s": "BITSTAMP:BTCUSD", "d": "Bitcoin" }
-                ]
-            }
-        ]
+        "showFloatingTooltip": true,
+        "width": "100%",
+        "height": "100%",
+        "plotLineColorGrowing": "rgba(41, 98, 255, 1)",
+        "plotLineColorFalling": "rgba(41, 98, 255, 1)",
+        "gridLineColor": "rgba(240, 243, 250, 0)",
+        "scaleFontColor": "#0F0F0F",
+        "belowLineFillColorGrowing": "rgba(41, 98, 255, 0.12)",
+        "belowLineFillColorFalling": "rgba(41, 98, 255, 0.12)",
+        "belowLineFillColorGrowingBottom": "rgba(41, 98, 255, 0)",
+        "belowLineFillColorFallingBottom": "rgba(41, 98, 255, 0)",
+        "symbolActiveColor": "rgba(41, 98, 255, 0.12)"
     });
+    container.appendChild(script);
 
     // Symbol Info Widget (Center Panel)
-    const symbolInfoWidget = new TradingView.widget({
+    new TradingView.widget({
         "container_id": "tv-symbol-info-widget-container",
         "width": "100%",
         "height": "100%",
@@ -1057,27 +1057,8 @@ function initializeTradingViewWidgets() {
         "symbol": "NASDAQ:AAPL", // Default symbol
         "autosize": true,
     });
-
-    // This is a workaround to detect a click in the watchlist
-    let currentSymbol = 'NASDAQ:AAPL';
-    setInterval(() => {
-        const iframe = document.getElementById('tv-symbol-info-widget-container').querySelector('iframe');
-        if (iframe && iframe.contentWindow) {
-            try {
-                const iframeSrc = iframe.src;
-                const urlParams = new URLSearchParams(iframeSrc.split('?')[1]);
-                const symbolInIframe = urlParams.get('symbol');
-                
-                if (symbolInIframe && decodeURIComponent(symbolInIframe) !== currentSymbol) {
-                    currentSymbol = decodeURIComponent(symbolInIframe);
-                    switchCenterPanel('stock-details');
-                }
-            } catch (e) {
-                // Cross-origin errors are expected, but this check still works.
-            }
-        }
-    }, 1000);
 }
+
 
 
 async function getInstrumentDictionary() {
@@ -1205,7 +1186,7 @@ function renderPortfolio(data, error = null) {
             watchlistHTML += `
                 <div class="stock-item-new">
                     <div class="stock-icon-new">
-                        <img src="${iconUrl}" alt="${companyName}" onerror="this.src='https.placehold.co/40x40/EFEFEF/AAAAAA?text=${baseTicker}'; this.onerror=null;">
+                        <img src="${iconUrl}" alt="${companyName}" onerror="this.src='https://placehold.co/40x40/EFEFEF/AAAAAA?text=${baseTicker}'; this.onerror=null;">
                     </div>
                     <div class="stock-info-new">
                         <div class="stock-name-new">${companyName}</div>
