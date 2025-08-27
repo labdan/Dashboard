@@ -1433,7 +1433,7 @@ body.dynamic-theme {
 #tv-hotlists-widget {
     padding: 0;
     overflow: hidden;
-    height: 265px; /* Fixed height to match weather/time widgets */
+    height: 215px;  /* ADJUSTED: Reduced from 265px to better match the header widgets */
     flex-shrink: 0; /* Prevents this widget from shrinking */
 }
 
