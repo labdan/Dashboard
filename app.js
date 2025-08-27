@@ -13,7 +13,6 @@ const INSTRUMENT_CACHE_DURATION = 24 * 60 * 60 * 1000;
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // --- CONSTANTS ---
-// ADDED: Static list of markets for the dropdown
 const MARKETS = [
     { name: "NASDAQ", value: "NASDAQ" },
     { name: "London Stock Exchange", value: "LSE" },
@@ -32,7 +31,6 @@ const MARKETS = [
     { name: "Vienna Stock Exchange", value: "VIE" },
     { name: "Euronext Lisbon", value: "EURONEXT" }
 ];
-
 
 // --- DOM ELEMENTS ---
 const timeElement = document.getElementById('time');
@@ -113,6 +111,7 @@ let saveTimeout;
 let sortableInstance;
 let instrumentDictionary = new Map();
 let watchlistItemsToDelete = [];
+let watchlistSortableInstance;
 
 
 // --- INITIALIZATION ---
@@ -824,26 +823,59 @@ async function openWatchlistEditor() {
     const marketSelect = document.getElementById('new-stock-market');
     editorBody.innerHTML = '<p>Loading current watchlist...</p>';
     watchlistItemsToDelete = [];
-    marketSelect.innerHTML = '<option value="" disabled selected>Select Market...</option>';
+    
+    // Populate market dropdown with NASDAQ as default
+    marketSelect.innerHTML = '<option value="" disabled>Select Market...</option>';
     MARKETS.forEach(market => {
         const option = document.createElement('option');
         option.value = market.value;
         option.textContent = market.name;
-        if (market.name === "London Stock Exchange") option.selected = true;
+        if (market.value === "NASDAQ") option.selected = true;
         marketSelect.appendChild(option);
     });
-    const { data, error } = await supabaseClient.from('watchlist').select('*').order('id');
+
+    const { data, error } = await supabaseClient.from('watchlist').select('*').order('sort_order');
     if (error) { editorBody.innerHTML = '<p class="error-message">Could not load watchlist.</p>'; return; }
+    
     editorBody.innerHTML = '';
-    data.forEach(stock => renderWatchlistEditRow(stock));
+    for (const stock of data) {
+        await renderWatchlistEditRow(stock);
+    }
+
+    if (watchlistSortableInstance) watchlistSortableInstance.destroy();
+    watchlistSortableInstance = new Sortable(editorBody, {
+        animation: 150,
+        handle: '.drag-handle',
+        ghostClass: 'sortable-ghost',
+    });
 }
 
-function renderWatchlistEditRow(stock) {
+async function renderWatchlistEditRow(stock) {
     const editorBody = document.getElementById('watchlist-editor-body');
     const row = document.createElement('div');
     row.className = 'watchlist-edit-row';
     row.dataset.id = stock.id;
-    row.innerHTML = `<span>${stock.ticker} (${stock.market})</span><button class="delete-link-btn"><i class="fas fa-trash"></i></button>`;
+    row.dataset.ticker = stock.ticker;
+    row.dataset.market = stock.market;
+
+    const fallbackSrc = 'nostockimg.png';
+    const t212Ticker = instrumentDictionary.has(`${stock.ticker}_${stock.market}`) ? `${stock.ticker}_${stock.market}` : Array.from(instrumentDictionary.keys()).find(k => k.startsWith(stock.ticker));
+    
+    let logoUrl = fallbackSrc;
+    if (t212Ticker) {
+        try {
+            const response = await fetch(`/.netlify/functions/enrich-company-details?ticker=${encodeURIComponent(t212Ticker)}&instrumentName=${encodeURIComponent(stock.ticker)}`);
+            const details = await response.json();
+            logoUrl = details.logo_url || fallbackSrc;
+        } catch(e) { console.error("Could not fetch logo for", stock.ticker); }
+    }
+
+    row.innerHTML = `
+        <i class="fas fa-grip-vertical drag-handle"></i>
+        <img src="${logoUrl}" class="stock-icon" onerror="this.onerror=null; this.src='${fallbackSrc}';">
+        <span>${stock.ticker} (${stock.market})</span>
+        <button class="delete-link-btn"><i class="fas fa-trash"></i></button>
+    `;
     row.querySelector('.delete-link-btn').addEventListener('click', () => {
         if (!String(stock.id).startsWith('new-')) watchlistItemsToDelete.push(stock.id);
         row.remove();
@@ -851,15 +883,15 @@ function renderWatchlistEditRow(stock) {
     editorBody.appendChild(row);
 }
 
-function handleAddStock(e) {
+async function handleAddStock(e) {
     e.preventDefault();
     const tickerInput = document.getElementById('new-stock-ticker');
     const marketSelect = document.getElementById('new-stock-market');
     const newStock = { id: `new-${Date.now()}`, ticker: tickerInput.value.toUpperCase().trim(), market: marketSelect.value };
     if (newStock.ticker && newStock.market) {
-        renderWatchlistEditRow(newStock);
+        await renderWatchlistEditRow(newStock);
         addStockForm.reset();
-        marketSelect.value = 'LSE'; // Reset to default
+        marketSelect.value = 'NASDAQ';
     }
 }
 
@@ -871,17 +903,30 @@ async function saveWatchlistChanges() {
             const { error } = await supabaseClient.from('watchlist').delete().in('id', watchlistItemsToDelete);
             if (error) throw error;
         }
-        const newStockRows = Array.from(document.querySelectorAll('.watchlist-edit-row[data-id^="new-"]'));
-        if (newStockRows.length > 0) {
-            const newStocks = newStockRows.map(row => {
-                const text = row.querySelector('span').textContent;
-                const ticker = text.substring(0, text.indexOf('(')).trim();
-                const market = text.substring(text.indexOf('(') + 1, text.indexOf(')')).trim();
-                return { ticker, market };
-            });
-            const { error } = await supabaseClient.from('watchlist').insert(newStocks);
+
+        const rows = Array.from(document.querySelectorAll('#watchlist-editor-body .watchlist-edit-row'));
+        const upsertData = rows.map((row, index) => {
+            const isNew = row.dataset.id.startsWith('new-');
+            return {
+                id: isNew ? undefined : row.dataset.id,
+                ticker: row.dataset.ticker,
+                market: row.dataset.market,
+                sort_order: index,
+            };
+        });
+        
+        const newStocks = upsertData.filter(s => s.id === undefined);
+        const existingStocks = upsertData.filter(s => s.id !== undefined);
+
+        if (newStocks.length > 0) {
+            const { error } = await supabaseClient.from('watchlist').insert(newStocks.map(({id, ...rest})=>rest));
             if (error) throw error;
         }
+        if (existingStocks.length > 0) {
+            const { error } = await supabaseClient.from('watchlist').upsert(existingStocks);
+            if (error) throw error;
+        }
+
     } catch (error) {
         alert('Error saving watchlist changes.'); console.error('Watchlist save error:', error);
     } finally {
