@@ -1435,7 +1435,7 @@ body.dynamic-theme {
     padding: 0;
     overflow-y: auto; /* Allow vertical scrolling */
     flex-shrink: 0; /* Prevents this widget from shrinking */
-    height: 40%; /* Allocate a percentage of the sidebar height */
+    height: 310px; /* Allocate a percentage of the sidebar height */
 }
 
 /* New rule for the bottom Custom Watchlist widget */
