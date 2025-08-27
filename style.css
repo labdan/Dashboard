@@ -1461,8 +1461,10 @@ body.dynamic-theme {
 
 .stock-details-grid {
     display: grid;
-    grid-template-columns: 2fr 1fr; /* Top row: 2/3 width for info, 1/3 for technicals */
-    grid-template-rows: auto 1fr;  /* Top row auto height, bottom row fills space */
+    /* ADJUSTED: Changed column ratio to make left side narrower and right side wider */
+    grid-template-columns: 1.8fr 1.2fr; 
+    /* ADJUSTED: Set a minimum height for the top row to make widgets taller */
+    grid-template-rows: minmax(420px, auto) 1fr;
     gap: 15px;
     height: 100%;
 }
@@ -1482,6 +1484,7 @@ body.dynamic-theme {
     grid-row: 2 / 3;
     min-height: 400px; /* Ensure it has a minimum height */
 }
+
 
 /* Custom Watchlist Styles */
 .single-ticker-widget-wrapper {
