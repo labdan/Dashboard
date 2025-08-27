@@ -220,14 +220,6 @@ function applySavedTheme() {
 
 function applyTheme(config, isInitialLoad = false) {
     const currentConfig = JSON.parse(localStorage.getItem('themeConfig')) || { type: 'normal', mode: 'light' };
-    
-    // If the old theme was royal-epic, clean up its special DOM modifications
-    if (currentConfig.type === 'royal-epic' && config.type !== 'royal-epic') {
-        if (typeof unwrapWidgetsForRoyalTheme === 'function') {
-            unwrapWidgetsForRoyalTheme();
-        }
-    }
-
     const newConfig = { ...currentConfig, ...config };
     localStorage.setItem('themeConfig', JSON.stringify(newConfig));
     document.body.setAttribute('data-theme', newConfig.mode);
@@ -249,11 +241,6 @@ function applyTheme(config, isInitialLoad = false) {
         }
     } else if (newConfig.type === 'royal-epic') {
         document.body.classList.add('royal-epic-theme');
-        document.body.style.backgroundImage = "url('royal/background.png')";
-        // Apply special DOM modifications for this theme
-        if (typeof wrapWidgetsForRoyalTheme === 'function') {
-            wrapWidgetsForRoyalTheme();
-        }
     }
 
     if (!isInitialLoad) {
