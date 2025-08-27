@@ -78,6 +78,7 @@ const addNewLinkBtn = document.getElementById('add-new-link-btn');
 const addLinkForm = document.getElementById('add-link-form');
 const setNormalThemeBtn = document.getElementById('set-normal-theme-btn');
 const setDynamicThemeBtn = document.getElementById('set-dynamic-theme-btn');
+const setRoyalEpicThemeBtn = document.getElementById('set-royal-epic-theme-btn');
 const backToSettingsBtn = document.getElementById('back-to-settings-btn');
 const saveWatchlistBtn = document.getElementById('save-watchlist-btn');
 const backToSettingsFromWatchlistBtn = document.getElementById('back-to-settings-from-watchlist-btn');
@@ -192,6 +193,7 @@ function setupEventListeners() {
     if (addNewLinkBtn) addNewLinkBtn.addEventListener('click', handleAddNewLink);
     if (setNormalThemeBtn) setNormalThemeBtn.addEventListener('click', () => { applyTheme({ type: 'normal' }); themeOptionsContainer.classList.remove('visible'); });
     if (setDynamicThemeBtn) setDynamicThemeBtn.addEventListener('click', () => { applyTheme({ type: 'dynamic' }); themeOptionsContainer.classList.remove('visible'); });
+    if (setRoyalEpicThemeBtn) setRoyalEpicThemeBtn.addEventListener('click', () => { applyTheme({ type: 'royal-epic' }); themeOptionsContainer.classList.remove('visible'); });
     if(saveNoteBtn) saveNoteBtn.addEventListener('click', saveNote);
     if (saveWatchlistBtn) saveWatchlistBtn.addEventListener('click', saveWatchlistChanges);
     if (backToSettingsFromWatchlistBtn) backToSettingsFromWatchlistBtn.addEventListener('click', () => switchCenterPanel('settings'));
@@ -222,6 +224,9 @@ function applyTheme(config, isInitialLoad = false) {
     localStorage.setItem('themeConfig', JSON.stringify(newConfig));
     document.body.setAttribute('data-theme', newConfig.mode);
     
+    document.body.classList.remove('dynamic-theme', 'royal-epic-theme');
+    document.body.style.backgroundImage = 'none';
+
     if (newConfig.type === 'dynamic') {
         document.body.classList.add('dynamic-theme');
         const today = new Date().toDateString();
@@ -233,14 +238,16 @@ function applyTheme(config, isInitialLoad = false) {
             if (cachedImage) document.body.style.backgroundImage = `url(${cachedImage})`;
             else fetchAndSetBackgroundImage(newConfig.mode);
         }
-    } else {
-        document.body.classList.remove('dynamic-theme');
-        document.body.style.backgroundImage = 'none';
+    } else if (newConfig.type === 'royal-epic') {
+        if (typeof applyRoyalEpicTheme === 'function') {
+            applyRoyalEpicTheme();
+        }
     }
 
     if (!isInitialLoad) {
         initializeTradingViewWidgets();
         loadCustomWatchlist();
+        loadQuickLinks();
     }
 }
 
@@ -596,6 +603,11 @@ async function loadQuickLinks() {
             quickLinksContainer.innerHTML += `<a href="${link.url}" class="link-item" target="_blank" rel="noopener noreferrer" title="${link.name}"><div class="link-icon">${iconHTML}</div><span class="link-name">${link.name}</span></a>`;
         }
     });
+
+    const themeConfig = JSON.parse(localStorage.getItem('themeConfig'));
+    if (themeConfig && themeConfig.type === 'royal-epic' && typeof setRoyalEpicQuickLinkIcons === 'function') {
+        setRoyalEpicQuickLinkIcons();
+    }
 }
 
 // --- QUICK LINKS EDITOR ---

@@ -1,0 +1,71 @@
+/* royal-epic-theme.css */
+
+body.royal-epic-theme {
+  background-image: url('royal/background.png');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  font-family: 'Times New Roman', Times, serif;
+}
+
+.royal-epic-theme .widget,
+.royal-epic-theme .header-widget {
+  background-color: transparent;
+  border: 40px solid transparent;
+  border-image: url('royal/smallb.png') 40 stretch;
+  color: #f0e6d2;
+}
+
+.royal-epic-theme .search-area {
+  background-image: url('royal/searchbar.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  padding-top: 50px; /* Adjust as needed */
+  height: 150px;
+  width: 100%;
+}
+
+.royal-epic-theme .inspirational-quote {
+  display: none;
+}
+
+.royal-epic-theme .search-container {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  position: relative;
+  width: 55%;
+  margin: 0 auto;
+}
+
+.royal-epic-theme .search-input {
+    color: #3a2e1d;
+    background-color: #f0e6d2;
+    border-radius: 25px;
+    border: 2px solid #b3a48e;
+}
+
+.royal-epic-theme .quick-links .link-icon {
+  width: 70px;
+  height: 70px;
+  background-image: url('royal/icons/empty.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  position: relative;
+}
+
+.royal-epic-theme .quick-links .link-icon .favicon {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.royal-epic-theme .link-name {
+    color: #f0e6d2;
+    text-shadow: 1px 1px 2px #000;
+}
