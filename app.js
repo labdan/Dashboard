@@ -376,6 +376,7 @@ function loadLoggedInContent() {
     loadUpcomingEvents();
     initializeEditor();
     initializeTradingViewWidgets();
+    loadCustomWatchlist();
 }
 
 
@@ -1016,8 +1017,10 @@ async function saveNote() {
 // --- STOCK WATCHLIST & TRADINGVIEW WIDGETS ---
 function initializeTradingViewWidgets() {
     const theme = document.body.getAttribute('data-theme') || 'light';
-    const container = document.getElementById('tv-market-overview-widget-container');
-    container.innerHTML = '';
+
+    // Clear previous widgets if they exist
+    const watchlistContainer = document.getElementById('tv-market-overview-widget-container');
+    watchlistContainer.innerHTML = '';
     
     // Create the script tag for the Hotlists widget
     const script = document.createElement('script');
@@ -1048,7 +1051,7 @@ function initializeTradingViewWidgets() {
     });
 
     // Append the script to the container
-    container.appendChild(script);
+    watchlistContainer.appendChild(script);
 
     // Initial load for the Symbol Info widget with a default symbol
     showStockDetails("NASDAQ:AAPL", true);
@@ -1074,6 +1077,47 @@ function showStockDetails(symbol, isInitialLoad = false) {
         switchCenterPanel('stock-details');
     }
 }
+
+async function loadCustomWatchlist() {
+    const container = document.getElementById('custom-watchlist-container');
+    container.innerHTML = 'Loading watchlist...';
+    try {
+        const response = await fetch('/.netlify/functions/get-watchlist');
+        if (!response.ok) throw new Error('Failed to fetch custom watchlist');
+        const watchlistData = await response.json();
+        
+        container.innerHTML = ''; // Clear loading message
+        
+        watchlistData.forEach(stock => {
+            const widgetWrapper = document.createElement('div');
+            widgetWrapper.className = 'single-ticker-widget';
+            widgetWrapper.dataset.ticker = `${stock.market}:${stock.ticker}`;
+            container.appendChild(widgetWrapper);
+            
+            new TradingView.widget({
+                "container_id": widgetWrapper,
+                "symbol": `${stock.market}:${stock.ticker}`,
+                "width": "100%",
+                "isTransparent": true,
+                "colorTheme": document.body.getAttribute('data-theme') || 'light',
+                "locale": "en"
+            });
+        });
+        
+        // Add a single event listener to the container
+        container.addEventListener('click', (e) => {
+            const widget = e.target.closest('.single-ticker-widget');
+            if (widget && widget.dataset.ticker) {
+                showStockDetails(widget.dataset.ticker);
+            }
+        });
+
+    } catch (error) {
+        console.error("Error loading custom watchlist:", error);
+        container.innerHTML = 'Could not load watchlist.';
+    }
+}
+
 
 
 async function getInstrumentDictionary() {

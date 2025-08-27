@@ -1451,3 +1451,21 @@ body.dynamic-theme {
 #stock-details-panel {
     padding: 10px;
 }
+
+/* Custom Watchlist Styles */
+#custom-watchlist-container {
+    border-top: 1px solid var(--border-color);
+    margin-top: 15px;
+    padding-top: 15px;
+    overflow-y: auto;
+    flex-grow: 1;
+}
+
+.single-ticker-widget {
+    margin-bottom: 5px;
+    cursor: pointer;
+}
+.single-ticker-widget:hover {
+    background-color: var(--border-color);
+    border-radius: 8px;
+}
