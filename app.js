@@ -257,6 +257,7 @@ function applyTheme(config, isInitialLoad = false) {
     // Reload TradingView widgets if the theme changes to apply new theme
     if (!isInitialLoad) {
         initializeTradingViewWidgets();
+        loadCustomWatchlist();
     }
 }
 
