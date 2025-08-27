@@ -1017,38 +1017,41 @@ async function saveNote() {
 // --- STOCK WATCHLIST & TRADINGVIEW WIDGETS ---
 function initializeTradingViewWidgets() {
     const theme = document.body.getAttribute('data-theme') || 'light';
-    const container = document.getElementById('tv-market-overview-widget-container');
-    container.innerHTML = '';
+
+    // Clear previous widgets if they exist
+    const watchlistContainer = document.getElementById('tv-market-overview-widget-container');
+    watchlistContainer.innerHTML = '';
     
     // Create the script tag for the Hotlists widget
-    new TradingView.widget(
-        {
-        "container_id": "tv-market-overview-widget-container",
-        "width": "100%",
-        "height": "100%",
+    const script = document.createElement('script');
+    script.type = 'text/javascript';
+    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-hotlists.js';
+    script.async = true;
+    script.innerHTML = JSON.stringify({
+        "exchange": "US",
         "colorTheme": theme,
+        "dateRange": "12M",
+        "showChart": false,
+        "locale": "en",
+        "largeChartUrl": "",
         "isTransparent": true,
         "showSymbolLogo": true,
-        "locale": "en",
-        "tabs": [
-            {
-                "title": "My Watchlist",
-                "symbols": [
-                    {"s": "NASDAQ:AAPL", "d": "Apple Inc."},
-                    {"s": "NASDAQ:GOOG", "d": "Alphabet Inc."},
-                    {"s": "NASDAQ:ADBE", "d": "Adobe Inc."},
-                    {"s": "NASDAQ:AMD", "d": "AMD"},
-                    {"s": "NASDAQ:AMZN", "d": "Amazon.com"},
-                    {"s": "NASDAQ:AVGO", "d": "Broadcom"},
-                    {"s": "NYSE:BABA", "d": "Alibaba"},
-                    {"s": "NYSE:BRK.A", "d": "Berkshire Hathaway"},
-                    {"s": "NASDAQ:COIN", "d": "Coinbase"},
-                    {"s": "NASDAQ:BMNR", "d": "BitMine"}
-                ]
-            }
-        ]
-      }
-    );
+        "showFloatingTooltip": true,
+        "width": "100%",
+        "height": "100%",
+        "plotLineColorGrowing": "rgba(41, 98, 255, 1)",
+        "plotLineColorFalling": "rgba(41, 98, 255, 1)",
+        "gridLineColor": "rgba(240, 243, 250, 0)",
+        "scaleFontColor": "rgba(0, 0, 0, 0)",
+        "belowLineFillColorGrowing": "rgba(41, 98, 255, 0.12)",
+        "belowLineFillColorFalling": "rgba(41, 98, 255, 0.12)",
+        "belowLineFillColorGrowingBottom": "rgba(41, 98, 255, 0)",
+        "belowLineFillColorFallingBottom": "rgba(41, 98, 255, 0)",
+        "symbolActiveColor": "rgba(41, 98, 255, 0.12)"
+    });
+
+    // Append the script to the container
+    watchlistContainer.appendChild(script);
 
     // Initial load for the Symbol Info widget with a default symbol
     showStockDetails("NASDAQ:AAPL", true);
@@ -1077,7 +1080,7 @@ function showStockDetails(symbol, isInitialLoad = false) {
 
 async function loadCustomWatchlist() {
     const container = document.getElementById('custom-watchlist-container');
-    container.innerHTML = 'Loading watchlist...';
+    container.innerHTML = '<p style="padding: 10px 0;">Loading watchlist...</p>';
     try {
         const response = await fetch('/.netlify/functions/get-watchlist');
         if (!response.ok) {
@@ -1088,29 +1091,42 @@ async function loadCustomWatchlist() {
         container.innerHTML = ''; // Clear loading message
         
         watchlistData.forEach(stock => {
-            const widgetId = `tradingview-widget-${stock.ticker}`;
+            const tvSymbol = `${stock.market}:${stock.ticker}`;
             const widgetWrapper = document.createElement('div');
-            widgetWrapper.id = widgetId;
-            widgetWrapper.className = 'single-ticker-widget';
-            container.appendChild(widgetWrapper);
+            widgetWrapper.className = 'single-ticker-widget-wrapper';
+            widgetWrapper.setAttribute('data-ticker', tvSymbol);
 
-            new TradingView.widget({
-                "container_id": widgetId,
-                "symbol": `${stock.market}:${stock.ticker}`,
-                "width": "100%",
-                "isTransparent": true,
+            const tvWidgetContainer = document.createElement('div');
+            tvWidgetContainer.className = 'tradingview-widget-container';
+            
+            const script = document.createElement('script');
+            script.type = 'text/javascript';
+            script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js';
+            script.async = true;
+            script.innerHTML = JSON.stringify({
+                "symbol": tvSymbol,
                 "colorTheme": document.body.getAttribute('data-theme') || 'light',
-                "locale": "en"
+                "isTransparent": true,
+                "locale": "en",
+                "width": "100%"
             });
 
-            widgetWrapper.addEventListener('click', () => {
-                showStockDetails(`${stock.market}:${stock.ticker}`);
-            });
+            tvWidgetContainer.appendChild(script);
+            widgetWrapper.appendChild(tvWidgetContainer);
+            container.appendChild(widgetWrapper);
+        });
+        
+        // Add a single event listener to the container
+        container.addEventListener('click', (e) => {
+            const widget = e.target.closest('.single-ticker-widget-wrapper');
+            if (widget && widget.dataset.ticker) {
+                showStockDetails(widget.dataset.ticker);
+            }
         });
 
     } catch (error) {
         console.error("Error loading custom watchlist:", error);
-        container.innerHTML = '<div class="error-message">Could not load watchlist. Please ensure you have run the SQL script in your Supabase account.</div>';
+        container.innerHTML = '<div class="error-message" style="padding: 10px 0;">Could not load watchlist. Please ensure you have run the SQL script in your Supabase account.</div>';
     }
 }
 
