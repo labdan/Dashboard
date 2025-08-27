@@ -1,3 +1,4 @@
+/* style.css */
 :root {
   --primary-color: #4a6fa5;
   --secondary-color: #6c757d;
@@ -1159,11 +1160,6 @@ header {
     height: 100%;
     flex-direction: column;
 }
-
-.center-panel-item.active {
-    display: flex;
-}
-
 
 #notes-panel {
     display: flex;

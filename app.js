@@ -97,6 +97,10 @@ async function init() {
     updateQuote();
     setInterval(updateQuote, 10000);
 
+    // Set initial panel display
+    document.getElementById('notes-panel').style.display = 'flex';
+
+
     setupEventListeners();
     await checkLoginStatus();
 }
@@ -177,22 +181,29 @@ function setupEventListeners() {
 
 // --- CENTER PANEL ---
 function switchCenterPanel(panelId) {
-    centerPanelItems.forEach(item => {
-        item.classList.remove('active');
-    });
-    const panel = document.getElementById(`${panelId}-panel`);
-    if(panel) {
-        panel.classList.add('active');
-    }
-
+    // Deactivate all nav links
     centerPanelNavLinks.forEach(link => {
         link.classList.remove('active');
     });
-    const navLink = document.querySelector(`.center-panel-nav-link[data-panel="${panelId}"]`);
-    if(navLink) {
-        navLink.classList.add('active');
+
+    // Hide all panels by directly setting their style
+    centerPanelItems.forEach(panel => {
+        panel.style.display = 'none';
+    });
+
+    // Activate the clicked link and show the corresponding panel
+    const targetLink = document.querySelector(`.center-panel-nav-link[data-panel="${panelId}"]`);
+    const targetPanel = document.getElementById(`${panelId}-panel`);
+
+    if (targetLink) {
+        targetLink.classList.add('active');
+    }
+    if (targetPanel) {
+        // We use 'flex' because the panels are flex containers
+        targetPanel.style.display = 'flex';
     }
 }
+
 
 // --- THEME ---
 function applySavedTheme() {
