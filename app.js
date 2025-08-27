@@ -1058,60 +1058,66 @@ function initializeTradingViewWidgets() {
     // Initial load for the Symbol Info widget with a default symbol
     showStockDetails("NASDAQ:AAPL", true);
 }
-
 function showStockDetails(symbol, isInitialLoad = false) {
     const theme = document.body.getAttribute('data-theme') || 'light';
-
+    
     // --- 1. Symbol Info Widget (Top Left) ---
     const symbolInfoContainer = document.getElementById('tv-widget-symbol-info');
     if (symbolInfoContainer) {
-        symbolInfoContainer.innerHTML = ''; // Clear previous
-        new TradingView.widget({
-          "container_id": "tv-widget-symbol-info",
-          "symbol": symbol,
-          "colorTheme": theme,
-          "isTransparent": true,
-          "locale": "en",
-          "width": "100%"
+        symbolInfoContainer.innerHTML = ''; // Clear previous content
+        const script = document.createElement('script');
+        script.type = 'text/javascript';
+        script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-symbol-info.js';
+        script.async = true;
+        script.innerHTML = JSON.stringify({
+            "symbol": symbol,
+            "colorTheme": theme,
+            "isTransparent": true,
+            "locale": "en",
+            "width": "100%"
         });
+        symbolInfoContainer.appendChild(script);
     }
 
     // --- 2. Technical Analysis Widget (Top Right) ---
     const techAnalysisContainer = document.getElementById('tv-widget-technical-analysis');
     if (techAnalysisContainer) {
-        techAnalysisContainer.innerHTML = ''; // Clear previous
-        new TradingView.widget({
-          "container_id": "tv-widget-technical-analysis",
-          "symbol": symbol,
-          "colorTheme": theme,
-          "displayMode": "single",
-          "isTransparent": true,
-          "locale": "en",
-          "width": "100%",
-          "height": "100%"
+        techAnalysisContainer.innerHTML = ''; // Clear previous content
+        const script = document.createElement('script');
+        script.type = 'text/javascript';
+        script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-technical-analysis.js';
+        script.async = true;
+        script.innerHTML = JSON.stringify({
+            "symbol": symbol,
+            "colorTheme": theme,
+            "displayMode": "single",
+            "isTransparent": true,
+            "locale": "en",
+            "width": "100%",
+            "height": "100%"
         });
+        techAnalysisContainer.appendChild(script);
     }
 
     // --- 3. Advanced Chart Widget (Bottom) ---
     const advancedChartContainer = document.getElementById('tv-widget-advanced-chart');
     if (advancedChartContainer) {
-        advancedChartContainer.innerHTML = ''; // Clear previous
-        new TradingView.widget({
-          "container_id": "tv-widget-advanced-chart",
-          "symbol": symbol,
-          "theme": theme,
-          "allow_symbol_change": true,
-          "calendar": false,
-          "details": false,
-          "hide_side_toolbar": true,
-          "hide_top_toolbar": false,
-          "hide_legend": false,
-          "save_image": true,
-          "isTransparent": true,
-          "locale": "en",
-          "width": "100%",
-          "height": "100%"
+        advancedChartContainer.innerHTML = ''; // Clear previous content
+        const script = document.createElement('script');
+        script.type = 'text/javascript';
+        script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
+        script.async = true;
+        script.innerHTML = JSON.stringify({
+            "symbol": symbol,
+            "theme": theme,
+            "allow_symbol_change": true,
+            "hide_side_toolbar": true,
+            "isTransparent": true,
+            "locale": "en",
+            "width": "100%",
+            "height": "100%"
         });
+        advancedChartContainer.appendChild(script);
     }
     
     // Switch to the panel if this isn't the initial page load
