@@ -118,7 +118,7 @@ function setupEventListeners() {
         localStorage.removeItem('weatherCache');
         getWeather();
     });
-    watchlistContainer.addEventListener('click', (e) => {
+    watchlistContainer.addEventListener('click', async (e) => {
         if (e.target.closest('#refresh-portfolio')) {
             localStorage.removeItem('portfolioCache');
             localStorage.removeItem('instrumentCache');
@@ -126,7 +126,18 @@ function setupEventListeners() {
         }
         const stockItem = e.target.closest('.stock-item-new');
         if (stockItem && stockItem.dataset.ticker) {
-            showStockDetails(stockItem.dataset.ticker);
+            const t212Ticker = stockItem.dataset.ticker;
+            const baseTicker = t212Ticker.split('_')[0];
+            try {
+                const response = await fetch(`/.netlify/functions/get-tv-symbol?ticker=${baseTicker}`);
+                if (!response.ok) throw new Error('Symbol lookup failed');
+                const { tvSymbol } = await response.json();
+                showStockDetails(tvSymbol);
+            } catch (error) {
+                console.error("Could not get TradingView symbol:", error);
+                // Fallback to just the base ticker if the lookup fails
+                showStockDetails(baseTicker);
+            }
         }
     });
     todoList.addEventListener('click', handleTodoClick);
@@ -430,7 +441,7 @@ async function handleTodoSubmit(e) {
             alert('Could not add task. See console for details.');
         } else {
             todoInput.value = '';
-            loadTodos(); // Refresh the list after adding
+            loadTodos();
         }
     }
 }
@@ -1008,71 +1019,57 @@ function initializeTradingViewWidgets() {
 
     // Clear previous widgets if they exist
     const watchlistContainer = document.getElementById('tv-market-overview-widget-container');
-    const symbolInfoContainer = document.getElementById('tv-symbol-info-widget-container');
     watchlistContainer.innerHTML = '';
-    symbolInfoContainer.innerHTML = '';
-
-    // Watchlist Widget (Right Sidebar)
-    const watchlistWidget = new TradingView.widget({
-        "container_id": "tv-market-overview-widget-container",
-        "width": "100%",
-        "height": "100%",
-        "isTransparent": true,
+    
+    // Create the script tag for the Hotlists widget
+    const script = document.createElement('script');
+    script.type = 'text/javascript';
+    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-hotlists.js';
+    script.async = true;
+    script.innerHTML = JSON.stringify({
+        "exchange": "US",
         "colorTheme": theme,
+        "dateRange": "12M",
         "showChart": true,
         "locale": "en",
         "largeChartUrl": "",
+        "isTransparent": true,
         "showSymbolLogo": true,
         "showFloatingTooltip": true,
+        "width": "100%",
+        "height": "100%",
         "plotLineColorGrowing": "rgba(41, 98, 255, 1)",
         "plotLineColorFalling": "rgba(41, 98, 255, 1)",
         "gridLineColor": "rgba(240, 243, 250, 0)",
-        "scaleFontColor": "#0F0F0F",
+        "scaleFontColor": "rgba(0, 0, 0, 0)",
         "belowLineFillColorGrowing": "rgba(41, 98, 255, 0.12)",
         "belowLineFillColorFalling": "rgba(41, 98, 255, 0.12)",
         "belowLineFillColorGrowingBottom": "rgba(41, 98, 255, 0)",
         "belowLineFillColorFallingBottom": "rgba(41, 98, 255, 0)",
-        "symbolActiveColor": "rgba(41, 98, 255, 0.12)",
-        "tabs": [
-            {
-                "title": "Assets",
-                "symbols": [
-                    { "s": "NASDAQ:AAPL" },
-                    { "s": "NASDAQ:TSLA" },
-                    { "s": "NASDAQ:NVDA" },
-                    { "s": "NASDAQ:AMZN" },
-                    { "s": "NASDAQ:GOOGL" },
-                    { "s": "INDEX:SPX" }
-                ],
-                "originalTitle": "Indices"
-            }
-        ]
+        "symbolActiveColor": "rgba(41, 98, 255, 0.12)"
     });
 
-    // Symbol Info Widget (Center Panel)
-    let symbolInfoWidgetInstance = null;
-    function createSymbolInfoWidget(symbol) {
-        symbolInfoContainer.innerHTML = '';
-        symbolInfoWidgetInstance = new TradingView.widget({
-            "container_id": "tv-symbol-info-widget-container",
-            "width": "100%",
-            "height": "100%",
-            "locale": "en",
-            "colorTheme": theme,
-            "isTransparent": true,
-            "symbol": symbol,
-            "autosize": true,
-        });
-    }
+    // Append the script to the container
+    watchlistContainer.appendChild(script);
+}
 
-    // Initial load for the Symbol Info widget
-    createSymbolInfoWidget('NASDAQ:AAPL');
+function showStockDetails(symbol) {
+    const theme = document.body.getAttribute('data-theme') || 'light';
+    const symbolInfoContainer = document.getElementById('tv-symbol-info-widget-container');
+    symbolInfoContainer.innerHTML = ''; // Clear previous widget
 
-    // Make the function globally accessible so the watchlist can call it
-    window.showStockDetails = (symbol) => {
-        createSymbolInfoWidget(symbol);
-        switchCenterPanel('stock-details');
-    };
+    new TradingView.widget({
+        "container_id": "tv-symbol-info-widget-container",
+        "width": "100%",
+        "height": "100%",
+        "locale": "en",
+        "colorTheme": theme,
+        "isTransparent": true,
+        "symbol": symbol,
+        "autosize": true,
+    });
+    
+    switchCenterPanel('stock-details');
 }
 
 
