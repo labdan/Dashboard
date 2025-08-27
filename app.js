@@ -1074,7 +1074,7 @@ function showStockDetails(symbol, isInitialLoad = false) {
             "colorTheme": theme,
             "isTransparent": true,
             "locale": "en",
-            "width": "100%",
+            "width": "600px",
             "height": "350px"
         });
         symbolInfoContainer.appendChild(script);
