@@ -1026,7 +1026,7 @@ function initializeTradingViewWidgets() {
         "exchange": "US",
         "colorTheme": theme,
         "dateRange": "12M",
-        "showChart": true,
+        "showChart": false,
         "locale": "en",
         "largeChartUrl": "",
         "isTransparent": true,
