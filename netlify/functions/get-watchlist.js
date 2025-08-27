@@ -14,7 +14,7 @@ exports.handler = async function(event, context) {
     const { data, error } = await supabase
       .from('watchlist')
       .select('*')
-      .order('id');
+      .order('sort_order'); 
 
     if (error) {
       throw error;
