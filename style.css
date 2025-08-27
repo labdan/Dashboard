@@ -1423,30 +1423,30 @@ body.dynamic-theme {
     margin-bottom: 15px;
 }
 /* TradingView Widget Containers */
-/* TradingView Widget Containers */
 .tradingview-widget-container {
     height: 100%;
     width: 100%;
 }
+
+/* 1. Make the main widget a flex column */
 #tv-watchlist-widget {
     padding: 0;
     overflow: hidden;
-    /* This ensures the parent is a flex container for its children */
     display: flex;
     flex-direction: column;
 }
 
-/* FIX: Give the top widget a fixed height and prevent it from growing */
+/* 2. Set a fixed height for the top "Hotlists" widget */
 #tv-market-overview-widget-container {
-    height: 265px; /* A fixed height similar to the weather widget */
-    flex-shrink: 0; /* Prevents this container from shrinking */
+    height: 265px;  /* This height is similar to the weather/time widgets */
+    flex-shrink: 0; /* Prevents this section from shrinking */
 }
 
-/* FIX: Make the bottom container fill the remaining available space */
+/* 3. Make the custom watchlist fill all remaining space */
 #custom-watchlist-container {
-    flex-grow: 1; /* Allows this container to expand and fill the rest of the space */
-    min-height: 0; /* Important for flex-grow to work correctly in all browsers */
-    overflow-y: auto;
+    flex-grow: 1; /* This makes the container expand to fill available space */
+    min-height: 0; /* A necessary property to ensure flex-grow works correctly */
+    overflow-y: auto; /* Adds a scrollbar if the list is too long */
     padding: 15px 20px;
     border-top: 1px solid var(--border-color);
 }
