@@ -79,6 +79,7 @@ const addLinkForm = document.getElementById('add-link-form');
 const setNormalThemeBtn = document.getElementById('set-normal-theme-btn');
 const setDynamicThemeBtn = document.getElementById('set-dynamic-theme-btn');
 const setRoyalEpicThemeBtn = document.getElementById('set-royal-epic-theme-btn');
+const setGoldenRedThemeBtn = document.getElementById('set-golden-red-theme-btn'); // New button element
 const backToSettingsBtn = document.getElementById('back-to-settings-btn');
 const saveWatchlistBtn = document.getElementById('save-watchlist-btn');
 const backToSettingsFromWatchlistBtn = document.getElementById('back-to-settings-from-watchlist-btn');
@@ -194,6 +195,8 @@ function setupEventListeners() {
     if (setNormalThemeBtn) setNormalThemeBtn.addEventListener('click', () => { applyTheme({ type: 'normal' }); themeOptionsContainer.classList.remove('visible'); });
     if (setDynamicThemeBtn) setDynamicThemeBtn.addEventListener('click', () => { applyTheme({ type: 'dynamic' }); themeOptionsContainer.classList.remove('visible'); });
     if (setRoyalEpicThemeBtn) setRoyalEpicThemeBtn.addEventListener('click', () => { applyTheme({ type: 'royal-epic' }); themeOptionsContainer.classList.remove('visible'); });
+        if (setGoldenRedThemeBtn) setGoldenRedThemeBtn.addEventListener('click', () => { applyTheme({ type: 'golden-red' }); themeOptionsContainer.classList.remove('visible'); });
+
     if(saveNoteBtn) saveNoteBtn.addEventListener('click', saveNote);
     if (saveWatchlistBtn) saveWatchlistBtn.addEventListener('click', saveWatchlistChanges);
     if (backToSettingsFromWatchlistBtn) backToSettingsFromWatchlistBtn.addEventListener('click', () => switchCenterPanel('settings'));
@@ -220,12 +223,24 @@ function applySavedTheme() {
 
 function applyTheme(config, isInitialLoad = false) {
     const currentConfig = JSON.parse(localStorage.getItem('themeConfig')) || { type: 'normal', mode: 'light' };
+        // If the old theme was royal-epic, clean up its special DOM modifications
+    if (currentConfig.type === 'royal-epic' && config.type !== 'royal-epic') {
+        if (typeof unwrapWidgetsForRoyalTheme === 'function') {
+            unwrapWidgetsForRoyalTheme();
+        }
+    }
+    // If the old theme was golden-red, clean up its special DOM modifications
+    if (currentConfig.type === 'golden-red' && config.type !== 'golden-red') {
+        if (typeof unwrapWidgetsForGoldenRedTheme === 'function') { // NEW line
+            unwrapWidgetsForGoldenRedTheme(); // NEW line
+        }
+    }
     const newConfig = { ...currentConfig, ...config };
     localStorage.setItem('themeConfig', JSON.stringify(newConfig));
     document.body.setAttribute('data-theme', newConfig.mode);
     
     // Reset all theme classes first
-    document.body.classList.remove('dynamic-theme', 'royal-epic-theme');
+    document.body.classList.remove('dynamic-theme', 'royal-epic-theme', 'golden-red-theme'); // Add new theme class
     document.body.style.backgroundImage = 'none';
 
     if (newConfig.type === 'dynamic') {
@@ -241,12 +256,21 @@ function applyTheme(config, isInitialLoad = false) {
         }
     } else if (newConfig.type === 'royal-epic') {
         document.body.classList.add('royal-epic-theme');
+        if (typeof wrapWidgetsForRoyalTheme === 'function') {
+            wrapWidgetsForRoyalTheme();
+        }
+    } else if (newConfig.type === 'golden-red') { // NEW theme condition
+        document.body.classList.add('golden-red-theme');
+        if (typeof wrapWidgetsForGoldenRedTheme === 'function') { // NEW line
+            wrapWidgetsForGoldenRedTheme(); // NEW line
+        }
     }
+
 
     if (!isInitialLoad) {
         initializeTradingViewWidgets();
         loadCustomWatchlist();
-        loadQuickLinks();
+        loadQuickLinks(); // Ensure quick links are reloaded to apply new icon logic
     }
 }
 
@@ -606,6 +630,8 @@ async function loadQuickLinks() {
     const themeConfig = JSON.parse(localStorage.getItem('themeConfig'));
     if (themeConfig && themeConfig.type === 'royal-epic' && typeof setRoyalEpicQuickLinkIcons === 'function') {
         setRoyalEpicQuickLinkIcons();
+    } else if (themeConfig && themeConfig.type === 'golden-red' && typeof setGoldenRedQuickLinkIcons === 'function') { // NEW icon function
+        setGoldenRedQuickLinkIcons(); // NEW icon function
     }
 }
 

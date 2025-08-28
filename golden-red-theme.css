@@ -1,0 +1,198 @@
+/* golden-red-theme.css */
+
+body.golden-red-theme {
+  /* Set a neutral background for the body or leave it as is if dynamic background is handled elsewhere */
+  background-color: #330000; /* Dark, solid red fallback */
+  font-family: 'Georgia', serif;
+  color: #f0e6d2; /* Light text color */
+}
+
+/* --- Widget Styling with Golden Frame and Dark Red Gradient --- */
+
+/* The widget itself is a positioning container */
+.golden-red-theme .widget,
+.golden-red-theme .header-widget {
+  position: relative;
+  background: transparent; /* Main widget container is transparent */
+  border: none;
+  padding: 0;
+  box-shadow: none;
+  margin: 20px 0; /* Adds space between widgets */
+  min-height: 100px; /* Ensure widgets have some height to display frame */
+}
+
+/* This wrapper holds the widget's actual content.
+   It has the dark red gradient background and is indented from the edges
+   to make space for the border images. */
+.golden-red-theme .golden-red-widget-content {
+  background: linear-gradient(145deg, rgba(80, 0, 0, 0.9), rgba(40, 0, 0, 0.95), rgba(20, 0, 0, 1));
+  color: #f0e6d2;
+  height: 100%;
+  padding: 20px;
+  box-sizing: border-box;
+  overflow-y: auto;
+  /* This margin creates the "thin border" effect by pushing content in */
+  margin: 15px 15px; /* Adjust this to control border width. 15px is half of 30px corner. */
+}
+
+/* --- Border Piece Styling (using a single corner image) --- */
+/* This is the common style for all corner and edge pieces */
+.golden-red-border {
+  position: absolute;
+  z-index: 2; /* Ensures borders render on top */
+  background-size: 100% 100%; /* For corners */
+  background-repeat: no-repeat;
+  pointer-events: none; /* Allows clicks to pass through border images to content */
+}
+
+/* CORNERS (fixed size, will not stretch) */
+/* Assuming corner1.png is a square image, e.g., 30x30px or 40x40px for a "small" corner */
+/* Adjust width/height below based on actual dimensions of your corner1.png if it's not square */
+.golden-red-border.top-left {
+  top: 0; left: 0;
+  width: 30px; height: 30px; /* Example size, adjust to your corner1.png */
+  background-image: url('box2/corner1.png');
+  transform: rotate(0deg); /* Top-left default rotation */
+}
+.golden-red-border.top-right {
+  top: 0; right: 0;
+  width: 30px; height: 30px;
+  background-image: url('box2/corner1.png');
+  transform: rotate(90deg); /* Rotate for top-right */
+  transform-origin: top right; /* Ensure rotation around the corner point */
+}
+.golden-red-border.bottom-left {
+  bottom: 0; left: 0;
+  width: 30px; height: 30px;
+  background-image: url('box2/corner1.png');
+  transform: rotate(270deg); /* Rotate for bottom-left */
+  transform-origin: bottom left;
+}
+.golden-red-border.bottom-right {
+  bottom: 0; right: 0;
+  width: 30px; height: 30px;
+  background-image: url('box2/corner1.png');
+  transform: rotate(180deg); /* Rotate for bottom-right */
+  transform-origin: bottom right;
+}
+
+/* EDGES (will tile to fill the space between corners) */
+/* We'll use a simple golden color for edges to match the frame,
+   or you can create a thin tileable golden image if you have a pattern */
+.golden-red-border.top-edge,
+.golden-red-border.bottom-edge {
+  left: 30px; /* Start after the corner width */
+  right: 30px; /* End before the corner width */
+  height: 2px; /* Thin golden line */
+  background-color: #d4af37; /* Golden color */
+  background-image: none; /* No image for simple line */
+  background-repeat: repeat-x;
+}
+.golden-red-border.top-edge    { top: 0; }
+.golden-red-border.bottom-edge { bottom: 0; }
+
+.golden-red-border.left-edge,
+.golden-red-border.right-edge {
+  top: 30px; /* Start after the corner height */
+  bottom: 30px; /* End before the corner height */
+  width: 2px; /* Thin golden line */
+  background-color: #d4af37; /* Golden color */
+  background-image: none; /* No image for simple line */
+  background-repeat: repeat-y;
+}
+.golden-red-border.left-edge   { left: 0; }
+.golden-red-border.right-edge  { right: 0; }
+
+
+/* --- Unchanged Styles (Search & Quick Links if needed) --- */
+/* Add any other specific styles for search, quick links, etc. that should still apply
+   or need adjustments for the new dark theme */
+
+.golden-red-theme .search-area {
+  background-image: url('royal/searchbar.png'); /* Or new searchbar if you have one */
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  padding-top: 50px;
+  height: 150px;
+  width: 100%;
+  margin: 0;
+}
+
+.golden-red-theme .search-container {
+  background: transparent; border: none; box-shadow: none; position: relative; width: 55%; margin: 0 auto;
+}
+.golden-red-theme .search-input {
+  color: #f0e6d2; /* Light text for input */
+  background-color: rgba(0,0,0,0.5); /* Darker, semi-transparent background */
+  border-radius: 25px;
+  border: 1px solid #d4af37; /* Golden border */
+}
+.golden-red-theme .search-input::placeholder {
+  color: rgba(240, 230, 210, 0.7); /* Lighter placeholder */
+}
+
+.golden-red-theme .quick-links .link-icon {
+  width: 70px; height: 70px;
+  background-image: url('box2/golden_icon_frame.png'); /* New golden icon frame if you have one */
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  position: relative;
+  border: none;
+}
+.golden-red-theme .quick-links .link-icon .favicon {
+  position: absolute; width: 32px; height: 32px; top: 50%; left: 50%; transform: translate(-50%, -50%);
+}
+.golden-red-theme .link-name {
+  color: #f0e6d2; /* Light text color for link names */
+  text-shadow: 1px 1px 2px #000;
+}
+
+/* Specific adjustments for text/icons in widgets if needed */
+.golden-red-theme .widget h2,
+.golden-red-theme .widget h3 {
+  color: #d4af37; /* Golden headings */
+}
+
+.golden-red-theme .todo-item .todo-text,
+.golden-red-theme .news-item .news-title,
+.golden-red-theme .event-item .event-title {
+  color: #f0e6d2;
+}
+.golden-red-theme .news-item .news-date,
+.golden-red-theme .event-item .event-time {
+  color: rgba(240, 230, 210, 0.8);
+}
+
+
+/* Adjustments for mini-calendar */
+.golden-red-theme .mini-calendar-cell {
+    color: #f0e6d2;
+}
+.golden-red-theme .mini-calendar-cell.current {
+    background-color: #d4af37; /* Golden highlight for current day */
+    color: #200000; /* Dark text on golden highlight */
+    border-radius: 3px;
+}
+.golden-red-theme .mini-calendar-cell.has-event {
+    border: 1px solid #d4af37; /* Golden border for event day */
+}
+
+/* Adjustments for portfolio widget */
+.golden-red-theme .portfolio-value .value-amount,
+.golden-red-theme .detail-amount {
+    color: #d4af37; /* Golden for financial values */
+}
+.golden-red-theme .stock-item-new .stock-name-new {
+    color: #f0e6d2;
+}
+.golden-red-theme .stock-item-new .stock-value {
+    color: #d4af37;
+}
+.golden-red-theme .stock-item-new .stock-change-new.positive {
+    color: #8aff8a; /* Bright green for positive change */
+}
+.golden-red-theme .stock-item-new .stock-change-new.negative {
+    color: #ff8a8a; /* Bright red for negative change */
+}
