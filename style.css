@@ -1608,3 +1608,14 @@ body.dynamic-theme {
 .single-ticker-widget-wrapper:hover {
     background-color: var(--border-color);
 }
+
+.single-ticker-widget-wrapper::before {
+  content: '';
+  position: absolute;
+  bottom: 1px;
+  right: 1px;
+  width: 60px;
+  height: 20px;
+  background-color: var(--card-background);
+  z-index: 3;
+}
