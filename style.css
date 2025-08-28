@@ -1609,19 +1609,21 @@ body.dynamic-theme {
     background-color: var(--border-color);
 }
 
-/* A single bar to hide the headers of all ticker widgets */
-#custom-watchlist-container::before {
-    content: '';
+.target-price-overlay {
     position: absolute;
-    /* Position it respecting the container's padding */
-    top: 15px;
-    left: 20px;
-    /* Span the width of the content area */
-    right: 20px; 
-    /* Set the height to cover the top part of the widgets */
+    top: 0;
+    right: 0;
+    width: 100%;
     height: 28px;
-    /* Match the page's background color */
     background-color: var(--background-color);
-    /* Ensure it's on top of the widgets but below the settings button */
-    z-index: 4; 
+    z-index: 3;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 15px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--primary-color);
 }

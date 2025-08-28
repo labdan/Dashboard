@@ -820,6 +820,15 @@ async function loadCustomWatchlist() {
             const widgetWrapper = document.createElement('div');
             widgetWrapper.className = 'single-ticker-widget-wrapper';
             widgetWrapper.setAttribute('data-ticker', tvSymbol);
+
+            // Create and add the target price overlay
+            if (stock.target) {
+                const targetOverlay = document.createElement('div');
+                targetOverlay.className = 'target-price-overlay';
+                targetOverlay.textContent = `Target: ${stock.target}`;
+                widgetWrapper.appendChild(targetOverlay);
+            }
+
             const script = document.createElement('script');
             script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js';
             script.innerHTML = JSON.stringify({ "symbol": tvSymbol, "colorTheme": document.body.getAttribute('data-theme') || 'light', "isTransparent": true, "locale": "en", "width": "100%" });
