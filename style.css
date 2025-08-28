@@ -1613,11 +1613,11 @@ body.dynamic-theme {
 .single-ticker-widget-wrapper::before {
   content: '';
   position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 55px; 
-  height: 18px;
-  /* Use the solid page background color to ensure the logo is hidden */
-  background-color: var(--background-color); 
+  bottom: 2px;
+  right: 1px;
+  width: 50px;
+  height: 22px;
+  background-color: var(--background-color);
   z-index: 3;
+  border-radius: 3px;
 }
