@@ -1609,15 +1609,19 @@ body.dynamic-theme {
     background-color: var(--border-color);
 }
 
-/* Corrected style to hide the TradingView logo */
-.single-ticker-widget-wrapper::before {
-  content: '';
-  position: absolute;
-  bottom: 2px;
-  right: 1px;
-  width: 50px;
-  height: 22px;
-  background-color: var(--background-color);
-  z-index: 3;
-  border-radius: 3px;
+/* A single bar to hide the headers of all ticker widgets */
+#custom-watchlist-container::before {
+    content: '';
+    position: absolute;
+    /* Position it respecting the container's padding */
+    top: 15px;
+    left: 20px;
+    /* Span the width of the content area */
+    right: 20px; 
+    /* Set the height to cover the top part of the widgets */
+    height: 28px;
+    /* Match the page's background color */
+    background-color: var(--background-color);
+    /* Ensure it's on top of the widgets but below the settings button */
+    z-index: 4; 
 }
