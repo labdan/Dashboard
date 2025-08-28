@@ -11,10 +11,10 @@
   --success-color: #28a745;
   --danger-color: #dc3545;
   /* Styles for Target Price Overlay */
-  --target-overlay-bg: #d8e4f5;
+  --target-overlay-bg: #eaf2ff;
   --target-overlay-glow: 0 0 8px rgba(0, 0, 0, 0.4);
   --target-overlay-border: #a9b8d1;
-  --target-overlay-text: #2c3e50;
+  --target-overlay-text: var(--secondary-color);
 }
 
 [data-theme="dark"] {
@@ -28,10 +28,10 @@
   --success-color: #38c172;
   --danger-color: #e3342f;
   /* Styles for Target Price Overlay */
-  --target-overlay-bg: #2c3e50;
+  --target-overlay-bg: #34495e;
   --target-overlay-glow: 0 0 10px rgba(137, 196, 244, 0.5);
   --target-overlay-border: #4a6fa5;
-  --target-overlay-text: #e0e8f0;
+  --target-overlay-text: var(--secondary-color);
 }
 
 * {
@@ -1621,12 +1621,12 @@ body.dynamic-theme {
 
 .target-price-overlay {
     position: absolute;
-    top: 4px;
-    right: 4px;
+    top: 6px;
+    right: 2px;
     z-index: 3;
-    height: 28px;
+    height: 30px;
     min-width: 55px;
-    padding: 0 12px;
+    padding: 0 8px;
     background-color: var(--target-overlay-bg);
     border: 1px solid var(--target-overlay-border);
     border-radius: 8px;
