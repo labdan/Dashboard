@@ -11,8 +11,8 @@
   --success-color: #28a745;
   --danger-color: #dc3545;
   /* Styles for Target Price Overlay */
-  --target-overlay-bg: #eaf2ff;
-  --target-overlay-glow: 0 0 8px rgba(0, 0, 0, 0.4);
+  --target-overlay-bg: var(--background-color);
+  --target-overlay-glow: 0 0 8px rgba(0, 0, 0, 0.2);
   --target-overlay-border: #a9b8d1;
   --target-overlay-text: var(--secondary-color);
 }
@@ -28,8 +28,8 @@
   --success-color: #38c172;
   --danger-color: #e3342f;
   /* Styles for Target Price Overlay */
-  --target-overlay-bg: #34495e;
-  --target-overlay-glow: 0 0 10px rgba(137, 196, 244, 0.5);
+  --target-overlay-bg: var(--background-color);
+  --target-overlay-glow: 0 0 10px rgba(137, 196, 244, 0.25);
   --target-overlay-border: #4a6fa5;
   --target-overlay-text: var(--secondary-color);
 }
@@ -69,7 +69,7 @@ body {
     left: 0;
     background-color: var(--background-color);
     z-index: 1000;
-    transition: opacity 0.3s ease;
+    transition: opacity: 0.3s ease;
 }
 
 .login-page-btn {
@@ -1613,11 +1613,11 @@ body.dynamic-theme {
 
 .target-price-overlay {
     position: absolute;
-    top: 6px;
-    right: 6px;
+    top: 8px;
+    right: 8px;
     z-index: 3;
     height: 32px;
-    min-width: 50px;
+    min-width: 45px;
     padding: 0 8px;
     background-color: var(--target-overlay-bg);
     border: 1px solid var(--target-overlay-border);
