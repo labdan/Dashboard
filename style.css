@@ -1609,13 +1609,15 @@ body.dynamic-theme {
     background-color: var(--border-color);
 }
 
+/* Corrected style to hide the TradingView logo */
 .single-ticker-widget-wrapper::before {
   content: '';
   position: absolute;
-  bottom: 1px;
-  right: 1px;
-  width: 60px;
-  height: 20px;
-  background-color: var(--card-background);
+  bottom: 0;
+  right: 0;
+  width: 55px; 
+  height: 18px;
+  /* Use the solid page background color to ensure the logo is hidden */
+  background-color: var(--background-color); 
   z-index: 3;
 }
