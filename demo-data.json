@@ -1,0 +1,53 @@
+{
+  "weather": {
+    "current": {
+      "temp": 19,
+      "weather": [{ "description": "Overcast Clouds", "icon": "04d" }],
+      "sunrise": 1693278832,
+      "sunset": 1693328325,
+      "uvi": 2.5
+    },
+    "daily": [
+      { "temp": { "max": 21, "min": 15 }, "weather": [{ "icon": "04d" }] },
+      { "dt": 1693396800, "temp": { "max": 22 }, "weather": [{ "icon": "02d" }] },
+      { "dt": 1693483200, "temp": { "max": 23 }, "weather": [{ "icon": "01d" }] },
+      { "dt": 1693569600, "temp": { "max": 20 }, "weather": [{ "icon": "10d" }] },
+      { "dt": 1693656000, "temp": { "max": 19 }, "weather": [{ "icon": "03d" }] },
+      { "dt": 1693742400, "temp": { "max": 21 }, "weather": [{ "icon": "01d" }] },
+      { "dt": 1693828800, "temp": { "max": 24 }, "weather": [{ "icon": "02d" }] },
+      { "dt": 1693915200, "temp": { "max": 25 }, "weather": [{ "icon": "01d" }] }
+    ]
+  },
+  "portfolio": {
+    "cash": {
+      "free": 1368.20,
+      "invested": 68489.39,
+      "total": 69857.59
+    },
+    "portfolio": [
+      { "ticker": "AAPL", "quantity": 10, "currentPrice": 232.85, "ppl": 23.50, "companyName": "Apple Inc.", "logoUrl": "https://s3-symbol-logo.tradingview.com/apple.svg" },
+      { "ticker": "MSFT", "quantity": 10, "currentPrice": 509.78, "ppl": -11.20, "companyName": "Microsoft Corp.", "logoUrl": "https://s3-symbol-logo.tradingview.com/microsoft.svg" },
+      { "ticker": "GOOGL", "quantity": 10, "currentPrice": 212.70, "ppl": 4.34, "companyName": "Alphabet Inc.", "logoUrl": "https://s3-symbol-logo.tradingview.com/alphabet.svg" },
+      { "ticker": "AMZN", "quantity": 10, "currentPrice": 212.55, "ppl": 15.60, "companyName": "Amazon.com, Inc.", "logoUrl": "https://s3-symbol-logo.tradingview.com/amazon.svg" },
+      { "ticker": "NVDA", "quantity": 10, "currentPrice": 180.87, "ppl": -3.21, "companyName": "NVIDIA Corp.", "logoUrl": "https://s3-symbol-logo.tradingview.com/nvidia.svg" },
+      { "ticker": "TSLA", "quantity": 10, "currentPrice": 353.90, "ppl": -2.67, "companyName": "Tesla, Inc.", "logoUrl": "https://s3-symbol-logo.tradingview.com/tesla.svg" },
+      { "ticker": "META", "quantity": 10, "currentPrice": 168.60, "ppl": 1.47, "companyName": "Meta Platforms, Inc.", "logoUrl": "https://s3-symbol-logo.tradingview.com/meta.svg" }
+    ]
+  },
+  "news": [
+      { "title": "Market Hits All-Time High Amid Tech Rally", "pubDate": "2025-08-28T14:30:00Z" },
+      { "title": "Fed Chairman Hints at No Interest Rate Hikes in Near Future", "pubDate": "2025-08-28T13:00:00Z" },
+      { "title": "EV Sector Sees a Surge After New Battery Technology Announcement", "pubDate": "2025-08-28T11:45:00Z" },
+      { "title": "Oil Prices Stabilize After a Volatile Week", "pubDate": "2025-08-28T10:15:00Z" }
+  ],
+  "todos": [
+      { "task": "Review Q2 earnings reports", "is_complete": false },
+      { "task": "Update portfolio spreadsheet", "is_complete": true },
+      { "task": "Research new energy stocks", "is_complete": false }
+  ],
+  "events": [
+      { "summary": "Tech Conference 2025", "start": { "dateTime": "2025-09-05T09:00:00Z" } },
+      { "summary": "Dentist Appointment", "start": { "dateTime": "2025-09-10T14:30:00Z" } }
+  ],
+  "noteContent": "<h1>Q3 Investment Strategy</h1><p>Focus on consolidating tech holdings. Look for opportunities in the renewable energy sector, particularly after the recent innovations in battery technology. Re-evaluate position in NVDA if it drops below 170. Consider taking some profits from AAPL if it hits the 250 target.</p>"
+}
