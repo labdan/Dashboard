@@ -821,13 +821,11 @@ async function loadCustomWatchlist() {
             widgetWrapper.className = 'single-ticker-widget-wrapper';
             widgetWrapper.setAttribute('data-ticker', tvSymbol);
 
-            // Create and add the target price overlay
-            if (stock.target) {
-                const targetOverlay = document.createElement('div');
-                targetOverlay.className = 'target-price-overlay';
-                targetOverlay.textContent = `Target: ${stock.target}`;
-                widgetWrapper.appendChild(targetOverlay);
-            }
+            // Create and add the target price overlay for every item
+            const targetOverlay = document.createElement('div');
+            targetOverlay.className = 'target-price-overlay';
+            targetOverlay.textContent = stock.target ? stock.target.toLocaleString() : ''; // Display number or be empty
+            widgetWrapper.appendChild(targetOverlay);
 
             const script = document.createElement('script');
             script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js';
