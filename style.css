@@ -1439,31 +1439,23 @@ body.dynamic-theme {
     width: 100%;
 }
 
-
-/* New rule for the top Hotlists widget */
+/* Adjustments for the new single right sidebar */
 #tv-hotlists-widget {
+    height: 360px; /* Increased height by 50px */
+    flex-shrink: 0;
     padding: 0;
-    overflow-y: auto; /* Allow vertical scrolling */
-    flex-shrink: 0; /* Prevents this widget from shrinking */
-    height: 310px; /* Allocate a percentage of the sidebar height */
+    margin: 0;
+    border: none;
 }
 
-/* New rule for the bottom Custom Watchlist widget */
 #tv-custom-watchlist-widget {
+    flex-grow: 1;
+    min-height: 0;
     padding: 0;
-    flex-grow: 1; /* Allows this widget to fill the remaining space */
-    min-height: 0; /* Critical for flex-grow to work properly */
-    display: flex; /* Make it a flex container so its child can grow */
-    overflow-y: auto; /* Allow vertical scrolling */
+    margin: 0;
+    border: none;
 }
 
-/* New rule for the bottom Custom Watchlist widget */
-#tv-custom-watchlist-widget {
-    padding: 0;
-    flex-grow: 1; /* Allows this widget to fill the remaining space */
-    min-height: 0; /* Critical for flex-grow to work properly */
-    display: flex; /* Make it a flex container so its child can grow */
-}
 
 /* Rule for the actual container inside the bottom widget */
 #custom-watchlist-container {
@@ -1622,10 +1614,10 @@ body.dynamic-theme {
 .target-price-overlay {
     position: absolute;
     top: 6px;
-    right: 2px;
+    right: 6px;
     z-index: 3;
-    height: 30px;
-    min-width: 55px;
+    height: 32px;
+    min-width: 50px;
     padding: 0 8px;
     background-color: var(--target-overlay-bg);
     border: 1px solid var(--target-overlay-border);
