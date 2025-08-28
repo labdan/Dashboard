@@ -37,7 +37,9 @@ const themeOptionsContainer = document.getElementById('theme-options-container')
 const setNormalThemeBtn = document.getElementById('set-normal-theme-btn');
 const setDynamicThemeBtn = document.getElementById('set-dynamic-theme-btn');
 const setRoyalEpicThemeBtn = document.getElementById('set-royal-epic-theme-btn');
-const setGoldenRedThemeBtn = document.getElementById('set-golden-red-theme-btn'); 
+const setGoldenRedThemeBtn = document.getElementById('set-golden-red-theme-btn');
+const editQuicklinksBtn = document.getElementById('edit-quicklinks-btn');
+
 
 // Weather DOM Elements
 const weatherIconImg = document.getElementById('weather-icon-img');
@@ -70,6 +72,7 @@ async function init() {
             document.getElementById('notes-panel').style.display = 'flex';
             setupEventListeners();
             loadDemoContent();
+            playBackgroundMusic();
         })
         .catch(error => console.error('Error loading demo data:', error));
 }
@@ -126,6 +129,12 @@ function setupEventListeners() {
     if (setDynamicThemeBtn) setDynamicThemeBtn.addEventListener('click', () => { applyTheme({ type: 'dynamic' }); themeOptionsContainer.classList.remove('visible'); });
     if (setRoyalEpicThemeBtn) setRoyalEpicThemeBtn.addEventListener('click', () => { applyTheme({ type: 'royal-epic' }); themeOptionsContainer.classList.remove('visible'); });
     if (setGoldenRedThemeBtn) setGoldenRedThemeBtn.addEventListener('click', () => { applyTheme({ type: 'golden-red' }); themeOptionsContainer.classList.remove('visible'); });
+
+    if (editQuicklinksBtn) {
+        editQuicklinksBtn.addEventListener('click', () => {
+            alert("Editing quick links is disabled in the demo.");
+        });
+    }
 }
 
 function loadDemoContent() {
@@ -142,10 +151,6 @@ function loadDemoContent() {
 
 // --- CENTER PANEL ---
 function switchCenterPanel(panelId) {
-    if (panelId === 'settings') {
-        alert("Editing settings is disabled in the demo.");
-        return;
-    }
     centerPanelItems.forEach(panel => panel.style.display = 'none');
     const targetPanel = document.getElementById(`${panelId}-panel`);
     if (targetPanel) targetPanel.style.display = 'flex';
@@ -191,6 +196,17 @@ function toggleTheme() {
     const currentConfig = JSON.parse(localStorage.getItem('themeConfig')) || { type: 'normal', mode: 'light' };
     currentConfig.mode = currentConfig.mode === 'dark' ? 'light' : 'dark';
     applyTheme(currentConfig);
+}
+
+function playBackgroundMusic() {
+    const audio = document.getElementById('background-audio');
+    if (audio) {
+        audio.currentTime = 30; // Start at 30 seconds
+        audio.play().catch(error => {
+            // Autoplay was prevented, show a message or a play button
+            console.warn("Audio autoplay was blocked by the browser.", error);
+        });
+    }
 }
 
 // --- NEWS FEEDS ---

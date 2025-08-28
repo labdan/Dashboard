@@ -31,14 +31,26 @@
       { "ticker": "AMZN", "quantity": 10, "currentPrice": 212.55, "ppl": 15.60, "companyName": "Amazon.com, Inc.", "logoUrl": "https://s3-symbol-logo.tradingview.com/amazon.svg" },
       { "ticker": "NVDA", "quantity": 10, "currentPrice": 180.87, "ppl": -3.21, "companyName": "NVIDIA Corp.", "logoUrl": "https://s3-symbol-logo.tradingview.com/nvidia.svg" },
       { "ticker": "TSLA", "quantity": 10, "currentPrice": 353.90, "ppl": -2.67, "companyName": "Tesla, Inc.", "logoUrl": "https://s3-symbol-logo.tradingview.com/tesla.svg" },
-      { "ticker": "META", "quantity": 10, "currentPrice": 168.60, "ppl": 1.47, "companyName": "Meta Platforms, Inc.", "logoUrl": "https://s3-symbol-logo.tradingview.com/meta.svg" }
+      { "ticker": "META", "quantity": 10, "currentPrice": 168.60, "ppl": 1.47, "companyName": "Meta Platforms, Inc.", "logoUrl": "https://s3-symbol-logo.tradingview.com/meta.svg" },
+      { "ticker": "JPM", "quantity": 10, "currentPrice": 150.25, "ppl": 12.80, "companyName": "JPMorgan Chase & Co.", "logoUrl": "https://s3-symbol-logo.tradingview.com/jpmorgan-chase.svg" },
+      { "ticker": "V", "quantity": 10, "currentPrice": 240.50, "ppl": 8.10, "companyName": "Visa Inc.", "logoUrl": "https://s3-symbol-logo.tradingview.com/visa.svg" },
+      { "ticker": "PG", "quantity": 10, "currentPrice": 155.75, "ppl": -5.30, "companyName": "Procter & Gamble Co.", "logoUrl": "https://s3-symbol-logo.tradingview.com/procter-and-gamble.svg" },
+      { "ticker": "JNJ", "quantity": 10, "currentPrice": 170.10, "ppl": 2.20, "companyName": "Johnson & Johnson", "logoUrl": "https://s3-symbol-logo.tradingview.com/johnson-and-johnson.svg" },
+      { "ticker": "WMT", "quantity": 10, "currentPrice": 145.90, "ppl": -1.90, "companyName": "Walmart Inc.", "logoUrl": "https://s3-symbol-logo.tradingview.com/walmart.svg" },
+      { "ticker": "UNH", "quantity": 10, "currentPrice": 520.40, "ppl": 18.60, "companyName": "UnitedHealth Group Inc.", "logoUrl": "https://s3-symbol-logo.tradingview.com/unitedhealth.svg" },
+      { "ticker": "HD", "quantity": 10, "currentPrice": 330.80, "ppl": 7.40, "companyName": "Home Depot, Inc.", "logoUrl": "https://s3-symbol-logo.tradingview.com/home-depot.svg" },
+      { "ticker": "BAC", "quantity": 10, "currentPrice": 35.20, "ppl": -0.50, "companyName": "Bank of America Corp.", "logoUrl": "https://s3-symbol-logo.tradingview.com/bank-of-america.svg" },
+      { "ticker": "PFE", "quantity": 10, "currentPrice": 45.60, "ppl": 1.10, "companyName": "Pfizer Inc.", "logoUrl": "https://s3-symbol-logo.tradingview.com/pfizer.svg" },
+      { "ticker": "DIS", "quantity": 10, "currentPrice": 110.30, "ppl": -3.80, "companyName": "The Walt Disney Company", "logoUrl": "https://s3-symbol-logo.tradingview.com/disney.svg" }
     ]
   },
   "news": [
       { "title": "Market Hits All-Time High Amid Tech Rally", "pubDate": "2025-08-28T14:30:00Z" },
       { "title": "Fed Chairman Hints at No Interest Rate Hikes in Near Future", "pubDate": "2025-08-28T13:00:00Z" },
       { "title": "EV Sector Sees a Surge After New Battery Technology Announcement", "pubDate": "2025-08-28T11:45:00Z" },
-      { "title": "Oil Prices Stabilize After a Volatile Week", "pubDate": "2025-08-28T10:15:00Z" }
+      { "title": "Oil Prices Stabilize After a Volatile Week", "pubDate": "2025-08-28T10:15:00Z" },
+      { "title": "Global Chip Shortage Expected to Ease by Q4", "pubDate": "2025-08-28T09:00:00Z" },
+      { "title": "Analysts Bullish on Renewable Energy Stocks", "pubDate": "2025-08-27T16:00:00Z" }
   ],
   "todos": [
       { "task": "Review Q2 earnings reports", "is_complete": false },
@@ -46,8 +58,8 @@
       { "task": "Research new energy stocks", "is_complete": false }
   ],
   "events": [
-      { "summary": "Tech Conference 2025", "start": { "dateTime": "2025-09-05T09:00:00Z" } },
-      { "summary": "Dentist Appointment", "start": { "dateTime": "2025-09-10T14:30:00Z" } }
+      { "summary": "NVIDIA Q3 Earnings Call", "start": { "dateTime": "2025-09-05T09:00:00Z" } },
+      { "summary": "Salesforce Q3 Earnings Call", "start": { "dateTime": "2025-09-10T14:30:00Z" } }
   ],
   "noteContent": "<h1>Q3 Investment Strategy</h1><p>Focus on consolidating tech holdings. Look for opportunities in the renewable energy sector, particularly after the recent innovations in battery technology. Re-evaluate position in NVDA if it drops below 170. Consider taking some profits from AAPL if it hits the 250 target.</p>"
 }
