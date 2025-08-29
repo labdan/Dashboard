@@ -57,11 +57,11 @@ const mainDashboard = document.getElementById('main-dashboard');
 const loginPageContainer = document.querySelector('.login-page-container');
 
 // Auth DOM Elements
-const loginBtn = document.getElementById('login-btn');
+const pinInputs = document.querySelectorAll('.pin-input');
+const pinSubmitBtn = document.getElementById('pin-submit-btn');
+const pinErrorMessage = document.querySelector('.pin-error-message');
 const logoutBtn = document.getElementById('logout-btn');
-const userProfileElement = document.getElementById('user-profile');
-const userAvatarElement = document.getElementById('user-avatar');
-const userNameElement = document.getElementById('user-name');
+
 
 // Settings & Center Panel
 const centerPanelNavLinks = document.querySelectorAll('.center-panel-nav-link');
@@ -106,7 +106,6 @@ const refreshWeatherBtn = document.getElementById('refresh-weather');
 // --- STATE ---
 let currentSearchEngine = 'google';
 let calendarDisplayDate = new Date();
-let allUserEvents = [];
 const USER_ID = '12345678-12321-1234-1234567890ab';
 let linkIdsToDelete = [];
 let quillEditor;
@@ -131,7 +130,6 @@ async function init() {
 }
 
 function setupEventListeners() {
-    loginBtn.addEventListener('click', () => window.location.href = '/.netlify/functions/auth-google');
     logoutBtn.addEventListener('click', handleLogout);
     searchBtn.addEventListener('click', handleSearch);
     searchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSearch(); });
@@ -201,6 +199,21 @@ function setupEventListeners() {
     if (saveWatchlistBtn) saveWatchlistBtn.addEventListener('click', saveWatchlistChanges);
     if (backToSettingsFromWatchlistBtn) backToSettingsFromWatchlistBtn.addEventListener('click', () => switchCenterPanel('settings'));
     if (addStockForm) addStockForm.addEventListener('submit', handleAddStock);
+
+    // PIN Input Logic
+    pinInputs.forEach((input, index) => {
+        input.addEventListener('input', () => {
+            if (input.value.length === 1 && index < pinInputs.length - 1) {
+                pinInputs[index + 1].focus();
+            }
+        });
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && input.value.length === 0 && index > 0) {
+                pinInputs[index - 1].focus();
+            }
+        });
+    });
+    pinSubmitBtn.addEventListener('click', handlePinSubmit);
 }
 
 // --- CENTER PANEL ---
@@ -311,46 +324,42 @@ setInterval(checkNewDay, 5 * 60 * 1000);
 
 // --- AUTHENTICATION ---
 async function checkLoginStatus() {
-    const accessToken = localStorage.getItem('google_access_token');
-    if (!accessToken) {
+    const authToken = getCookie('dashboard_auth');
+    if (authToken) {
+        showDashboard();
+        loadDashboardContent();
+    } else {
         showLoginPage();
-        return;
     }
+}
+
+async function handlePinSubmit() {
+    const pin = Array.from(pinInputs).map(input => input.value).join('');
+    if (pin.length !== 4) return;
+
     try {
-        const response = await fetch('https://www.googleapis.com/oauth2/v1/userinfo', { headers: { 'Authorization': `Bearer ${accessToken}` } });
-        if (response.ok) {
-            const user = await response.json();
-            showUserProfile(user);
-            loadLoggedInContent();
-        } else if (response.status === 401) {
-            await refreshAccessToken();
-            await checkLoginStatus();
+        const response = await fetch('/.netlify/functions/verify-pin', {
+            method: 'POST',
+            body: JSON.stringify({ pin })
+        });
+        const data = await response.json();
+        if (data.success) {
+            setCookie('dashboard_auth', 'true', 365);
+            showDashboard();
+            loadDashboardContent();
         } else {
-            throw new Error('Failed to fetch user info');
+            pinErrorMessage.classList.remove('hidden');
+            pinInputs.forEach(input => input.value = '');
+            pinInputs[0].focus();
         }
     } catch (error) {
-        console.error("Login check failed:", error);
-        handleLogout();
+        console.error('Error verifying PIN:', error);
+        pinErrorMessage.textContent = 'Verification Error';
+        pinErrorMessage.classList.remove('hidden');
     }
 }
 
-async function refreshAccessToken() {
-    const refreshToken = localStorage.getItem('google_refresh_token');
-    if (!refreshToken) throw new Error("No refresh token available.");
-    try {
-        const response = await fetch(`/.netlify/functions/auth-google-refresh?refresh_token=${refreshToken}`);
-        if (!response.ok) throw new Error('Failed to refresh token');
-        const data = await response.json();
-        localStorage.setItem('google_access_token', data.access_token);
-    } catch (error) {
-        console.error("Could not refresh token:", error);
-        throw error;
-    }
-}
-
-function showUserProfile(user) {
-    userNameElement.textContent = user.name;
-    userAvatarElement.src = user.picture;
+function showDashboard() {
     mainDashboard.classList.remove('hidden');
     loginPageContainer.classList.add('hidden');
 }
@@ -358,30 +367,51 @@ function showUserProfile(user) {
 function showLoginPage() {
     mainDashboard.classList.add('hidden');
     loginPageContainer.classList.remove('hidden');
-    if(eventsContainer) eventsContainer.innerHTML = '';
     if(watchlistContainer) watchlistContainer.innerHTML = '';
     if(sideNewsContainer) sideNewsContainer.innerHTML = '';
     if(todoList) todoList.innerHTML = '';
 }
 
 function handleLogout() {
-    localStorage.removeItem('google_access_token');
-    localStorage.removeItem('google_refresh_token');
+    setCookie('dashboard_auth', '', -1);
     showLoginPage();
 }
 
+// --- COOKIE HELPER FUNCTIONS ---
+function setCookie(name, value, days) {
+    let expires = "";
+    if (days) {
+        const date = new Date();
+        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+        expires = "; expires=" + date.toUTCString();
+    }
+    document.cookie = name + "=" + (value || "") + expires + "; path=/";
+}
+
+function getCookie(name) {
+    const nameEQ = name + "=";
+    const ca = document.cookie.split(';');
+    for (let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) == ' ') c = c.substring(1, c.length);
+        if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
+    }
+    return null;
+}
+
+
 // --- CONTENT LOADING ---
-function loadLoggedInContent() {
+function loadDashboardContent() {
     loadQuickLinks();
     getWeather();
     loadStockWatchlist();
     loadCombinedNews();
     loadTodos();
     subscribeToTodoChanges();
-    loadUpcomingEvents();
     initializeEditor();
     initializeTradingViewWidgets();
     loadCustomWatchlist();
+    renderMiniCalendar([], calendarDisplayDate);
 }
 
 // --- NEWS FEEDS ---
@@ -493,57 +523,6 @@ function updateWeatherUI(data) {
     });
 }
 
-// --- GOOGLE CALENDAR ---
-async function loadUpcomingEvents() {
-    eventsContainer.innerHTML = '<p>Loading events...</p>';
-    try {
-        const accessToken = localStorage.getItem('google_access_token');
-        if (!accessToken) throw new Error("Not logged in");
-        const response = await fetch('/.netlify/functions/get-google-events', { headers: { 'Authorization': `Bearer ${accessToken}` } });
-        if (!response.ok) {
-            if (response.status === 401) {
-                await refreshAccessToken();
-                await loadUpcomingEvents();
-                return;
-            }
-            throw new Error(`Failed to fetch events: ${response.statusText}`);
-        }
-        const { events, holidays } = await response.json();
-        allUserEvents = [...events, ...holidays];
-        renderUpcomingEvents(allUserEvents);
-        renderMiniCalendar(allUserEvents, calendarDisplayDate);
-    } catch (error) {
-        console.error("Error loading calendar events:", error);
-        allUserEvents = [];
-        renderUpcomingEvents([]);
-        renderMiniCalendar([], calendarDisplayDate);
-    }
-}
-
-function renderUpcomingEvents(events) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const futureEvents = events
-        .map(event => {
-            const start = new Date(event.start.dateTime || event.start.date);
-            if (event.start.date) start.setMinutes(start.getMinutes() + start.getTimezoneOffset());
-            return { ...event, startDate: start };
-        })
-        .filter(event => event.startDate >= today)
-        .sort((a, b) => a.startDate - b.startDate);
-
-    if (futureEvents.length === 0) {
-        eventsContainer.innerHTML = '<p>No upcoming events found.</p>';
-    } else {
-        eventsContainer.innerHTML = futureEvents.map(event => `
-            <div class="event-item">
-                <div class="event-title">${event.summary}</div>
-                <div class="event-time">${event.startDate.toLocaleDateString()} - ${event.start.dateTime ? event.startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'All-day'}</div>
-            </div>
-        `).join('');
-    }
-}
-
 // --- TIME, DATE, & CALENDAR UI ---
 function updateClock() {
     timeElement.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -551,7 +530,7 @@ function updateClock() {
 
 function updateDateDisplay() {
     dateElement.textContent = calendarDisplayDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-    renderMiniCalendar(allUserEvents, calendarDisplayDate);
+    renderMiniCalendar([], calendarDisplayDate);
 }
 
 function renderMiniCalendar(events = [], displayDate) {
@@ -561,7 +540,7 @@ function renderMiniCalendar(events = [], displayDate) {
     const firstDayOfMonth = new Date(year, month, 1);
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const startingDay = (firstDayOfMonth.getDay() + 6) % 7;
-    const eventDays = new Set(events.map(event => new Date(event.start.date || event.start.dateTime).getDate()).filter(d => new Date(events[0].start.date || events[0].start.dateTime).getMonth() === month));
+    const eventDays = new Set();
     let calendarHTML = ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(day => `<div class="mini-calendar-cell mini-calendar-day-name">${day}</div>`).join('');
     calendarHTML += Array(startingDay).fill('<div class="mini-calendar-cell"></div>').join('');
     for (let i = 1; i <= daysInMonth; i++) {
@@ -1032,18 +1011,5 @@ function renderPortfolio(data, error = null) {
     watchlistContainer.innerHTML = watchlistHTML;
 }
 
-// --- Handle Auth Callback ---
-function handleAuthCallback() {
-    const params = new URLSearchParams(window.location.search);
-    const accessToken = params.get('access_token');
-    const refreshToken = params.get('refresh_token');
-    if (accessToken && refreshToken) {
-        localStorage.setItem('google_access_token', accessToken);
-        localStorage.setItem('google_refresh_token', refreshToken);
-        window.history.replaceState({}, document.title, "/");
-    }
-}
-
 // --- START THE APP ---
-handleAuthCallback();
 init();
