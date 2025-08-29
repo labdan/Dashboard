@@ -786,8 +786,11 @@ function showStockDetails(symbol, isInitialLoad = false) {
 
 async function loadCustomWatchlist() {
     const container = document.getElementById('custom-watchlist-container');
-    container.innerHTML = `<div id="custom-watchlist-header"><button class="settings-btn" id="edit-watchlist-btn" title="Edit Watchlist"><i class="fas fa-cog"></i></button></div><div id="custom-watchlist-body"><p style="padding: 10px 0;">Loading...</p></div>`;
+    container.innerHTML = `<div id="custom-watchlist-body"><p style="padding: 10px 0;">Loading...</p></div>`;
+    
+    // The button is now static in the HTML, so we just ensure the listener is attached.
     document.getElementById('edit-watchlist-btn').addEventListener('click', openWatchlistEditor);
+
     const bodyContainer = document.getElementById('custom-watchlist-body');
     try {
         const response = await fetch('/.netlify/functions/get-watchlist');
