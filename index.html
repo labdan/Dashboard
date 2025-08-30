@@ -9,9 +9,25 @@
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="royal-epic-theme.css" />
+  <script>
+    // This script runs before the page is rendered to prevent the login screen from flashing.
+    // If the auth cookie is not present, we prepare the page to show the login screen immediately.
+    if (!document.cookie.includes('dashboard_auth=true')) {
+      document.documentElement.classList.add('show-login');
+    }
+  </script>
+  <style>
+    /* These styles use the class from the script above to hide the dashboard and show the login screen instantly for logged-out users. */
+    .show-login #main-dashboard {
+      display: none !important;
+    }
+    .show-login .login-page-container {
+      display: flex !important;
+    }
+  </style>
 </head>
 <body>
-  <div class="login-page-container">
+  <div class="login-page-container hidden">
     <div class="pin-login-container">
       <div class="pin-login-header">
         <h2>ACCESS TERMINAL</h2>
@@ -28,7 +44,7 @@
     </div>
   </div>
 
-  <div id="main-dashboard" class="hidden">
+  <div id="main-dashboard">
     <div class="container">
       <div class="left-sidebar">
           <div class="widget">

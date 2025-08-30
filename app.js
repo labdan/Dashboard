@@ -126,7 +126,7 @@ async function init() {
     setInterval(updateQuote, 10000);
     document.getElementById('notes-panel').style.display = 'flex';
     setupEventListeners();
-    await checkLoginStatus();
+    checkLoginStatus(); // This will now primarily load content
 }
 
 function setupEventListeners() {
@@ -323,13 +323,11 @@ setInterval(checkNewDay, 5 * 60 * 1000);
 
 
 // --- AUTHENTICATION ---
-async function checkLoginStatus() {
-    const authToken = getCookie('dashboard_auth');
-    if (authToken) {
-        showDashboard();
+function checkLoginStatus() {
+    // The initial view is handled by the inline script in index.html.
+    // This function now just loads content if the user is logged in.
+    if (getCookie('dashboard_auth')) {
         loadDashboardContent();
-    } else {
-        showLoginPage();
     }
 }
 
@@ -345,8 +343,8 @@ async function handlePinSubmit() {
         const data = await response.json();
         if (data.success) {
             setCookie('dashboard_auth', 'true', 365);
-            showDashboard();
-            loadDashboardContent();
+            // Reload the page. The inline script will now show the dashboard instantly.
+            window.location.reload();
         } else {
             pinErrorMessage.classList.remove('hidden');
             pinInputs.forEach(input => input.value = '');
@@ -359,22 +357,9 @@ async function handlePinSubmit() {
     }
 }
 
-function showDashboard() {
-    mainDashboard.classList.remove('hidden');
-    loginPageContainer.classList.add('hidden');
-}
-
-function showLoginPage() {
-    mainDashboard.classList.add('hidden');
-    loginPageContainer.classList.remove('hidden');
-    if(watchlistContainer) watchlistContainer.innerHTML = '';
-    if(sideNewsContainer) sideNewsContainer.innerHTML = '';
-    if(todoList) todoList.innerHTML = '';
-}
-
 function handleLogout() {
-    setCookie('dashboard_auth', '', -1);
-    showLoginPage();
+    setCookie('dashboard_auth', '', -1); // Expire the cookie
+    window.location.reload();
 }
 
 // --- COOKIE HELPER FUNCTIONS ---
