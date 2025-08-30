@@ -151,15 +151,7 @@ function setupEventListeners() {
         if (stockItem && stockItem.dataset.ticker) {
             const t212Ticker = stockItem.dataset.ticker;
             const baseTicker = t212Ticker.split('_')[0];
-            try {
-                const response = await fetch(`/.netlify/functions/get-tv-symbol?ticker=${baseTicker}`);
-                if (!response.ok) throw new Error('Symbol lookup failed');
-                const { tvSymbol } = await response.json();
-                showStockDetails(tvSymbol);
-            } catch (error) {
-                console.error("Could not get TradingView symbol:", error);
-                showStockDetails(baseTicker);
-            }
+            fetchAndShowStockDetails(baseTicker);
         }
     });
     todoList.addEventListener('click', handleTodoClick);
@@ -720,54 +712,91 @@ async function saveNote() {
 
 
 // --- STOCK WIDGETS ---
-function initializeTradingViewWidgets() {
-    const theme = document.body.getAttribute('data-theme') || 'light';
-    const container = document.getElementById('tv-market-overview-widget-container');
-    container.innerHTML = '';
-    const script = document.createElement('script');
-    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-hotlists.js';
-    script.async = true;
-    script.innerHTML = JSON.stringify({ "exchange": "US", "colorTheme": theme, "dateRange": "12M", "showChart": false, "locale": "en", "isTransparent": true, "showSymbolLogo": true, "showFloatingTooltip": true, "width": "100%", "height": "100%" });
-    container.appendChild(script);
-    showStockDetails("NASDAQ:AAPL", true);
+async function fetchAndShowStockDetails(identifier) {
+    try {
+        const response = await fetch(`/.netlify/functions/get-symbol-info?symbol=${encodeURIComponent(identifier)}`);
+        if (!response.ok) throw new Error('Symbol lookup failed');
+        const symbolInfo = await response.json();
+        
+        // Call the original function with the new type info
+        showStockDetails(symbolInfo.tvSymbol, false, symbolInfo.type);
+        
+    } catch (error) {
+        console.error("Could not get symbol info:", error);
+        // Fallback to old behavior (assuming stock) if the lookup fails
+        showStockDetails(identifier, false, 'stock'); 
+    }
 }
 
-function showStockDetails(symbol, isInitialLoad = false) {
+function initializeTradingViewWidgets() {
+    // Initial load with a known stock to prevent looking up 'NASDAQ:AAPL'
+    showStockDetails("NASDAQ:AAPL", true, 'stock');
+}
+
+function showStockDetails(symbol, isInitialLoad = false, symbolType = 'stock') {
     const theme = document.body.getAttribute('data-theme') || 'light';
+    
+    // Get containers
     const symbolInfoContainer = document.getElementById('tv-widget-symbol-info');
+    const techAnalysisContainer = document.getElementById('tv-widget-technical-analysis');
+    const financialsContainer = document.getElementById('tv-widget-financials');
+    const advancedChartContainer = document.getElementById('tv-widget-advanced-chart');
+    const stockDetailsGrid = document.querySelector('.stock-details-grid');
+
+    // Clear all containers first
+    symbolInfoContainer.innerHTML = '';
+    techAnalysisContainer.innerHTML = '';
+    financialsContainer.innerHTML = '';
+    advancedChartContainer.innerHTML = '';
+
+    // Always show Symbol Info
     if (symbolInfoContainer) {
-        symbolInfoContainer.innerHTML = ''; 
         const script = document.createElement('script');
         script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-symbol-info.js';
         script.innerHTML = JSON.stringify({ "symbol": symbol, "colorTheme": theme, "isTransparent": true, "locale": "en", "width": "100%" });
         symbolInfoContainer.appendChild(script);
     }
-    const techAnalysisContainer = document.getElementById('tv-widget-technical-analysis');
-    if (techAnalysisContainer) {
-        techAnalysisContainer.innerHTML = '';
-        const script = document.createElement('script');
-        script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-technical-analysis.js';
-        script.innerHTML = JSON.stringify({ "symbol": symbol, "colorTheme": theme, "isTransparent": true, "locale": "en", "width": "100%", "height": "100%", "interval": "1M" });
-        techAnalysisContainer.appendChild(script);
-    }
-    const financialsContainer = document.getElementById('tv-widget-financials');
-    if (financialsContainer) {
-        financialsContainer.innerHTML = '';
-        const script = document.createElement('script');
-        script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-financials.js';
-        script.innerHTML = JSON.stringify({ "symbol": symbol, "colorTheme": theme, "displayMode": "adaptive", "isTransparent": true, "locale": "en", "width": "100%", "height": "100%" });
-        financialsContainer.appendChild(script);
-    }
-    const advancedChartContainer = document.getElementById('tv-widget-advanced-chart');
+    
+    // Always show Advanced Chart
     if (advancedChartContainer) {
-        advancedChartContainer.innerHTML = '';
         const script = document.createElement('script');
         script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
         script.innerHTML = JSON.stringify({ "symbol": symbol, "theme": theme, "allow_symbol_change": true, "hide_side_toolbar": true, "isTransparent": true, "locale": "en", "width": "100%", "height": "100%" });
         advancedChartContainer.appendChild(script);
     }
-    if (!isInitialLoad) switchCenterPanel('stock-details');
+
+    const isETF = (symbolType && symbolType.toLowerCase() === 'etf');
+    
+    // Conditionally show Technical Analysis and Financials
+    if (!isETF) {
+        techAnalysisContainer.style.display = 'block';
+        financialsContainer.style.display = 'block';
+        stockDetailsGrid.classList.remove('chart-only');
+
+        if (techAnalysisContainer) {
+            const script = document.createElement('script');
+            script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-technical-analysis.js';
+            script.innerHTML = JSON.stringify({ "symbol": symbol, "colorTheme": theme, "isTransparent": true, "locale": "en", "width": "100%", "height": "100%", "interval": "1M" });
+            techAnalysisContainer.appendChild(script);
+        }
+        if (financialsContainer) {
+            const script = document.createElement('script');
+            script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-financials.js';
+            script.innerHTML = JSON.stringify({ "symbol": symbol, "colorTheme": theme, "displayMode": "adaptive", "isTransparent": true, "locale": "en", "width": "100%", "height": "100%" });
+            financialsContainer.appendChild(script);
+        }
+    } else {
+        // Hide the containers and adjust grid for chart-only view
+        techAnalysisContainer.style.display = 'none';
+        financialsContainer.style.display = 'none';
+        stockDetailsGrid.classList.add('chart-only');
+    }
+
+    if (!isInitialLoad) {
+        switchCenterPanel('stock-details');
+    }
 }
+
 
 async function loadCustomWatchlist() {
     const container = document.getElementById('custom-watchlist-container');
@@ -802,7 +831,9 @@ async function loadCustomWatchlist() {
         });
         bodyContainer.addEventListener('click', (e) => {
             const widget = e.target.closest('.single-ticker-widget-wrapper');
-            if (widget && widget.dataset.ticker) showStockDetails(widget.dataset.ticker);
+            if (widget && widget.dataset.ticker) {
+                fetchAndShowStockDetails(widget.dataset.ticker);
+            }
         });
     } catch (error) {
         console.error("Error loading custom watchlist:", error);
