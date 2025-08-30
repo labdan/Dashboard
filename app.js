@@ -718,38 +718,44 @@ async function fetchAndShowStockDetails(identifier) {
         if (!response.ok) throw new Error('Symbol lookup failed');
         const symbolInfo = await response.json();
         
-        // Call the original function with the new type info
-        showStockDetails(symbolInfo.tvSymbol, false, symbolInfo.type);
+        // Pass the symbol's full description to the rendering function
+        showStockDetails(symbolInfo.tvSymbol, false, symbolInfo.description);
         
     } catch (error) {
         console.error("Could not get symbol info:", error);
-        // Fallback to old behavior (assuming stock) if the lookup fails
-        showStockDetails(identifier, false, 'stock'); 
+        // Fallback to old behavior if the lookup fails, pass the identifier itself to be checked
+        showStockDetails(identifier, false, identifier); 
     }
 }
 
 function initializeTradingViewWidgets() {
-    // Initial load with a known stock to prevent looking up 'NASDAQ:AAPL'
-    showStockDetails("NASDAQ:AAPL", true, 'stock');
+    const theme = document.body.getAttribute('data-theme') || 'light';
+    const container = document.getElementById('tv-market-overview-widget-container');
+    container.innerHTML = '';
+    const script = document.createElement('script');
+    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-hotlists.js';
+    script.async = true;
+    script.innerHTML = JSON.stringify({ "exchange": "US", "colorTheme": theme, "dateRange": "12M", "showChart": false, "locale": "en", "isTransparent": true, "showSymbolLogo": true, "showFloatingTooltip": true, "width": "100%", "height": "100%" });
+    container.appendChild(script);
+    
+    // Initial load with a known stock, passing an empty description so it's not mistaken for an ETF
+    showStockDetails("NASDAQ:AAPL", true, 'Apple Inc.');
 }
 
-function showStockDetails(symbol, isInitialLoad = false, symbolType = 'stock') {
+function showStockDetails(symbol, isInitialLoad = false, description = '') {
     const theme = document.body.getAttribute('data-theme') || 'light';
     
-    // Get containers
     const symbolInfoContainer = document.getElementById('tv-widget-symbol-info');
     const techAnalysisContainer = document.getElementById('tv-widget-technical-analysis');
     const financialsContainer = document.getElementById('tv-widget-financials');
     const advancedChartContainer = document.getElementById('tv-widget-advanced-chart');
     const stockDetailsGrid = document.querySelector('.stock-details-grid');
 
-    // Clear all containers first
     symbolInfoContainer.innerHTML = '';
     techAnalysisContainer.innerHTML = '';
     financialsContainer.innerHTML = '';
     advancedChartContainer.innerHTML = '';
 
-    // Always show Symbol Info
     if (symbolInfoContainer) {
         const script = document.createElement('script');
         script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-symbol-info.js';
@@ -757,7 +763,6 @@ function showStockDetails(symbol, isInitialLoad = false, symbolType = 'stock') {
         symbolInfoContainer.appendChild(script);
     }
     
-    // Always show Advanced Chart
     if (advancedChartContainer) {
         const script = document.createElement('script');
         script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
@@ -765,9 +770,8 @@ function showStockDetails(symbol, isInitialLoad = false, symbolType = 'stock') {
         advancedChartContainer.appendChild(script);
     }
 
-    const isETF = (symbolType && symbolType.toLowerCase() === 'etf');
+    const isETF = (description || '').toUpperCase().includes('ETF');
     
-    // Conditionally show Technical Analysis and Financials
     if (!isETF) {
         techAnalysisContainer.style.display = 'block';
         financialsContainer.style.display = 'block';
@@ -786,7 +790,6 @@ function showStockDetails(symbol, isInitialLoad = false, symbolType = 'stock') {
             financialsContainer.appendChild(script);
         }
     } else {
-        // Hide the containers and adjust grid for chart-only view
         techAnalysisContainer.style.display = 'none';
         financialsContainer.style.display = 'none';
         stockDetailsGrid.classList.add('chart-only');
@@ -802,7 +805,6 @@ async function loadCustomWatchlist() {
     const container = document.getElementById('custom-watchlist-container');
     container.innerHTML = `<div id="custom-watchlist-body"><p style="padding: 10px 0;">Loading...</p></div>`;
     
-    // The button is now static in the HTML, so we just ensure the listener is attached.
     document.getElementById('edit-watchlist-btn').addEventListener('click', openWatchlistEditor);
 
     const bodyContainer = document.getElementById('custom-watchlist-body');
@@ -817,10 +819,9 @@ async function loadCustomWatchlist() {
             widgetWrapper.className = 'single-ticker-widget-wrapper';
             widgetWrapper.setAttribute('data-ticker', tvSymbol);
 
-            // Create and add the target price overlay for every item
             const targetOverlay = document.createElement('div');
             targetOverlay.className = 'target-price-overlay';
-            targetOverlay.textContent = stock.target ? stock.target.toLocaleString() : ''; // Display number or be empty
+            targetOverlay.textContent = stock.target ? stock.target.toLocaleString() : '';
             widgetWrapper.appendChild(targetOverlay);
 
             const script = document.createElement('script');
@@ -900,7 +901,6 @@ async function renderWatchlistEditRow(stock) {
     let logoUrl = stock.logo_url;
     const fallbackSrc = 'nostockimg.png';
     
-    // If logo is missing, fetch and update it
     if (!logoUrl) {
         try {
             const response = await fetch(`/.netlify/functions/enrich-watchlist-item?id=${stock.id}&ticker=${encodeURIComponent(stock.ticker)}&market=${encodeURIComponent(stock.market)}`);
