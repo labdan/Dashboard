@@ -916,6 +916,7 @@ async function renderWatchlistEditRow(stock) {
         <i class="fas fa-grip-vertical drag-handle"></i>
         <img src="${logoUrl}" class="stock-icon" onerror="this.onerror=null; this.src='${fallbackSrc}';">
         <span>${stock.ticker} (${stock.market})</span>
+        <input type="number" class="ql-input" data-field="target" value="${stock.target || ''}" placeholder="Target Price">
         <button class="delete-link-btn"><i class="fas fa-trash"></i></button>
     `;
     row.querySelector('.delete-link-btn').addEventListener('click', () => {
@@ -953,6 +954,7 @@ async function saveWatchlistChanges() {
                 ticker: row.dataset.ticker,
                 market: row.dataset.market,
                 sort_order: index,
+                target: row.querySelector('[data-field="target"]').value ? parseFloat(row.querySelector('[data-field="target"]').value) : null,
             };
         });
         
