@@ -1531,8 +1531,9 @@ body.dynamic-theme {
 /* --- STOCK DETAILS PANEL --- */
 #stock-details-panel {
     /* The panel itself should not scroll; its content will */
-    overflow: visible; 
+    overflow: hidden; /* Changed from visible to hidden for cleaner layout */
     padding: 15px;
+    height: 100%; /* Ensure panel takes full height */
 }
 /* New Grid Layout for Stock Details */
 .stock-details-grid {
@@ -1540,35 +1541,53 @@ body.dynamic-theme {
     /* Two equal columns */
     grid-template-columns: 1fr 1fr;
     /* Define heights for the three rows */
-    grid-template-rows: auto auto 350px; 
+    grid-template-rows: auto auto 1fr; /* Let the chart take the rest of the space */
     gap: 15px;
+    height: 100%; /* Make grid take full height of panel */
 }
 
 #tv-widget-symbol-info {
     /* Span both columns on the first row */
     grid-column: 1 / 3;
     grid-row: 1 / 2;
-    min-height: 200px; /* Give it a minimum height */
+    min-height: 120px; /* Adjusted min-height */
 }
 
 #tv-widget-technical-analysis {
     /* Second row, first column */
     grid-column: 1 / 2;
     grid-row: 2 / 3;
-    min-height: 450px; /* Give it a minimum height */
+    min-height: 400px; /* Adjusted min-height */
 }
 
 #tv-widget-financials {
     /* Second row, second column */
     grid-column: 2 / 3;
     grid-row: 2 / 3;
-    min-height: 450px; /* Give it a minimum height */
+    min-height: 400px; /* Adjusted min-height */
 }
 
 #tv-widget-advanced-chart {
     /* Span both columns on the third row */
     grid-column: 1 / 3;
     grid-row: 3 / 4;
+}
+
+
+/* New styles for ETF / Chart-only view */
+.stock-details-grid.chart-only {
+    /* Change to a 2-row layout */
+    grid-template-rows: auto 1fr; /* Info on top, chart takes remaining space */
+}
+
+.stock-details-grid.chart-only #tv-widget-symbol-info {
+    grid-column: 1 / 3;
+    grid-row: 1 / 2;
+}
+
+.stock-details-grid.chart-only #tv-widget-advanced-chart {
+    grid-column: 1 / 3;
+    grid-row: 2 / 3; /* Span the entire second row */
 }
 
 #custom-watchlist-header {
